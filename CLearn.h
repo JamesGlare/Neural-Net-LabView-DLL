@@ -1,44 +1,12 @@
 #pragma once
 
-#ifndef M_PI
-#define M_PI 3.14159265359
-#endif // !1
+#include "defininitions.h"
 
 #ifdef CLEARN_EXPORTS  
 #define CLEARN_API__declspec(dllexport)   
 #else  
 #define CLEARN_API__declspec(dllimport)   
 #endif  
-#include <vector>
-#include <memory>
-#include "Eigen/Core"
-
-using namespace Eigen;
-using namespace std;
-
-// Define a few types.
-typedef float fREAL;
-typedef Matrix<fREAL, Dynamic, Dynamic> MAT;
-typedef Matrix<fREAL, Dynamic, Dynamic, Dynamic> MAT3;
-typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
-typedef Map<MAT> MATMAP;
-typedef vector<MAT> MATVEC;
-typedef Map<MATU8> MATU8MAP;
-
-template<typename T>
-void inline copyToOut(T* const in, T* const out, uint32_t N) {
-	for (uint32_t i = 0; i < N; i++) {
-		out[i] = in[i];
-	}
-}
-
-struct learnPars {
-	fREAL eta; // learning rate
-	fREAL metaEta; // learning rate decay rate
-	fREAL gamma; // inertia term
-	fREAL lambda; // regularizer
-	uint32_t nesterov;
-};
 
 class CLearn {
 	public:
@@ -84,21 +52,8 @@ class CLearn {
 		uint32_t NHIDDEN; // number of hidden layers (NOT NODES!)
 		uint32_t* NNODES;
 
-		// private functions
-		void appendOne(MAT&);
-		void shrinkOne(MAT& in);
-		MAT appendOneInline(const MAT&);
-		
-		static MAT matNorm(const MAT&);
-		static fREAL norm(fREAL);
-		static fREAL cumSum(const MAT&);
-
 		// activation functions
 		static MAT ACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
 		static MAT DACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
-		static fREAL Tanh(fREAL);
-		static fREAL Sig(fREAL);
-		static fREAL DSig(fREAL);
-		static fREAL ReLu(fREAL);
-		static fREAL DReLu(fREAL);
+
 };

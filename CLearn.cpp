@@ -99,14 +99,6 @@ CLearn::~CLearn() {
 	}
 }
 
-// Careful, this function assumes a column vector.
-void CLearn::appendOne(MAT& in) {
-	in.conservativeResize(in.rows() + 1, in.cols()); // (NIN+1,1)
-	in.bottomRows(1) = MAT(1, 1).setConstant(1); // bottomRows etc can be used as lvalue 
-}
-void CLearn::shrinkOne(MAT& in) {
-	in.conservativeResize(in.rows() - 1, in.cols());
-}
 MAT CLearn::forProp(const MAT& in, bool saveActivations) {
 	// size(in) = (NIN,1)
 	MAT temp = appendOneInline(in);
@@ -130,14 +122,11 @@ MAT CLearn::forProp(const MAT& in, bool saveActivations) {
 
 	return ACT(temp);
 }
+
 fREAL CLearn::l2Error(const MAT& deltaOut) {
 	return 0.5f*cumSum(matNorm(deltaOut));
 }
-inline MAT CLearn::appendOneInline(const MAT& toAppend) {
-	MAT temp = MAT(toAppend.rows() + 1, toAppend.cols()).setConstant(1);
-	temp.topRows(toAppend.rows()) = toAppend;
-	return temp;
-}
+
 fREAL CLearn::backProp(const MAT& in, MAT& dOut, learnPars pars) {
 	// (1) Forward propagate through network, but save activations
 	if (pars.nesterov == 1) {
@@ -204,38 +193,14 @@ fREAL CLearn::backProp(const MAT& in, MAT& dOut, learnPars pars) {
 
 	return error;
 }
-fREAL CLearn::cumSum(const MAT& in) {
-	return in.sum();
-}
-// Activation functions
-inline fREAL CLearn::Tanh(fREAL f) {
-	return std::tanh(f);
-}
-inline fREAL CLearn::Sig(fREAL f) {
-	return 1.0f / (1.0f + std::exp(-1.0f*f));
-}
-inline fREAL CLearn::DSig(fREAL f) {
-	return Sig(f)*(1.0f-Sig(f));
-}
-inline fREAL CLearn::ReLu(fREAL f) {
-	return std::log(1.0f + std::exp(f));
-}
-inline fREAL CLearn::DReLu(fREAL f) {
-	return Sig(f);
-}
-fREAL inline CLearn::norm(fREAL f) {
-	return f*f;
-}
-MAT CLearn::matNorm(const MAT& in) {
-	return in.unaryExpr(&CLearn::norm);
-}
+
 MAT CLearn::ACT(const MAT& in) {
 	// be careful with overloads here - it needs to be clear which function to use
 	// only call other static functions.
-	return in.unaryExpr(&CLearn::ReLu);
+	return in.unaryExpr(&ReLu);
 }
 MAT CLearn::DACT(const MAT& in) {
-	return in.unaryExpr(&CLearn::DReLu);
+	return in.unaryExpr(&DReLu);
 }
 uint32_t CLearn::get_NIN() {
 	return NIN;
