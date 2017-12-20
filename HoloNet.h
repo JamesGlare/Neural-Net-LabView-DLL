@@ -15,26 +15,26 @@ public:
 	// Training functions
 	fREAL backProp(const MAT&, MAT&, learnPars); // returns cum error and overwrites the second argument with the prediction
 	MAT forProp(const MAT&, bool);
-	fREAL l2Error(const MAT&);
-
+	MAT fourier(const MAT& );
+	MAT conv( const MAT&, const MAT&);
+	MAT antiConv(const MAT&, const MAT&);
+	MAT getKernel() const;
 	// Getter functions
 	uint32_t get_NIN();
 	uint32_t get_NOUT();
-	uint32_t get_NNODE(uint32_t);
-
+	uint32_t get_NNODES();
 
 private:
 	// private parameters
 	uint32_t NINXY;
-
 	uint32_t NOUTXY;
-
 	uint32_t NNODES;
 
-	uint32_t kernelSize;
-	uint32_t stride;
-	uint32_t padding;
+	int32_t kernelSize;
+	int32_t stride;
+	int32_t padding;
 
+	MAT inFourier; // store fourier trafo of input
 	MAT inLayer; // weights for fourier layer
 	MAT inAct;
 	MAT inDelta; 
@@ -49,8 +49,6 @@ private:
 	// activation functions
 	static MAT ACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
 	static MAT DACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
-	// convolution functions
-	MAT conv(const MAT& in);
-	MAT fourier(const MAT& in);
+	static fREAL l2Error(const MAT&);
 };
 

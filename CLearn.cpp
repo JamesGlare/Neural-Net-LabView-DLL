@@ -190,6 +190,7 @@ fREAL CLearn::backProp(const MAT& in, MAT& dOut, learnPars pars) {
 	// (NNODE_0, NIN+1) = (NNODE_0,1)x(1,NIN+1)
 	inVel = pars.gamma * inVel + pars.eta*inDelta*temp.transpose();
 	inLayer = discount*inLayer - inVel;
+	dOut = out; // copy the output
 
 	return error;
 }
@@ -225,6 +226,54 @@ void CLearn::copy_outWeights(fREAL* const weights) {
 	memcpy(weights, this->outLayer.data(), this->outLayer.size() * sizeof(fREAL));
 }
 
+
+/*
+ * Define functions in definitions.h
+ */
+
+template<typename T>
+void copyToOut(T* const in, T* const out, uint32_t N) {
+	for (uint32_t i = 0; i < N; i++) {
+		out[i] = in[i];
+	}
+}
+
+fREAL cumSum(const MAT& in) {
+	return in.sum();
+}
+// static functions
+fREAL Tanh(fREAL f) {
+	return std::tanh(f);
+}
+fREAL DTanh(fREAL f) {
+	return 1.0f - Tanh(f)*Tanh(f);
+}
+
+fREAL ReLu(fREAL f) {
+	return std::log(1.0f + std::exp(f));
+}
+fREAL DReLu(fREAL f) {
+	return Sig(f);
+}
+fREAL norm(fREAL f) {
+	return f*f;
+}
+MAT matNorm(const MAT& in) {
+	return in.unaryExpr(&norm);
+}
+// MAT functions
+void appendOne(MAT& in) {
+	in.conservativeResize(in.rows() + 1, in.cols()); // (NIN+1,1)
+	in.bottomRows(1) = MAT(1, 1).setConstant(1); // bottomRows etc can be used as lvalue 
+}
+void shrinkOne(MAT& in) {
+	in.conservativeResize(in.rows() - 1, in.cols());
+}
+inline MAT appendOneInline(const MAT& toAppend) {
+	MAT temp = MAT(toAppend.rows() + 1, toAppend.cols()).setConstant(1);
+	temp.topRows(toAppend.rows()) = toAppend;
+	return temp;
+}
 
 /*
  * DLL Functions
