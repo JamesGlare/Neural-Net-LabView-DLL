@@ -7,7 +7,8 @@
 #else  
 #define CLEARN_API__declspec(dllimport)   
 #endif  
-
+#ifndef CLEARN_CLASS
+#define CLEARN_CLASS
 class CLearn {
 	public:
 		CLearn(uint32_t, uint32_t, uint32_t, uint32_t* const);
@@ -57,3 +58,4 @@ class CLearn {
 		static MAT DACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
 
 };
+#endif

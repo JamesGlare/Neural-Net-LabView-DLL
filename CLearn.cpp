@@ -238,38 +238,16 @@ void copyToOut(T* const in, T* const out, uint32_t N) {
 	}
 }
 
-fREAL cumSum(const MAT& in) {
-	return in.sum();
-}
-// static functions
-fREAL Tanh(fREAL f) {
-	return std::tanh(f);
-}
-fREAL DTanh(fREAL f) {
-	return 1.0f - Tanh(f)*Tanh(f);
-}
 
-fREAL ReLu(fREAL f) {
-	return std::log(1.0f + std::exp(f));
-}
-fREAL DReLu(fREAL f) {
-	return Sig(f);
-}
-fREAL norm(fREAL f) {
-	return f*f;
-}
-MAT matNorm(const MAT& in) {
-	return in.unaryExpr(&norm);
-}
 // MAT functions
 void appendOne(MAT& in) {
 	in.conservativeResize(in.rows() + 1, in.cols()); // (NIN+1,1)
-	in.bottomRows(1) = MAT(1, 1).setConstant(1); // bottomRows etc can be used as lvalue 
+	in.bottomRows(1).setConstant(1); // bottomRows etc can be used as lvalue 
 }
 void shrinkOne(MAT& in) {
 	in.conservativeResize(in.rows() - 1, in.cols());
 }
-inline MAT appendOneInline(const MAT& toAppend) {
+MAT appendOneInline(const MAT& toAppend) {
 	MAT temp = MAT(toAppend.rows() + 1, toAppend.cols()).setConstant(1);
 	temp.topRows(toAppend.rows()) = toAppend;
 	return temp;

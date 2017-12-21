@@ -35,9 +35,7 @@ private:
 	int32_t padding;
 
 	MAT inFourier; // store fourier trafo of input
-	MAT inLayer; // weights for fourier layer
-	MAT inAct;
-	MAT inDelta; 
+	
 	MAT hiddenLayer1; // all to all layer
 	MAT hiddenAct1;
 	MAT hiddenDelta1;

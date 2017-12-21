@@ -31,24 +31,43 @@ struct learnPars {
 	fREAL lambda; // regularizer
 	uint32_t nesterov;
 };
+// library functions
 
 template<typename T>
 void inline copyToOut(T* const, T* const, uint32_t);
 
-inline fREAL cumSum(const MAT&);
-// static functions
-inline fREAL Tanh(fREAL);
-inline fREAL DTanh(fREAL);
-inline fREAL Sig(fREAL);
-inline fREAL DSig(fREAL);
-inline fREAL ReLu(fREAL);
-inline fREAL DReLu(fREAL);
-inline fREAL norm(fREAL);
-inline MAT matNorm(const MAT&);
+inline fREAL cumSum(const MAT& in) {
+	return in.sum();
+}
+// Activation functions & derivatives
+inline fREAL Tanh(fREAL f) {
+	return std::tanh(f);
+}
+inline fREAL DTanh(fREAL f) {
+	return 1.0f - Tanh(f)*Tanh(f);
+}
+inline fREAL Sig(fREAL f) {
+	return 1.0f / (1.0f + std::exp(-1.0f*f));
+}
+inline fREAL DSig(fREAL f) {
+	return Sig(f)*(1.0f - Sig(f));
+}
+inline fREAL ReLu(fREAL f) {
+	return std::log(1.0f + std::exp(f));
+}
+inline fREAL DReLu(fREAL f) {
+	return Sig(f);
+}
+inline fREAL norm(fREAL f) {
+	return f*f;
+}
+inline MAT matNorm(const MAT& in) {
+	return in.unaryExpr(&norm);
+}
 // MAT functions
 void appendOne(MAT&);
 void shrinkOne(MAT&);
-inline MAT appendOneInline(const MAT& );
+MAT appendOneInline(const MAT& );
 
 void gauss(MAT& in);
 #endif // !DEFINITIONS_H_INCLUDE
