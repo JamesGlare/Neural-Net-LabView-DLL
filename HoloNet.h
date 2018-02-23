@@ -16,9 +16,9 @@ public:
 	fREAL backProp(const MAT&, MAT&, learnPars); // returns cum error and overwrites the second argument with the prediction
 	MAT forProp(const MAT&, bool);
 	MAT fourier(const MAT& );
-	MAT conv( const MAT&, const MAT&);
+	MAT conv( const MAT&, const MAT&, uint32_t, uint32_t);
 	MAT antiConv(const MAT&, const MAT&);
-	MAT getKernel() const;
+	MAT& getKernel();
 	// Getter functions
 	uint32_t get_NIN();
 	uint32_t get_NOUT();

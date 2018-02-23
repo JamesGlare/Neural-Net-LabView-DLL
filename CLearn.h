@@ -13,6 +13,7 @@ class CLearn {
 	public:
 		CLearn(uint32_t, uint32_t, uint32_t, uint32_t* const);
 		~CLearn();
+
 		// Training functions
 		fREAL backProp(const MAT&, MAT&, learnPars); // returns cum error and overwrites the second argument with the prediction
 		MAT forProp(const MAT&, bool saveActivations);
@@ -24,6 +25,10 @@ class CLearn {
 		uint32_t get_NOUT();
 		uint32_t get_NNODE(uint32_t);
 		uint32_t get_NHIDDEN();
+		// Save network to file
+		int saveToFile();
+		int initializeFromFiles();
+
 		// copy the weight matrices
 		void copy_inWeights(fREAL* const);
 		void copy_hiddenWeights(fREAL* const, uint32_t);
@@ -57,5 +62,10 @@ class CLearn {
 		static MAT ACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
 		static MAT DACT(const MAT&); // TODO speed up by (const MAT&) pass by pointer
 
+		// initialization
+		void init();
+
+		// fileName
+		string filePath;
 };
 #endif

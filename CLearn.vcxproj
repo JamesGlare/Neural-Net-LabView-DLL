@@ -105,6 +105,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MinimalRebuild>false</MinimalRebuild>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -149,15 +150,26 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AntiConvolutionalLayer.h" />
     <ClInclude Include="CLearn.h" />
+    <ClInclude Include="CNet.h" />
+    <ClInclude Include="CNetLayer.h" />
+    <ClInclude Include="ConvolutionalLayer.h" />
     <ClInclude Include="defininitions.h" />
     <ClInclude Include="dllWrapper.h" />
+    <ClInclude Include="FullyConnectedLayer.h" />
     <ClInclude Include="HoloNet.h" />
+    <ClInclude Include="MaxPoolLayer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AntiConvolutionalLayer.cpp" />
     <ClCompile Include="CLearn.cpp" />
+    <ClCompile Include="CNet.cpp" />
+    <ClCompile Include="CNetLayer.cpp" />
+    <ClCompile Include="ConvolutionalLayer.cpp" />
+    <ClCompile Include="definitions.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -172,7 +184,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="FullyConnectedLayer.cpp" />
     <ClCompile Include="HoloNet.cpp" />
+    <ClCompile Include="MaxPoolLayer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

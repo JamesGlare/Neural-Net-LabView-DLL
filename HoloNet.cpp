@@ -5,25 +5,26 @@ CHoloNet::CHoloNet(uint32_t _NINXY, uint32_t _NOUTXY, uint32_t _NNODES) : NINXY(
 
 	// (1) construct inLayer
 
-	inFourier = MAT(NINXY*(NINXY+1)/2,1);
+	inFourier = MAT(NINXY*NINXY, 1);//MAT(NINXY*(NINXY+1)/2,1);
 	inFourier.setConstant(0);
-	kernelSize = 3;
+	kernelSize = 5;
 	stride = 0;
 	padding = 0;
 
 	// (2) Setup hidden layer
-	hiddenLayer1 = MAT(NNODES, inFourier.size() + 1);
+	hiddenLayer1 = MAT(NNODES, inFourier.rows() + 1);
 	hiddenLayer1.setRandom();
-	hiddenDelta1 = MAT(NNODES, 1);
-	hiddenAct1 = MAT(NNODES, 1);
+	hiddenDelta1 = MAT(hiddenLayer1.rows(), 1);
+	hiddenAct1 = MAT(hiddenLayer1.rows(), 1);
 	hiddenDelta1.setConstant(0);
 	hiddenLayer2 = MAT(NOUTXY*NOUTXY, NNODES + 1); // convolution with the output of this matrix should yield (NOUTX * NOUTY)
 	hiddenLayer2.setRandom();
-	hiddenDelta2 = MAT(NOUTXY*NOUTXY, 1);
-	hiddenAct2 = MAT(NOUTXY*NOUTXY, 1);
+	hiddenDelta2 = MAT(hiddenLayer2.rows(), 1);
+	hiddenAct2 = MAT(hiddenLayer2.rows(), 1);
 	// (3) Setup kernel matrix
 	kernel = MAT(kernelSize, kernelSize);
-	gauss(kernel);
+	kernel.setRandom();
+	kernel *= 1 / kernel.sum();
 }
 
 CHoloNet::~CHoloNet()
@@ -48,13 +49,14 @@ uint32_t CHoloNet::get_NNODES() {
 MAT CHoloNet::ACT(const MAT& in) {
 	// be careful with overloads here - it needs to be clear which function to use
 	// only call other static functions.
-	return in.unaryExpr(&Tanh);
+	return in.unaryExpr(&ReLu);
 }
 MAT CHoloNet::DACT(const MAT& in) {
-	return in.unaryExpr(&DTanh);
+	return in.unaryExpr(&DReLu);
 }
 MAT CHoloNet::forProp(const MAT& in, bool saveActivations) {
-	MAT temp = fourier(in);
+	MAT temp = in;// fourier(in);
+	temp.resize(NINXY*NINXY, 1);
 	if (saveActivations)
 		inFourier = temp;
 
@@ -71,7 +73,7 @@ MAT CHoloNet::forProp(const MAT& in, bool saveActivations) {
 
 	temp = ACT(temp); // (NOUTXY*NOUTXY,1)
 	temp.resize(NOUTXY, NOUTXY); // RESIZE - this should be removed, unncessary cost
-	return conv(temp, kernel); // (NOUTXY, NOUTXY)
+	return conv(temp, kernel,1, padSizeForEqualConv(temp.rows(), kernelSize, 1)); // (NOUTXY, NOUTXY)
 }
 
 fREAL CHoloNet::backProp(const MAT& in, MAT& dOut, learnPars pars) {
@@ -83,14 +85,17 @@ fREAL CHoloNet::backProp(const MAT& in, MAT& dOut, learnPars pars) {
 	fREAL error = l2Error(outDelta); // save error
 	
 	// (2.1) Kernel layer - Calculate deltas for NOUTXYxNOUTXY matrix, then later, sum down to kernel matrix with identity matrix
-	MAT kernelDelta = conv(outDelta, kernel.reverse());// CHECK FLIPPED KERNEL(NOUTXYxNOUTXY);
-	MAT temp = kernelDelta;
-	temp.resize(NOUTXY*NOUTXY, 1); // RESIZE
+	/*
+	MAT grad = ptr->conv(delta, in, 1, (kernelSize - 1) / 2).reverse(); // .reverse()
+	ptr->getKernel() = ptr->getKernel().reverse() - eta*grad;
+	*/
+	MAT kernelDelta = conv( outDelta, kernel.reverse(), 1, padSizeForEqualConv(NOUTXY, kernelSize, 1)); // ()
+	kernelDelta.resize(NOUTXY*NOUTXY, 1); // RESIZE
 											   
 	// (2.2) Hidden layer 2 - (NOUTXY^2,1)
 	// Activation has (NOUTXY^2,1) shape
 	// (NOUTXY^2,1) = DACT(NOUTXY^2,1) * (NOUTXY^2,1)
-	hiddenDelta2 = DACT(hiddenAct2).cwiseProduct(temp);
+	hiddenDelta2 = DACT(hiddenAct2).cwiseProduct(kernelDelta);
 	// (2.3) Hidden layer 1 -  
 	// (NNODES,1) = DACT(NNODES,1) * (NOUTXY^2, NNODES).T x (NOUTXY^2,1) = (NNODES,1)
 	hiddenDelta1 = DACT(hiddenAct1).cwiseProduct(hiddenLayer2.leftCols(hiddenLayer2.cols() - 1).transpose()*hiddenDelta2);
@@ -98,12 +103,11 @@ fREAL CHoloNet::backProp(const MAT& in, MAT& dOut, learnPars pars) {
 	// (3) Apply gradient
 	//(3.1) kernelLayer
 	// (kS, kS)
-	temp = ACT(hiddenAct2);
+	MAT temp = ACT(hiddenAct2);
 	temp.resize(NOUTXY, NOUTXY);
-	MAT oneMatrix = MAT(kernelSize, kernelSize);
-	oneMatrix.setConstant(1);
-	//kernel = kernel - pars.eta * antiConv(temp.cwiseProduct(kernelDelta),oneMatrix); // .cwiseProduct(kernelDelta)
-	
+	// update the kernel
+	// convolve 
+	kernel = kernel.reverse() - pars.eta*conv(outDelta, temp, 1, (kernelSize - 1) / 2).reverse();
 	// (3.2) hidden layer 2
 	temp = appendOneInline(ACT(hiddenAct1));
 	// (NOUTXY^2, NNODES+1 ) = (NOUTXY^2, 1) x ( 1, NNODES+1)
@@ -161,82 +165,40 @@ MAT CHoloNet::antiConv(const MAT& delta, const MAT& _kernel) {
 	
 	return norm.cwiseQuotient(_kernelDelta);
 }
-MAT CHoloNet::conv(const MAT& in, const MAT& _kernel) {
+MAT CHoloNet::conv(const MAT& in, const MAT& _kernel, uint32_t stride, uint32_t padding) {
 	
-	int32_t nRows = in.rows();
-	int32_t nCols = in.cols();
-	MAT out(nRows, nCols);
+	int32_t inRows = in.rows(); // we only accept square matrices 
+	if (inRows != in.cols()) {
+		// error
+		return in;
+	}
+	int32_t inCols = inRows; // to make it easier to read
+	int32_t _kernelSize = _kernel.rows();
+	if (_kernelSize != _kernel.cols()) {
+		return in;
+	}
+	size_t outSize = convoSize(inRows, _kernelSize, padding, stride); 
+
+	MAT out(outSize, outSize); // square matrix
+	MAT paddedIn(inRows + 2*padding, inCols + 2*padding);
+	paddedIn.setConstant(0);
+	// fill paddedIn matrix
+	paddedIn.block(padding, padding, inRows, inCols) = in;
+	
 	out.setConstant(0);
-	for (int32_t j = 0; j < nCols; j++) {
-		for (int32_t i = 0; i < nRows; i++) {
-			for (int32_t n = j-kernelSize/2 >=0 ? -kernelSize / 2: -j; n < ( j+ kernelSize/2+1 <= nCols ? kernelSize / 2 + 1:nCols-j) ; n++) {
-				for (int32_t m = i - kernelSize / 2 >= 0 ? -kernelSize / 2 : -i; m < (i + kernelSize / 2 + 1 <= nRows ? kernelSize / 2 + 1 : nRows - i); m++) {
-					out(i, j) += _kernel(m + kernelSize / 2, n + kernelSize / 2)*in(i + m, j + n); //kernel(m+kernelSize/2, n + kernelSize / 2)*in(i + m, j + n);
- 				}
-			} 
+	// convolution
+	for (int32_t i = 0; i < outSize; i++) {
+		for (int32_t j = 0; j < outSize; j++) {
+			for (int32_t n = 0; n < kernelSize; n++) {
+				for (int32_t m = 0; m < kernelSize; m++) {
+					out(j, i) += _kernel(m, n)*paddedIn(j*stride + m, i*stride + n);
+				}
+			}
 		}
 	}
 	return out;
 }
 
-MAT CHoloNet::getKernel() const {
+MAT& CHoloNet::getKernel() {
 	return kernel;
-}
-/*
- * DLL Functions
- */
-
-__declspec(dllexport) int __stdcall initCHoloNet(CHoloNet** ptr, uint32_t NINXY, uint32_t NOUTXY, uint32_t NNODES) {
-	*ptr = new CHoloNet(NINXY, NOUTXY, NNODES);
-	return 1;
-}
-
-__declspec(dllexport) void __stdcall testFourier(CHoloNet* ptr, fREAL* const img) {
-	MAT in = MATMAP(img, ptr->get_NIN(), ptr->get_NIN()); // (NIN, 1) Matrix
-	MAT out = ptr->fourier(in);
-	in.setConstant(out.size());
-	copyToOut(in.data(), img, in.size());
-	copyToOut(out.data(), img, out.size());
-}
-
-__declspec(dllexport) void __stdcall testConvolution(CHoloNet* ptr, fREAL* const img) {
-	MAT in = MATMAP(img, ptr->get_NIN(), ptr->get_NIN()); // (NIN, 1) Matrix
-	MAT out(in.rows(), in.cols());
-	out = ptr->conv( in, ptr->getKernel());
-	copyToOut(out.data(), img, out.size());
-}
-__declspec(dllexport) void __stdcall testForward(CHoloNet* ptr, fREAL* const img) {
-	MAT in = MATMAP(img, ptr->get_NIN(), ptr->get_NIN()); // (NIN, 1) Matrix
-	MAT out = ptr->forProp(in, false);
-	copyToOut(out.data(), img, out.size());
-}
-__declspec(dllexport) fREAL __stdcall train(CHoloNet* ptr, fREAL* const in, fREAL* const dOut, fREAL* const eta, int32_t forwardOnly) {
-	MAT inMat = MATMAP(in, ptr->get_NIN(), ptr->get_NIN()); // (NINXY, NINXY) Matrix
-	MAT dOutMat = MATMAP(dOut, ptr->get_NOUT(), ptr->get_NOUT()); // (NOUTXY, NOUTXY)
-	learnPars pars = { *eta, 0,0,0, false };
-	fREAL error = 0;
-	if (1 == forwardOnly) {
-		dOutMat = ptr->forProp(inMat, false);
-	}
-	else {
-		error = ptr->backProp(inMat, dOutMat, pars); // doutMat contains prediction
-	}
-	copyToOut(dOutMat.data(), dOut, dOutMat.size());
-
-	return error;
-}
-void gauss(MAT& in) {
-	//EIGEN stores matrices in column-major order! 
-	// iterate columns (second index)
-	int32_t nRows = in.rows();
-	int32_t nCols = in.cols();
-	// outer perimeter of window is at 3 sigma boundary
-	fREAL std = (nRows + nCols) / 2;
-	fREAL norm = 1.0f / ( std*std* 2 * M_PI);
-
-	for (int32_t j = 0; j < nCols; j++) {
-		for (int32_t i = 0; i < nRows; i++) {
-			in(i, j) = norm* exp(-(j - nCols / 2)*(j - nCols / 2) / (2*std*std) - (i - nRows / 2)*(i - nRows / 2) / (2* std*std));
-		}
-	}
 }

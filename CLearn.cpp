@@ -1,6 +1,5 @@
 // CLearn.cpp : Defines the exported functions for the DLL application.
 //
-
 #include "stdafx.h"
 #include "CLearn.h"
 
@@ -15,9 +14,13 @@ CLearn::CLearn(uint32_t _NIN, uint32_t _NOUT, uint32_t _NHIDDEN, uint32_t* const
 	if (NHIDDEN < 1) {
 		return;
 	}
+	filePath = "C:\\Jannes\\learnSamples\\";
 
 	NNODES = new uint32_t[NHIDDEN];
 	memcpy(NNODES, _NNODES, NHIDDEN*sizeof(uint32_t));
+	this->init();
+}
+void CLearn::init() {
 
 	// Matrix ( NNEXT, NPREV+1)
 	inLayer = MAT(NNODES[0], NIN + 1); // add bias node 
@@ -25,10 +28,10 @@ CLearn::CLearn(uint32_t _NIN, uint32_t _NOUT, uint32_t _NHIDDEN, uint32_t* const
 	// initialize the inlayer
 	inLayer.setRandom();
 	inVel.setConstant(0);
-	inLayer *= 1.0f/NIN;
-	//inLayer.rightCols(1).setConstant(1); // bias nodes
+	inLayer *= 1.0f / NIN;
+	inLayer.rightCols(1).setConstant(0); // bias nodes
 
-	if (NHIDDEN > 1){
+	if (NHIDDEN > 1) {
 		hiddenLayers = MATVEC(NHIDDEN - 1);// there are one fewer weight matrices than node layers !!!
 		hiddenVel = MATVEC(NHIDDEN - 1);
 		for (uint32_t i = 0; i < NHIDDEN - 1; i++) {
@@ -37,7 +40,7 @@ CLearn::CLearn(uint32_t _NIN, uint32_t _NOUT, uint32_t _NHIDDEN, uint32_t* const
 			hiddenLayers[i] = MAT(NNODES[i + 1], NNODES[i] + 1); // add bias node  MAT(NNODE, NNODE+1)
 			hiddenLayers[i].setRandom();
 			hiddenLayers[i] *= 1.0f / NNODES[i];
-			//hiddenLayers[i].rightCols(1).setConstant(1);
+			hiddenLayers[i].rightCols(1).setConstant(0);
 		}
 	}
 	else {
@@ -46,11 +49,11 @@ CLearn::CLearn(uint32_t _NIN, uint32_t _NOUT, uint32_t _NHIDDEN, uint32_t* const
 	}
 	outLayer = MAT(NOUT, NNODES[NHIDDEN - 1] + 1); // add bias node
 	outVel = MAT(NOUT, NNODES[NHIDDEN - 1] + 1);
-	
+
 	outLayer.setRandom();
 	outLayer *= 1.0 / NNODES[NHIDDEN - 1];
 	outVel.setConstant(0);
-
+	outLayer.rightCols(1).setConstant(0); // initialize bias nodes
 	// Activation storage matrices
 	// The activation matrices have always dimensions
 	// of outgoing weights
@@ -86,6 +89,74 @@ CLearn::CLearn(uint32_t _NIN, uint32_t _NOUT, uint32_t _NHIDDEN, uint32_t* const
 	inDelta = MAT(NNODES[0], 1);
 	inDelta.setConstant(0);
 }
+// initialize from file
+int CLearn::initializeFromFiles() {
+	//(1) Read structure file
+	ifstream strucFile(filePath + "structure.dat");
+	if (strucFile.is_open()) {
+		strucFile >> NIN;
+		strucFile >> NOUT;
+		strucFile >> NHIDDEN;
+		delete NNODES;
+
+		NNODES = new uint32_t[NHIDDEN];
+		for (int32_t i = 0; i < NHIDDEN; i++) {
+			strucFile >> NNODES[i];
+		}
+	} else {
+		return -1;
+	}
+	strucFile.close();
+	// Now initialize this file
+	//this->init(); 
+ 
+	// (2) Read in matrix
+	ifstream inFile(filePath + "in.dat");
+	if (inFile.is_open()) {
+		// column major order - inner loop must be columns
+		for (size_t i = 0; i < inLayer.rows(); i++) {
+			for (size_t j = 0; j < inLayer.cols(); j++) {
+				inFile >> inLayer(i, j);
+			}
+		}
+	}
+	else {
+		return -1;
+	}
+	inFile.close();
+	// (3) read out matrix
+	ifstream outFile(filePath + "out.dat");
+	if (outFile.is_open()) {
+		// column major order - inner loop must be columns
+		for (size_t i = 0; i < outLayer.rows(); i++) {
+			for (size_t j = 0; j < outLayer.cols(); j++) {
+				outFile >> outLayer(i, j);
+			}
+		}
+	}
+	else {
+		return -1;
+	}
+	outFile.close();
+
+	// (4) read hidden matrices
+	for (int32_t k = 0; k < NHIDDEN-1; k++) {
+		ifstream hiddenFile(filePath + "hidden_" + to_string(k) + ".dat");
+		if (hiddenFile.is_open()) {
+			for (size_t i = 0; i < hiddenLayers[k].rows(); i++) {
+				for (size_t j = 0; j < hiddenLayers[k].cols(); j++) {
+					hiddenFile >> hiddenLayers[k](i, j);
+				}
+			}
+		}
+		else {
+			return -1;
+		}
+		hiddenFile.close();
+	}
+	return 1;
+}
+
 // destructor
 CLearn::~CLearn() {
 	// delete nnode array
@@ -98,7 +169,59 @@ CLearn::~CLearn() {
 		hiddenActs[i].resize(0, 0);
 	}
 }
+/* Save the network to file.
+*/
+int CLearn::saveToFile() {
+	// (1) open filestream - except hidden layers
+	ofstream strucFile(filePath+"structure.dat");
+	ofstream inMat(filePath + "in.dat");
+	ofstream outMat(filePath + "out.dat");
 
+	// (2) write structure of the network
+	if (strucFile.is_open()) {
+		strucFile << NIN << endl;
+		strucFile << NOUT << endl;
+		strucFile << NHIDDEN << endl;
+		for (int32_t i = 0; i < NHIDDEN; i++) {
+			strucFile << NNODES[i] << endl;
+		}
+	}
+	else {
+		return -1;
+	}
+	strucFile.close();
+
+	//(3) write in matrix
+	if (inMat.is_open()) {
+		inMat << inLayer;
+		inMat.close();
+	}
+	else {
+		return -1;
+	}
+	
+	// (4) write out matrix
+	if (outMat.is_open()) {
+		outMat << outLayer;
+		outMat.close();
+	}
+	else {
+		return -1;
+	}
+	
+	//(5) open & write hidden layers
+	for (int32_t i = 0; i < NHIDDEN-1; i++) {
+		ofstream hiddenMat(filePath + "hidden_" + to_string(i) + ".dat");
+		if (hiddenMat.is_open()) {
+			hiddenMat << hiddenLayers[i];
+			hiddenMat.close();
+		}
+		else {
+			return -1;
+		}
+	}
+	return 1;
+}
 MAT CLearn::forProp(const MAT& in, bool saveActivations) {
 	// size(in) = (NIN,1)
 	MAT temp = appendOneInline(in);
@@ -129,7 +252,7 @@ fREAL CLearn::l2Error(const MAT& deltaOut) {
 
 fREAL CLearn::backProp(const MAT& in, MAT& dOut, learnPars pars) {
 	// (1) Forward propagate through network, but save activations
-	if (pars.nesterov == 1) {
+	if (pars.conjugate == 1) {
 		inLayer = inLayer - pars.gamma * inVel;
 		for (uint32_t i = 0; i < NHIDDEN - 1; i++) {
 			hiddenLayers[i] = hiddenLayers[i] - pars.gamma*hiddenVel[i];
@@ -224,85 +347,4 @@ void CLearn::copy_hiddenWeights(fREAL* const weights, uint32_t layer) {
 }
 void CLearn::copy_outWeights(fREAL* const weights) {
 	memcpy(weights, this->outLayer.data(), this->outLayer.size() * sizeof(fREAL));
-}
-
-
-/*
- * Define functions in definitions.h
- */
-
-template<typename T>
-void copyToOut(T* const in, T* const out, uint32_t N) {
-	for (uint32_t i = 0; i < N; i++) {
-		out[i] = in[i];
-	}
-}
-
-
-// MAT functions
-void appendOne(MAT& in) {
-	in.conservativeResize(in.rows() + 1, in.cols()); // (NIN+1,1)
-	in.bottomRows(1).setConstant(1); // bottomRows etc can be used as lvalue 
-}
-void shrinkOne(MAT& in) {
-	in.conservativeResize(in.rows() - 1, in.cols());
-}
-MAT appendOneInline(const MAT& toAppend) {
-	MAT temp = MAT(toAppend.rows() + 1, toAppend.cols()).setConstant(1);
-	temp.topRows(toAppend.rows()) = toAppend;
-	return temp;
-}
-
-/*
- * DLL Functions
- */
-
-__declspec(dllexport) int __stdcall initClass(CLearn** ptr, uint32_t NIN, uint32_t NOUT, uint32_t NHIDDEN, uint32_t* const NNODES) {
-	*ptr = new CLearn(NIN, NOUT, NHIDDEN, NNODES);
-	return 1;
-}
-
-__declspec(dllexport) int __stdcall callClass(CLearn* ptr, uint8_t* const SLM, uint8_t* const out, int32_t kx, int32_t ky, double val) {
-	int sx = 100;
-	int sy = 100;
-	for (int i = 0; i < sx; i++) {
-		for (int j = 0; j < sy; j++) {
-			SLM[i*sy+j] = 127*val*(sin((double)(ky*i)/sy)*sin((double)(kx*j)/sx)+1);
-		}
-	}
-	return 1;
-}
-__declspec(dllexport) fREAL __stdcall forward(CLearn* ptr, fREAL* const SLM, fREAL* const image, fREAL* const eta, fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const nesterov, int* const validate) {
-	// remember not to use .size() on a matrix. It's not numpy ;)
-	learnPars pars = {*eta, *metaEta, *gamma, *lambda, *nesterov};
-
-	MAT in = MATMAP(SLM, ptr->get_NIN(),1); // (NIN, 1) Matrix
-	MAT dOut = MATMAP(image, ptr->get_NOUT(), 1);
-	fREAL error = 0.0;
-	if (*validate == 0) {
-		error = ptr->backProp(in, dOut, pars); // overwrites dOut with prediction
-	}
-	else {
-		dOut = ptr->forProp(in, false);
-	}
-	copyToOut(dOut.data(), image, ptr->get_NOUT()); // copy data into pointer
-	//MAT SLMSub = MATMAP(SLM, ptr->get_NIN(), 1);
-	//SLMSub.setConstant(128);
-	//copyToOut(SLMSub.data(), SLM, ptr->get_NIN()); // copy data into pointer
-
-	return error;
-}
-
-__declspec(dllexport) void __stdcall getINWeights(CLearn* ptr, fREAL* const inWeights) {
-	ptr->copy_inWeights(inWeights);
-}
-__declspec(dllexport) void __stdcall getHiddenWeights(CLearn* ptr, fREAL* const hiddenWeights, uint32_t layer) {
-	ptr->copy_hiddenWeights(hiddenWeights, layer);
-}
-__declspec(dllexport) void __stdcall getOutWeights(CLearn* ptr, fREAL* const outWeights) {
-	ptr->copy_outWeights(outWeights);
-}
-__declspec(dllexport) int __stdcall terminateClass(CLearn* ptr) {
-	delete (ptr);
-	return 1;
 }
