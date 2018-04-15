@@ -49,7 +49,7 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t instride, uint32_t kernelStr
 	return out;
 }
 
-
+/*
 MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSizeY, uint32_t kernelSizeX, uint32_t strideUsed, uint32_t paddingYUsed, uint32_t paddingXUsed) {
 	// outSize == kernelSize
 
@@ -70,7 +70,7 @@ MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSize
 		}
 	}
 	return out;
-}
+}*/
 MAT antiConv(const MAT& in, const MAT& kernel, uint32_t stride, uint32_t antiPaddingY, uint32_t antiPaddingX) {
 
 	size_t inY = in.rows(); // we only accept square matrices 

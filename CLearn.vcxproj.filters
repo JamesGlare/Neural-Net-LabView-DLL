@@ -24,15 +24,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CLearn.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllWrapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HoloNet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="defininitions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -59,13 +50,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CLearn.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HoloNet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FullyConnectedLayer.cpp">

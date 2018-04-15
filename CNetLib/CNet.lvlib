@@ -7,6 +7,7 @@
 	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../addFullyConnectedLayer.vi"/>
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
+	<Item Name="getWeights.vi" Type="VI" URL="../getWeights.vi"/>
 	<Item Name="InitializeCNet.vi" Type="VI" URL="../InitializeCNet.vi"/>
 	<Item Name="resetConjugat.vi" Type="VI" URL="../resetConjugat.vi"/>
 	<Item Name="saveToFile.vi" Type="VI" URL="../saveToFile.vi"/>

@@ -59,6 +59,10 @@ __declspec(dllexport) void __stdcall saveCNet(CNet* ptr) {
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 	ptr->~CNet();
 }
+__declspec(dllexport) void __stdcall writeLayer(CNet* ptr, uint32_t layer, fREAL* const toCopyTo) {
+	if(layer < ptr->getLayerNumber())
+		ptr->copyNthLayer(layer, toCopyTo);
+}
 __declspec(dllexport) uint32_t __stdcall test() {
 	FullyConnectedLayer fc(16, 16, actfunc_t::RELU,0,1);
 	MaxPoolLayer mpl(2, fc);

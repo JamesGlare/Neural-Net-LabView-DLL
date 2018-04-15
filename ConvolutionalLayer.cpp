@@ -98,9 +98,9 @@ MAT ConvolutionalLayer::grad(MAT& const input) {
 	if (hierarchy == hierarchy_t::input) {
 		input.resize(NINY, NINX);
 		//MAT convoluted = conv(deltaSave, input, stride, padSize(kernelY,  NOUTY, NINY, stride), padSize(kernelX,  NOUTX, NINX, stride)).reverse();
-		//MAT convoluted = conv(input, deltaSave,1,stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
+		MAT convoluted = conv(input, deltaSave,1,stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
 		
-		MAT convoluted = deltaActConv(deltaSave, input, kernelY, kernelX, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
+		//MAT convoluted = deltaActConv(deltaSave, input, kernelY, kernelX, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
 		deltaSave.resize(NOUT, 1);
 		input.resize(NIN, 1);
 		return convoluted;
@@ -109,8 +109,8 @@ MAT ConvolutionalLayer::grad(MAT& const input) {
 		MAT fromBelow = below->getACT();
 		fromBelow.resize(NINY, NINX);
 		//MAT convoluted = conv( deltaSave, fromBelow, stride, padSize(kernelY,NOUTY, NINY, stride), padSize(kernelX,  NOUTX, NINX, stride)).reverse();
-		//MAT convoluted = conv(fromBelow, deltaSave, 1,stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
-		MAT convoluted = deltaActConv(deltaSave, fromBelow, kernelY, kernelX, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
+		MAT convoluted = conv(fromBelow, deltaSave, 1,stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
+		//MAT convoluted = deltaActConv(deltaSave, fromBelow, kernelY, kernelX, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
 		deltaSave.resize(NOUT, 1);
 		return convoluted;
 	}
