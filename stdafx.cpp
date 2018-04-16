@@ -23,6 +23,10 @@ __declspec(dllexport) uint32_t __stdcall addFullyConnectedLayer(CNet* ptr, uint3
 __declspec(dllexport) uint32_t __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride) {
 	return ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, actfunc_t::RELU);
 }
+__declspec(dllexport) uint32_t __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride) {
+	return ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, actfunc_t::RELU);
+}
+
 __declspec(dllexport) uint32_t __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	return ptr->addPoolingLayer(maxOverXY, pooling_t::max);
 }
@@ -69,7 +73,7 @@ __declspec(dllexport) uint32_t __stdcall test() {
 	return mpl.getNOUT();
 }
 /* HOLONET Stuff **************************************************************************************************************
-*/
+
 
 __declspec(dllexport) int __stdcall initCHoloNet(CHoloNet** ptr, uint32_t NINXY, uint32_t NOUTXY, uint32_t NNODES) {
 	*ptr = new CHoloNet(NINXY, NOUTXY, NNODES);
@@ -93,9 +97,6 @@ __declspec(dllexport) void __stdcall testConvolution(uint32_t NINX, uint32_t ker
 	copyToOut(out.data(), img, out.size());
 }
 
-/* test the conv layer backprop
-* it should converge to the identity function.
-*/
 __declspec(dllexport) fREAL __stdcall testConvLayerBackProp(CHoloNet* ptr, fREAL* const img, fREAL eta) {
 	MAT in = MATMAP(img, ptr->get_NIN(), ptr->get_NIN()); // (NINXY, NINXY) Matrix
 	MAT out(in.rows(), in.cols());
@@ -135,8 +136,9 @@ __declspec(dllexport) fREAL __stdcall train(CHoloNet* ptr, fREAL* const in, fREA
 
 	return error;
 }
-/* CLearn Stuff ***************************************************************************************************************
 */
+/* CLearn Stuff ***************************************************************************************************************
+
 
 __declspec(dllexport) int __stdcall saveNetwork(CLearn* ptr) {
 	return ptr->saveToFile();
@@ -194,3 +196,4 @@ __declspec(dllexport) int __stdcall terminateClass(CLearn* ptr) {
 	delete (ptr);
 	return 1;
 }
+*/

@@ -2,6 +2,7 @@
 #include "CNet.h"
 #include "FullyConnectedLayer.h"
 #include "ConvolutionalLayer.h"
+#include "AntiConvolutionalLayer.h"
 #include "MaxPoolLayer.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
@@ -30,6 +31,16 @@ size_t CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride
 		// then it's the input layer
 		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, type);
 		layers.push_back(cl);
+	}
+	return getLayerNumber();
+}
+size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type) {
+	if (getLayerNumber() > 0) {
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, type, *(layers.back()));
+		layers.push_back(acl);
+	} else {
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, type);
+		layers.push_back(acl);
 	}
 	return getLayerNumber();
 }

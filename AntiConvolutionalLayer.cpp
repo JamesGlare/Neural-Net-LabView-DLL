@@ -83,7 +83,7 @@ void AntiConvolutionalLayer::backPropDelta(MAT& const deltaAbove) {
 
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
 		deltaSave.resize(NOUTY, NOUTX); // keep track of this!!!
-		MAT convoluted = conv(deltaSave, layer, stride, 1,padSize(NINY, NOUTY, kernelY, stride), padSize(NINX, NOUTX, kernelX, stride));
+		MAT convoluted = conv(deltaSave, layer, stride, 1,0,0);
 		convoluted.resize(NIN, 1);
 		convoluted = convoluted.cwiseProduct(below->getDACT()); // multiply with h'(aj)
 		deltaSave.resize(NOUT, 1); // resize back
@@ -96,7 +96,7 @@ MAT AntiConvolutionalLayer::grad(MAT& const input) {
 
 	if (hierarchy == hierarchy_t::input) {
 		input.resize(NINY, NINX);
-		MAT convoluted = conv(deltaSave, input, stride, 1,padSize(kernelY, NOUTY, NINY, stride), padSize(kernelX, NOUTX, NINX, stride)).reverse();
+		MAT convoluted = conv(deltaSave, input, stride, 1,0, 0);
 		deltaSave.resize(NOUT, 1);
 		input.resize(NIN, 1);
 		return convoluted;
@@ -104,7 +104,7 @@ MAT AntiConvolutionalLayer::grad(MAT& const input) {
 	else {
 		MAT fromBelow = below->getACT();
 		fromBelow.resize(NINY, NINX);
-		MAT convoluted = conv(deltaSave, fromBelow, stride, 1, padSize(kernelY, NOUTY, NINY, stride), padSize(kernelX, NOUTX, NINX, stride)).reverse();
+		MAT convoluted = conv(deltaSave, fromBelow, stride, 1, 0, 0);
 		deltaSave.resize(NOUT, 1);
 		return convoluted;
 	}
@@ -125,8 +125,7 @@ fREAL AntiConvolutionalLayer::applyUpdate(learnPars pars, MAT& const input) {
 		else {
 			resetConjugate(input);
 		}
-	}
-	else {
+	} else {
 		prevStep = -grad(input);
 		vel = pars.gamma*vel - pars.eta*prevStep;
 		if (vel.allFinite())
