@@ -18,7 +18,7 @@ MAT appendOneInline(const MAT& toAppend) {
 	temp.topRows(toAppend.rows()) = toAppend;
 	return temp;
 }
-MAT conv(const MAT& in, const MAT& kernel, uint32_t instride, uint32_t kernelStride, uint32_t paddingY, uint32_t paddingX ) {
+MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStride, uint32_t paddingY, uint32_t paddingX ) {
 
 	size_t inY = in.rows(); // we only accept square matrices 
 	size_t inX = in.cols();
@@ -26,8 +26,8 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t instride, uint32_t kernelStr
 	size_t kernelY = kernel.rows();
 	size_t kernelX = kernel.cols();
 	
-	size_t outSizeY = convoSize(inY, kernelY, paddingY, instride*kernelStride);
-	size_t outSizeX = convoSize(inX, kernelX, paddingX, instride*kernelStride);
+	size_t outSizeY = convoSize(inY, kernelY, paddingY, kernelStride);
+	size_t outSizeX = convoSize(inX, kernelX, paddingX, kernelStride);
 
 	MAT out(outSizeY, outSizeX); // 
 	MAT paddedIn(inY + 2 * paddingY, inX+ 2 * paddingX);
@@ -41,12 +41,71 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t instride, uint32_t kernelStr
 		for (size_t j = 0; j < outSizeY; j++) {
 			for (size_t n = 0; n < kernelX; n++) {
 				for (size_t m = 0; m < kernelY; m++) {
-					out(j, i) += kernel(m, n)*paddedIn(j*instride + m*kernelStride, i*instride + n*kernelStride);
+					out(j, i) += kernel(m, n)*paddedIn(j*kernelStride + m, i*kernelStride + n);
 				}
 			}
 		}
 	}
 	return out;
+}
+MAT convGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX) {
+
+	size_t NOUTY = delta.rows(); // we only accept square matrices 
+	size_t NOUTX = delta.cols();
+
+	size_t NINY = input.rows();
+	size_t NINX = input.cols();
+
+	MAT out(kernelY, kernelX); // 
+	MAT paddedIn(NINY + 2 * paddingY, NINX+ 2 * paddingX);
+	paddedIn.setConstant(0);
+								 // fill paddedIn matrix
+	paddedIn.block(paddingY, paddingX, NINY, NINX) = input;
+
+	out.setConstant(0);
+	// convolution
+
+	for (size_t i = 0; i < kernelX; i++) { // 0, ...,7
+		for (size_t j = 0; j < kernelY; j++) { // 0, ...,7
+			for (size_t n = 0; n < NOUTX; n++) { // 0, 1
+				for (size_t m = 0; m < NOUTY; m++) { // 0,1
+					out(j, i) += paddedIn(j + m*stride, i + n*stride)*delta(m,n ); // max[j+m*stride] == K-1+(NO-1)*stride => [K+NO*stride - stride] -1
+				}
+			}
+		}
+	}
+	return out;
+}
+MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t paddingY, uint32_t paddingX) {
+
+	size_t NOUTY = delta.rows(); // we only accept square matrices 
+	size_t NOUTX= delta.cols();
+
+	size_t NINY = input.rows();
+	size_t NINX = input.cols();
+
+	size_t outSizeY = inStrideConvoSize(NOUTY, NINY, stride, paddingY); // 8
+	size_t outSizeX = inStrideConvoSize(NOUTX, NINX, stride, paddingX);
+
+	MAT out(outSizeY, outSizeX); // 
+//	MAT paddedIn(NINY + 2 * paddingY, NINX+ 2 * paddingX);
+//	paddedIn.setConstant(0);
+	// fill paddedIn matrix
+//	paddedIn.block(paddingY, paddingX, NINY, NINX) = input;
+
+	out.setConstant(0);
+	// convolution
+
+	for (size_t i = 0; i < outSizeX; i++) { // 0, ...,7
+		for (size_t j = 0; j < outSizeY; j++) { // 0, ...,7
+			for (size_t n = 0; n < NINX; n++) { // 0, 1
+				for (size_t m = 0; m < NINY; m++) { // 0,1
+					out(j, i) += input(m, n)*delta(j + m*stride, i+ n*stride); // max -> 7+2 = 9
+				}
+			}
+		}
+	} 
+	return out.block(paddingY, paddingX, outSizeY-2*paddingY, outSizeX-2*paddingX);
 }
 
 /*

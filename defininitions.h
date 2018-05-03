@@ -1,8 +1,8 @@
 #pragma once
 
 
-#ifndef DEFINITIONS_H_INCLUDE
-#define DEFINITIONS_H_INCLUDE
+#ifndef CNET_DEFINITIONS_H_INCLUDE
+#define CNET_DEFINITIONS_H_INCLUDE
 
 #ifndef M_PI
 #define M_PI 3.14159265359f
@@ -28,7 +28,7 @@ typedef Map<MATU8> MATU8MAP;
 typedef fREAL(*ACTFUNC)(fREAL);
 
 enum actfunc_t {RELU =1, TANH=2, SIG=3, NONE=4};
-enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5}; // enumerators: 1, 2, 4 range: 0..7
+enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6}; // enumerators: 1, 2, 4 range: 0..7
 enum pooling_t {max =1, average = 2};
 enum hierarchy_t { input = 1, hidden = 2, output = 3};
 
@@ -37,13 +37,15 @@ struct learnPars {
 	fREAL metaEta; // learning rate decay rate
 	fREAL gamma; // inertia term
 	fREAL lambda; // regularizer
-	uint32_t conjugate;
+	uint32_t conjugate; // 0 or 1
+	uint32_t batch_update;
 };
 // library functions
 
-MAT conv(const MAT& in, const MAT& _kernel, uint32_t instride, uint32_t kernelStride, uint32_t paddingY, uint32_t paddingX);
+MAT conv(const MAT& in, const MAT& _kernel, uint32_t kernelStride, uint32_t paddingY, uint32_t paddingX);
 MAT antiConv(const MAT& in, const MAT& kernel, uint32_t stride, uint32_t paddingY, uint32_t paddingX);
-MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSizeY, uint32_t kernelSizeX, uint32_t strideUsed, uint32_t paddingYUsed, uint32_t paddingXUsed);
+MAT convGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX);
+MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t paddingY, uint32_t paddingX);
 
 MAT fourier(const MAT& in);
 
@@ -104,6 +106,10 @@ inline MAT matNorm(const MAT& in) {
 inline uint32_t convoSize(uint32_t inSize, uint32_t kernelSize, uint32_t padding, uint32_t stride) {
 	return (inSize - kernelSize + 2 * padding) / stride + 1;
 }
+inline uint32_t inStrideConvoSize(uint32_t NOUTXY, uint32_t NINXY, uint32_t stride, uint32_t padding) {
+	return NOUTXY - stride*(NINXY - 1) - 2 * padding; 
+}
+
 inline uint32_t antiConvoSize(uint32_t inSize, uint32_t kernelSize,uint32_t antiPadding, uint32_t stride) {
 	return inSize*stride + kernelSize - stride - 2*antiPadding;
 }

@@ -4,14 +4,14 @@
 
 // Constructors
 MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
-	: NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), CNetLayer(((int)(NINXY / _maxOverXY))*((int)(NINXY / _maxOverXY)),NINXY*NINXY, actfunc_t::NONE){
+	: NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), DiscarnateLayer(((int)(NINXY / _maxOverXY))*((int)(NINXY / _maxOverXY)),NINXY*NINXY, actfunc_t::NONE){
 	init();
 	assertGeometry();
 }
 
 MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, CNetLayer& const lower) 
 	: NINX((int)sqrt(lower.getNOUT())), NINY((int)sqrt(lower.getNOUT())), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT())) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT())) / _maxOverXY), 
-	CNetLayer(((int)sqrt(lower.getNOUT()) / _maxOverXY)*((int)sqrt(lower.getNOUT()) / _maxOverXY), actfunc_t::NONE, lower) {
+	DiscarnateLayer(((int)sqrt(lower.getNOUT()) / _maxOverXY)*((int)sqrt(lower.getNOUT()) / _maxOverXY), actfunc_t::NONE, lower) {
 	init();
 	assertGeometry();
 }
@@ -29,12 +29,6 @@ void MaxPoolLayer::init() {
 	indexX.setConstant(0);
 	indexY = MATINDEX(NOUTY, NOUTX);
 	indexY.setConstant(0);
-	layer = MAT(1, 1);
-	layer.setConstant(0);
-	vel = MAT(1, 1); 
-	vel.setConstant(0);
-	prevStep = MAT(1, 1);
-	prevStep.setConstant(0);
 	actSave = MAT(NOUT, 1); 
 	actSave.setConstant(0);
 	deltaSave = MAT(1, 1);
@@ -43,18 +37,8 @@ void MaxPoolLayer::init() {
 layer_t MaxPoolLayer::whoAmI() const {
 	return layer_t::maxPooling;
 }
-MAT MaxPoolLayer::grad(MAT& const input) {
-	return MAT::Constant(1, 1, -1); // problem for conjugate gradient switching when first layer is maxpool layer
-}
-fREAL MaxPoolLayer::applyUpdate(learnPars pars, MAT& const input) {
-	if (hierarchy != hierarchy_t::output) {
-		//input.resize(NINY, NINX);
-		//MAT handUpwards = maxPool(input, false);
-		//handUpwards.resize(NOUT, 1);
-		above->applyUpdate(pars, input);
-	}
-	return 1;
-}
+
+
 void MaxPoolLayer::saveToFile(ostream& os) const {
 	os << maxOverX << "\t" << maxOverY << "\t" << NINX << "\t" << NINY << "\t" << NOUTX << "\t"<< NOUTY << endl;
 }

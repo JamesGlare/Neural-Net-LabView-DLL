@@ -4,6 +4,7 @@
 #include "ConvolutionalLayer.h"
 #include "AntiConvolutionalLayer.h"
 #include "MaxPoolLayer.h"
+#include "PassOnLayer.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
@@ -12,11 +13,11 @@ CNet::CNet(size_t NIN) :  NIN(NIN) {
 size_t CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	// now we need to check if there is a layer already
 	if (getLayerNumber() > 0) { // .. so there is one
-		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT,  type, -1.0/layers.back()->getNOUT(), 1.0 / layers.back()->getNOUT(), *(layers.back())); // don't want to forward declare this..
+		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT,  type,  *(layers.back())); // don't want to forward declare this..
 		layers.push_back(fcl);
 	}
 	else {
-		FullyConnectedLayer* fcl = new FullyConnectedLayer(NOUT, NIN,type, -1.0/NIN, 1.0/NIN);
+		FullyConnectedLayer* fcl = new FullyConnectedLayer(NOUT, NIN,type);
 		layers.push_back(fcl);
 	}
 	return getLayerNumber();
@@ -43,6 +44,17 @@ size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t st
 		layers.push_back(acl);
 	}
 	return getLayerNumber();
+}
+
+size_t CNet::addPassOnLayer( actfunc_t type) {
+	if (getLayerNumber() > 0) {
+		PassOnLayer* pol = new PassOnLayer(type, *(layers.back()));
+		layers.push_back(pol);
+	} else {
+		PassOnLayer* pol = new PassOnLayer(NIN, NIN, type);
+		layers.push_back(pol);
+	}
+	return getLayerNumber(); 
 }
 
 size_t CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
@@ -105,19 +117,19 @@ fREAL CNet::forProp(MAT& in, MAT& const outDesired) {
 fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars pars) {
 	// (1) for prop with saveActivations == true
 	MAT outPredicted = input;
-	(*layers.front()).forProp(outPredicted, true);
+	layers.front()->forProp(outPredicted, true);
 	// (2) calculate error matrix and error
 	MAT diff = errorMatrix(outPredicted, outDesired);
 	// (3) back propagate the deltas
 	// (3.1) if Nesterov then set weights back now
-	if (!pars.conjugate) {
-		(*layers.front()).NesterovWeightSetback(pars);
-	}
+	//if (!pars.conjugate) {
+	//	layers.front()->NesterovWeightSetback(pars);
+	//}
 	// (3.2) back propagate
 	(*layers.back()).backPropDelta(diff);
 	// (4) Apply update
 	if (diff.allFinite()) {
-		fREAL gamma = (*layers.front()).applyUpdate(pars, input);
+		fREAL gamma = layers.front()->applyUpdate(pars, input);
 	}
 	// ... DONE
 	outDesired = outPredicted;
@@ -125,9 +137,15 @@ fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars pars) {
 	return error(diff);
 }
 void CNet::resetConjugate(MAT& const input) {
-	(*layers.front()).resetConjugate(input);
+	layers.front()->resetConjugate(input);
 }
 
+void CNet::copyNthLayer(uint32_t layer, fREAL* const toCopyTo) {
+	if (layers[layer]->whoAmI() != layer_t::maxPooling
+		&& layers[layer]->whoAmI() != layer_t::passOn) {
+		((PhysicalLayer*) layers[layer])->copyLayer(toCopyTo);
+	}
+}
 
 MAT CNet::errorMatrix(MAT& const outPrediction, MAT& const outDesired) {
 	return outPrediction - outDesired;

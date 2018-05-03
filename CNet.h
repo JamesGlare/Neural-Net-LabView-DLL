@@ -3,8 +3,8 @@
 #include "defininitions.h"
 #include "CNETLayer.h"
 
-#ifndef CNET
-#define CNET
+#ifndef CNET_CNET
+#define CNET_CNET
 
 class CNet {
 	public:
@@ -15,6 +15,7 @@ class CNet {
 		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type);
 		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type);
 		size_t addPoolingLayer(size_t maxOverXY, pooling_t type);
+		size_t addPassOnLayer(actfunc_t type);
 
 		// forProp
 		fREAL forProp(MAT& in, MAT& const outDesired);
@@ -29,7 +30,7 @@ class CNet {
 		// Getter functions
 		inline size_t getLayerNumber() const { return layers.size(); };
 		inline size_t getNIN() const { return NIN; };
-		inline void copyNthLayer(uint32_t layer, fREAL* const toCopyTo) { layers[layer]->copyLayer(toCopyTo);};
+		void copyNthLayer(uint32_t layer, fREAL* const toCopyTo);
 		size_t getNOUT() const;
 		inline CNetLayer* getLast() const { return layers.back(); };
 		inline CNetLayer* getFirst() const { return layers.front(); };

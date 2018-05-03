@@ -7,8 +7,8 @@
 #include "CNet.h"
 #include "FullyConnectedLayer.h"
 #include "MaxPoolLayer.h"
+#include "PassOnLayer.h"
 #include "CLearn.h"
-#include "HoloNet.h"
 // TODO: reference any additional headers you need in STDAFX.H
 // and not in this file
 typedef std::shared_ptr<CNet> CNETPTR;
@@ -30,6 +30,9 @@ __declspec(dllexport) uint32_t __stdcall addAntiConvolutionalLayer(CNet* ptr, ui
 __declspec(dllexport) uint32_t __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	return ptr->addPoolingLayer(maxOverXY, pooling_t::max);
 }
+__declspec(dllexport) uint32_t __stdcall addPassOnLayer(CNet* ptr) {
+	return ptr->addPassOnLayer(actfunc_t::NONE);
+}
 
 __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input, fREAL* const output) {
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
@@ -41,9 +44,9 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	return error;
 }
 __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const outputDesired, fREAL* const eta, 
-	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate ) {
+	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const batch_update) {
 	
-	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate };
+	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *batch_update };
 
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP(outputDesired, ptr->getNOUT(), 1);
@@ -68,9 +71,7 @@ __declspec(dllexport) void __stdcall writeLayer(CNet* ptr, uint32_t layer, fREAL
 		ptr->copyNthLayer(layer, toCopyTo);
 }
 __declspec(dllexport) uint32_t __stdcall test() {
-	FullyConnectedLayer fc(16, 16, actfunc_t::RELU,0,1);
-	MaxPoolLayer mpl(2, fc);
-	return mpl.getNOUT();
+	return 0;
 }
 /* HOLONET Stuff **************************************************************************************************************
 

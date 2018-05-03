@@ -1,11 +1,10 @@
 #pragma once
-#include "CNetLayer.h"
+#include "DiscarnateLayer.h"
+#ifndef CNET_CMAXPOOL
+#define CNET_CMAXPOOL
 
-#ifndef CMAXPOOL
-#define CMAXPOOL
 
-
-class MaxPoolLayer : public CNetLayer {
+class MaxPoolLayer : public DiscarnateLayer{
 
 public:
 	MaxPoolLayer(size_t NINXY, size_t maxOver);
@@ -16,11 +15,8 @@ public:
 	layer_t whoAmI() const;
 	// forProp
 	void forProp(MAT& in, bool saveActivation); // recursive
-	// backprop
-	MAT grad(MAT& const input);
 	void backPropDelta(MAT& const delta); // recursive
-	fREAL applyUpdate(learnPars pars, MAT& const input); // recursive
-
+	
 	inline size_t getMaxOverX() { return maxOverX; }
 	inline size_t getMaxOverY() { return maxOverY; }
 	inline size_t getNINX() { return NINX; };

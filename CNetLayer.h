@@ -2,8 +2,8 @@
 
 #include "defininitions.h"
 
-#ifndef CNETLAYER
-#define CNETLAYER
+#ifndef CNET_CNETLAYER
+#define CNET_CNETLAYER
 
 /* Abstract base class for a layer of weights.
  * This means that this class sits in between nodes and forwards input or
@@ -22,10 +22,8 @@ class CNetLayer {
 		// forProp
 		virtual void forProp(MAT& in, bool saveActivation) = 0; // recursive
 		// backprop
-		virtual MAT grad(MAT& const input) =0;
 		virtual void backPropDelta(MAT& const delta) = 0; // recursive
 		virtual fREAL applyUpdate(learnPars pars, MAT& const input) =0 ; // recursive
-		void NesterovWeightSetback(learnPars pars); // recursive
 
 		// getters
 		inline size_t getNIN() const { return NIN; };
@@ -34,19 +32,15 @@ class CNetLayer {
 		MAT getACT() const;
 		// Connect to layer above and change hierarchy from output to hidden
 		void connectAbove(CNetLayer* ptr);
-		void resetConjugate(MAT& const input);
+		virtual void resetConjugate(MAT& const input) = 0;
 
 		// save to file
 		friend ostream& operator<<(ostream& os, const CNetLayer& toSave); // almost virtual member
 		friend ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct);
 
 	protected:
-		MAT layer; // actual layer
-		MAT vel; // velocity for momentum OR previous gradient
-		MAT prevStep; // this is needed for conjugate gradient method
 		MAT actSave; // keep activation before propagation
 		MAT deltaSave; // store deltas for backprop
-
 		// saving functions
 		void saveMother(ostream& os) const;
 		void reconstructMother(istream& is) ;

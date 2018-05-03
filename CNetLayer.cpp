@@ -33,6 +33,7 @@ MAT CNetLayer::getDACT() const {
 		return MAT::Constant(NOUT,1,1);
 	}
 }
+
 MAT CNetLayer::getACT() const {
 	if (activationType != actfunc_t::NONE) {
 		return actSave.unaryExpr(act);
@@ -42,52 +43,12 @@ MAT CNetLayer::getACT() const {
 	}
 }
 
-/*fREAL CNetLayer::applyUpdate(learnPars pars, MAT& const input) {
-	fREAL gamma = 0;
-	fREAL denom = 0;
-	if (pars.conjugate) {
-		// treat vel as g_(i-1)
-		denom = vel.cwiseProduct(vel).sum(); // should be scalar
-		MAT gi = -grad(input);
-		gamma = gi.cwiseProduct(gi - vel).sum() / denom;
-		if (!isnan(gamma)) {
-			prevStep = gi + gamma*prevStep; // save step
-			layer = (1.0f - pars.lambda)*layer + pars.eta*gi; // do the actual step
-			vel = gi; // save negative gradient
-		}
-		else {
-			resetConjugate(input);
-		}
-	}
-	else {
-		prevStep = -grad(input);
-		vel = pars.gamma*vel - pars.eta*prevStep;
-		if (vel.allFinite())
-			layer = (1.0f - pars.lambda)*layer - vel; // this reverse call forces us to implement this function in the derived classes
-	}
-	if (hierarchy != hierarchy_t::output) {
-		above->applyUpdate(pars, input);
-	}
-	return gamma;
-}*/
-
-void CNetLayer::resetConjugate(MAT& const input) {
-	MAT gi = -grad(input);
-	vel = gi;
-	prevStep = gi;
-	if(hierarchy != hierarchy_t::output)
-		above->resetConjugate(input);
-}
 void CNetLayer::connectAbove(CNetLayer* ptr) {
 	above = ptr;
 	if (hierarchy != hierarchy_t::input)
 		hierarchy = hierarchy_t::hidden; // change from output to hidden
 }
-void CNetLayer::NesterovWeightSetback(learnPars pars) {
-	layer = layer - pars.gamma*vel;
-	if (hierarchy != hierarchy_t::output)
-		above->NesterovWeightSetback(pars);
-}
+
 // assign the activation function
 void CNetLayer::assignActFunc(actfunc_t type) {
 	activationType = type; // save type

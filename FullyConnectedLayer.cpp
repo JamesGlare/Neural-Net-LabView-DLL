@@ -2,14 +2,14 @@
 #include "FullyConnectedLayer.h"
 
 // constructor - for input layers
-FullyConnectedLayer::FullyConnectedLayer(size_t NOUT, size_t NIN, actfunc_t type, fREAL min, fREAL max) : CNetLayer(NOUT, NIN, type){
+FullyConnectedLayer::FullyConnectedLayer(size_t NOUT, size_t NIN, actfunc_t type) : PhysicalLayer(NOUT, NIN, type){
 	 // declare matrix
-	init(min, max);
+	init();
 }
 // constructor - for hidden layers and output layers
-FullyConnectedLayer::FullyConnectedLayer(size_t NOUT, actfunc_t type, fREAL min, fREAL max, CNetLayer& const lower) :  CNetLayer(NOUT, type,lower) {
+FullyConnectedLayer::FullyConnectedLayer(size_t NOUT, actfunc_t type, CNetLayer& const lower) : PhysicalLayer(NOUT, type,lower) {
 	// layer and velocity matrices
-	init(min, max);
+	init();
 }
 // Destructor
 FullyConnectedLayer::~FullyConnectedLayer() {
@@ -20,9 +20,10 @@ layer_t FullyConnectedLayer::whoAmI() const {
 	return layer_t::fullyConnected;
 }
 // init
-void FullyConnectedLayer::init(fREAL min, fREAL max) {
+void FullyConnectedLayer::init() {
 
 	layer = MAT(NOUT, NIN + 1);
+	gradient = MAT(NOUT, NIN + 1);
 	actSave = MAT(NIN, 1);
 	deltaSave = MAT(NOUT,1);
 	vel = MAT(layer.rows(), layer.cols());
@@ -31,8 +32,10 @@ void FullyConnectedLayer::init(fREAL min, fREAL max) {
 	actSave.setConstant(0);
 	vel.setConstant(0);
 	deltaSave.setConstant(0);
-
+	gradient.setConstant(0);
 	layer.setRandom(); // in (-1,1)
+	fREAL max = 1.0f / NIN;
+	fREAL min = -1.0f / NIN;
 	layer *= (max-min)/2.0f ; // (-max, max)
 	layer = (layer.array() + (max+min)/2.0f).matrix(); // (min,  2+min)
 }
@@ -61,10 +64,11 @@ void FullyConnectedLayer::backPropDelta(MAT& const deltaAbove) {
 	//DACT(inAct).cwiseProduct(hiddenLayers[0].leftCols(hiddenLayers[0].cols() - 1).transpose()*hiddenDeltas[0]);
 	deltaSave = deltaAbove;
 	if (hierarchy != hierarchy_t::input ) {
-		MAT temp = (below->getDACT()).cwiseProduct(layer.leftCols(NIN).transpose() * deltaAbove);
-		below->backPropDelta(temp);
+		deltaAbove = (below->getDACT()).cwiseProduct(layer.leftCols(NIN).transpose() * deltaAbove);
+		below->backPropDelta(deltaAbove);
 	}
 }
+
 MAT FullyConnectedLayer::grad(MAT& const input) {
 	if (hierarchy == hierarchy_t::input) {
 		return deltaSave*appendOneInline(input).transpose();
@@ -72,34 +76,6 @@ MAT FullyConnectedLayer::grad(MAT& const input) {
 	else {
 		return deltaSave * appendOneInline(below->getACT()).transpose();
 	}
-}
-
-fREAL FullyConnectedLayer::applyUpdate(learnPars pars, MAT& const input) {
-	fREAL gamma = 0;
-	fREAL denom = 0;
-	if (pars.conjugate) {
-		// treat vel as g_(i-1)
-		denom = vel.cwiseProduct(vel).sum(); // should be scalar
-		MAT gi = -grad(input);
-		gamma = gi.cwiseProduct(gi - vel).sum() / denom;
-		if (!isnan(gamma)) {
-			prevStep = gi + gamma*prevStep; // save step
-			layer = (1.0f - pars.lambda)*layer + pars.eta*gi; // do the actual step
-			vel = gi; // save negative gradient
-		}
-		else {
-			resetConjugate(input);
-		}
-	} else {
-		prevStep = -grad(input);
-		vel = pars.gamma*vel - pars.eta*prevStep;
-		if(vel.allFinite())
-			layer = (1.0f - pars.lambda)*layer - vel; // this reverse call forces us to implement this function in the derived classes
-	}
-	if (hierarchy != hierarchy_t::output) {
-		above->applyUpdate(pars, input);
-	}
-	return gamma;
 }
 
 void FullyConnectedLayer::saveToFile(ostream& os) const {

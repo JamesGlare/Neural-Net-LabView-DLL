@@ -1,15 +1,14 @@
 #pragma once
+#include "PhysicalLayer.h"
 
-#include "CNetLayer.h"
+#ifndef CNET_FULLYCONNECTEDLAYER
+#define CNET_FULLYCONNECTEDLAYER
 
-#ifndef FULLYCONNECTEDLAYER
-#define FULLYCONNECTEDLAYER
-
-class FullyConnectedLayer : public CNetLayer {
+class FullyConnectedLayer : public PhysicalLayer {
 	public:
 		// Constructors
-		FullyConnectedLayer(size_t NOUT, size_t NIN, actfunc_t type, fREAL min, fREAL max); // specified in .cpp
-		FullyConnectedLayer(size_t NOUT, actfunc_t type, fREAL min, fREAL max, CNetLayer& const lower);
+		FullyConnectedLayer(size_t NOUT, size_t NIN, actfunc_t type); // specified in .cpp
+		FullyConnectedLayer(size_t NOUT, actfunc_t type, CNetLayer& const lower);
 		~FullyConnectedLayer();
 		layer_t whoAmI() const;
 
@@ -18,12 +17,11 @@ class FullyConnectedLayer : public CNetLayer {
 		void forProp(MAT& in, bool saveActivation);
 		// backprop
 		MAT grad(MAT& const input);
-		fREAL applyUpdate(learnPars pars, MAT& const input); // recursive
 		void backPropDelta(MAT& const delta);
 
 private:
 	// initialization
-	void init(fREAL min, fREAL max);
+	void init();
 	void saveToFile(ostream& os) const;
 	void loadFromFile(ifstream& in);
 };

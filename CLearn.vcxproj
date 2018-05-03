@@ -155,8 +155,11 @@
     <ClInclude Include="CNetLayer.h" />
     <ClInclude Include="ConvolutionalLayer.h" />
     <ClInclude Include="defininitions.h" />
+    <ClInclude Include="DiscarnateLayer.h" />
     <ClInclude Include="FullyConnectedLayer.h" />
     <ClInclude Include="MaxPoolLayer.h" />
+    <ClInclude Include="PassOnLayer.h" />
+    <ClInclude Include="PhysicalLayer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -166,6 +169,7 @@
     <ClCompile Include="CNetLayer.cpp" />
     <ClCompile Include="ConvolutionalLayer.cpp" />
     <ClCompile Include="definitions.cpp" />
+    <ClCompile Include="DiscarnateLayer.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -182,6 +186,8 @@
     </ClCompile>
     <ClCompile Include="FullyConnectedLayer.cpp" />
     <ClCompile Include="MaxPoolLayer.cpp" />
+    <ClCompile Include="PassOnLayer.cpp" />
+    <ClCompile Include="PhysicalLayer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
