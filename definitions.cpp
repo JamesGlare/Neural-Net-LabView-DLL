@@ -13,10 +13,12 @@ void appendOne(MAT& in) {
 void shrinkOne(MAT& in) {
 	in.conservativeResize(in.rows() - 1, in.cols());
 }
-MAT appendOneInline(const MAT& toAppend) {
-	MAT temp = MAT(toAppend.rows() + 1, toAppend.cols()).setConstant(1);
-	temp.topRows(toAppend.rows()) = toAppend;
-	return temp;
+MAT& appendOneInline(MAT& toAppend) {
+	//MAT temp = MAT(toAppend.rows() + 1, toAppend.cols()).setConstant(1);
+	//temp.topRows(toAppend.rows()) = toAppend;
+	toAppend.conservativeResize(toAppend.rows() + 1, toAppend.cols());
+	toAppend.bottomRows(1).setConstant(1);
+	return toAppend;
 }
 MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStride, uint32_t paddingY, uint32_t paddingX ) {
 

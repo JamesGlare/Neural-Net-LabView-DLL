@@ -18,7 +18,7 @@ public:
 
 	// type
 	// forProp
-	virtual void forProp(MAT& in, bool saveActivation) = 0; // recursive
+	virtual void forProp(MAT& in, learnPars& const pars, bool saveActivation) = 0; // recursive
 	virtual void backPropDelta(MAT& const delta) = 0; // recursive
 	fREAL applyUpdate(learnPars pars, MAT& const input); // recursive
 	void resetConjugate(MAT& const input); // recursive;

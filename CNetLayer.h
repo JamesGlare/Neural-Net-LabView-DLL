@@ -20,7 +20,7 @@ class CNetLayer {
 		// type
 		virtual layer_t whoAmI() const;
 		// forProp
-		virtual void forProp(MAT& in, bool saveActivation) = 0; // recursive
+		virtual void forProp(MAT& in, learnPars& const pars, bool training) = 0; // recursive
 		// backprop
 		virtual void backPropDelta(MAT& const delta) = 0; // recursive
 		virtual fREAL applyUpdate(learnPars pars, MAT& const input) =0 ; // recursive
@@ -28,8 +28,8 @@ class CNetLayer {
 		// getters
 		inline size_t getNIN() const { return NIN; };
 		inline size_t getNOUT() const { return NOUT; };
-		MAT getDACT() const;
-		MAT getACT() const;
+		MAT getDACT() const; // rely on RVO
+		MAT getACT() const; // rely on RVO
 		// Connect to layer above and change hierarchy from output to hidden
 		void connectAbove(CNetLayer* ptr);
 		virtual void resetConjugate(MAT& const input) = 0;

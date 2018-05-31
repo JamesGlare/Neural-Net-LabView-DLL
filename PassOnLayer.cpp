@@ -23,13 +23,13 @@ void PassOnLayer::init() {
 	deltaSave = MAT(1, 1);
 	deltaSave.setConstant(0);
 }
-void PassOnLayer::forProp(MAT& inBelow, bool saveActivation) {
-	if (saveActivation) {
+void PassOnLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
+	if (training) {
 		actSave = inBelow;
 	}
 	inBelow = inBelow.unaryExpr(act);
 	if (hierarchy != hierarchy_t::output) {
-		above->forProp(inBelow, saveActivation);
+		above->forProp(inBelow, pars, training);
 	} 
 }
 

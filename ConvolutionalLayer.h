@@ -16,7 +16,7 @@ class ConvolutionalLayer : public PhysicalLayer{
 		layer_t whoAmI() const;
 		// propagation 
 		// forProp
-		void forProp(MAT& in, bool saveActivation);
+		void forProp(MAT& in, learnPars& const pars, bool training);
 		MAT grad(MAT& const input);
 		void backPropDelta(MAT& const delta);
 

@@ -151,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntiConvolutionalLayer.h" />
+    <ClInclude Include="BatchNormalizer.h" />
     <ClInclude Include="CNet.h" />
     <ClInclude Include="CNetLayer.h" />
     <ClInclude Include="ConvolutionalLayer.h" />
@@ -165,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AntiConvolutionalLayer.cpp" />
+    <ClCompile Include="BatchNormalizer.cpp" />
     <ClCompile Include="CNet.cpp" />
     <ClCompile Include="CNetLayer.cpp" />
     <ClCompile Include="ConvolutionalLayer.cpp" />

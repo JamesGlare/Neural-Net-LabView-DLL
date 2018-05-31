@@ -55,15 +55,15 @@ void AntiConvolutionalLayer::init() {
 	deltaSave.setConstant(0);
 }
 
-void AntiConvolutionalLayer::forProp(MAT& inBelow, bool saveActivation) {
+void AntiConvolutionalLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
 	inBelow.resize(NINY, NINX);
 	MAT convoluted =  antiConv(inBelow, layer, stride, 0, 0); // square convolution//
 	convoluted.resize(NOUTX*NOUTY, 1);
-	if (saveActivation) {
+	if (training) {
 		actSave = convoluted;
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act);
-			above->forProp(inBelow, true);
+			above->forProp(inBelow,pars, true);
 		}
 		else {
 			inBelow = actSave;
@@ -72,7 +72,7 @@ void AntiConvolutionalLayer::forProp(MAT& inBelow, bool saveActivation) {
 	else {
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = convoluted.unaryExpr(act);
-			above->forProp(inBelow, false);
+			above->forProp(inBelow, pars, false);
 		}
 		else {
 			inBelow = convoluted;

@@ -39,6 +39,7 @@ struct learnPars {
 	fREAL lambda; // regularizer
 	uint32_t conjugate; // 0 or 1
 	uint32_t batch_update;
+	uint32_t batch_normalization;
 };
 // library functions
 
@@ -100,6 +101,12 @@ inline fREAL DReLu(fREAL f) {
 inline fREAL norm(fREAL f) {
 	return f*f;
 }
+inline fREAL sqroot(fREAL f) {
+	return sqrt(f); // to avoid overloading problems
+}
+inline fREAL invSqrt(fREAL f) {
+	return 1.0f/sqrt(f);
+}
 inline MAT matNorm(const MAT& in) {
 	return in.unaryExpr(&norm);
 }
@@ -122,7 +129,7 @@ inline uint32_t padSize(uint32_t outSize, uint32_t inSize, uint32_t kernelSize, 
 // MAT functions
 void appendOne(MAT&);
 void shrinkOne(MAT&);
-MAT appendOneInline(const MAT&);
+MAT& appendOneInline(MAT&);
 
 void gauss(MAT& in);
 #endif // !DEFINITIONS_H_INCLUDE

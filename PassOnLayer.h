@@ -14,7 +14,7 @@ public:
 	~PassOnLayer();
 	layer_t whoAmI() const;
 	// forProp
-	void forProp(MAT& in, bool saveActivation); // recursive
+	void forProp(MAT& in, learnPars& const pars, bool saveActivation); // recursive
 	void backPropDelta(MAT& const delta); // recursive
 
 private:

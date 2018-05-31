@@ -2,9 +2,9 @@
 #include "PhysicalLayer.h"
 
 // pass constructor to base class
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN) : CNetLayer(_NOUT, _NIN) { };
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : CNetLayer(_NOUT, _NIN, type) { };
-PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower) : CNetLayer(_NOUT, type, lower) {  };
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN) : batchNormalizer(NIN), CNetLayer(_NOUT, _NIN) { };
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : batchNormalizer(NIN), CNetLayer(_NOUT, _NIN, type) { };
+PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower) : batchNormalizer(lower.getNOUT()), CNetLayer(_NOUT, type, lower) {  };
 
 void PhysicalLayer::NesterovParameterSetback(learnPars pars) {
 	if(!pars.conjugate && vel.allFinite())
@@ -56,4 +56,27 @@ void PhysicalLayer::resetConjugate(MAT& const input) {
 	prevStep = gi;
 	if (hierarchy != hierarchy_t::output)
 		above->resetConjugate(input);
+}
+
+void PhysicalLayer::miniBatch_updateBuffer(MAT& input) {
+	batchNormalizer.updateBuffer(input);
+}
+MAT& PhysicalLayer::miniBatch_normalize() {
+	return batchNormalizer.passOnNormalized();
+}
+
+void PhysicalLayer::miniBatch_updateModel() {
+	batchNormalizer.updateModel(); // build the model
+}
+
+MAT& PhysicalLayer::miniBatch_denormalize(MAT& toPassOn) {
+	return batchNormalizer.deNormalize(toPassOn);
+}
+
+void PhysicalLayer::miniBatch_clearBuffer() {
+	batchNormalizer.clearBuffer();
+}
+
+MAT& PhysicalLayer::miniBatch_passOnNormalized() {
+	return batchNormalizer.passOnNormalized();
 }

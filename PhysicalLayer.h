@@ -1,7 +1,7 @@
 #pragma once
-
 #include "defininitions.h"
 #include "CNetLayer.h"
+#include "BatchNormalizer.h"
 
 #ifndef CNET_PHYSICALLAYER
 #define CNET_PHSICALLAYER
@@ -12,32 +12,55 @@
 */
 class PhysicalLayer : public CNetLayer{
 public:
-	// constructors and initializers
+	/* Constructors
+	* Initialize Base Class (CNetLayer) and internal instance of MiniBatchNormalization.
+	*/ 
 	PhysicalLayer(size_t _NOUT, size_t _NIN);
 	PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type);
 	PhysicalLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower);
 	virtual ~PhysicalLayer() {}; // purely abstract
 
-	// forProp
-	virtual void forProp(MAT& in, bool saveActivation) = 0; // recursive
+	/* Forward Propagation 
+	*  Implementation on child class level.
+	*/
+	virtual void forProp(MAT& in, learnPars& const pars, bool training) = 0; // recursive
 															// backprop
 	virtual MAT grad(MAT& const input) = 0;
+	/* Backward propagation
+	* Implementation on child class level.
+	*/
 	virtual void backPropDelta(MAT& const delta) = 0; // recursive
 	fREAL applyUpdate(learnPars pars, MAT& const input); // recursive
-	void NesterovParameterSetback(learnPars pars); 
-	void NesterovParameterReset(learnPars pars);
-
 	void resetConjugate(MAT& const input);
-	// getters
+
+	// Read-only access to weight parameters.
 	void copyLayer(fREAL* const toCopyTo);
 
 protected:
+	/* MiniBatch Normalization
+	*/
+	void miniBatch_updateBuffer(MAT& input);
+	MAT& miniBatch_normalize();
+	void miniBatch_updateModel();
+	MAT& miniBatch_passOnNormalized();
+	MAT& miniBatch_denormalize(MAT& toPassOn);
+	void miniBatch_clearBuffer();
+	inline bool miniBatch_stillToCome() { return batchNormalizer.stillToCome();};
+
+	/* Internal weights and parameters
+	*/
 	MAT layer; // actual layer
 	MAT vel; // velocity for momentum OR previous gradient
 	MAT prevStep; // this is needed for conjugate gradient method
 	MAT gradient; // add gradients for minibatch before applying update.
 
 	virtual void init()=0; // initialize all the weight matrices
+private:
+	// Some auxiliary functions
+	void NesterovParameterSetback(learnPars pars);
+	void NesterovParameterReset(learnPars pars);
+	// BatchNormalization instance
+	BatchNormalizer batchNormalizer;
 };
 
 #endif

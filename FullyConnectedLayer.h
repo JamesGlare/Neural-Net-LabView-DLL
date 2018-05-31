@@ -14,7 +14,7 @@ class FullyConnectedLayer : public PhysicalLayer {
 
 		// propagation 
 		// forProp
-		void forProp(MAT& in, bool saveActivation);
+		void forProp(MAT& in, learnPars& const pars, bool training);
 		// backprop
 		MAT grad(MAT& const input);
 		void backPropDelta(MAT& const delta);

@@ -7,6 +7,7 @@
 	<Item Name="addConvolutionalLayer.vi" Type="VI" URL="../addConvolutionalLayer.vi"/>
 	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../addFullyConnectedLayer.vi"/>
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
+	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
 	<Item Name="getWeights.vi" Type="VI" URL="../getWeights.vi"/>
 	<Item Name="InitializeCNet.vi" Type="VI" URL="../InitializeCNet.vi"/>

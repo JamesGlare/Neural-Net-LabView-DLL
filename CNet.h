@@ -18,9 +18,9 @@ class CNet {
 		size_t addPassOnLayer(actfunc_t type);
 
 		// forProp
-		fREAL forProp(MAT& in, MAT& const outDesired);
+		fREAL forProp(MAT& in, learnPars& const pars, MAT& const outDesired);
 		// backprop
-		fREAL backProp(MAT& const in, MAT& outDesired, learnPars pars);
+		fREAL backProp(MAT& const in, MAT& outDesired, learnPars& const pars);
 		void resetConjugate(MAT& const input);
 
 		// save to file

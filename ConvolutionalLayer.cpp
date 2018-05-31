@@ -58,22 +58,22 @@ void ConvolutionalLayer::init() {
 	deltaSave.setConstant(0);
 }
 
-void ConvolutionalLayer::forProp(MAT& inBelow, bool saveActivation) {
+void ConvolutionalLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
 	inBelow.resize(NINY, NINX);
 	MAT convoluted = conv(inBelow, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride)); // square convolution
 	convoluted.resize(NOUTX*NOUTY, 1);
-	if (saveActivation) {
+	if (training) {
 		actSave = convoluted;
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act);
-			above->forProp(inBelow, true);
+			above->forProp(inBelow, pars, true);
 		} else {
 			inBelow = actSave;
 		}
 	} else {
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = convoluted.unaryExpr(act);
-			above->forProp(inBelow, false);
+			above->forProp(inBelow, pars, false);
 		}
 		else {
 			inBelow = convoluted;

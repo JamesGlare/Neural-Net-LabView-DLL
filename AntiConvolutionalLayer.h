@@ -14,7 +14,7 @@ public:
 
 	layer_t whoAmI() const;
 	// forProp
-	void forProp(MAT& in, bool saveActivation);
+	void forProp(MAT& in, learnPars& const pars, bool training);
 	MAT grad(MAT& const input);
 	void backPropDelta(MAT& const delta);
 

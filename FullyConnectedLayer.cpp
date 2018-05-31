@@ -40,26 +40,55 @@ void FullyConnectedLayer::init() {
 	layer = (layer.array() + (max+min)/2.0f).matrix(); // (min,  2+min)
 }
 
-void FullyConnectedLayer::forProp(MAT& inBelow, bool saveActivation) {
-	if (saveActivation) {
-		actSave = layer*appendOneInline(inBelow);
-		if (hierarchy != hierarchy_t::output) {
-			inBelow = actSave.unaryExpr(act);
-			above->forProp(inBelow, true);
-		}
-		else {
-			inBelow =  actSave;
+void FullyConnectedLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
+	if (training) {
+		if (pars.batch_normalization == 1) {
+			/* (1) Batch normalization
+			*	Transfer incoming training examples into batch buffer.
+			*/
+			miniBatch_updateBuffer(inBelow);
+			if (pars.batch_update == 0) {
+				miniBatch_updateModel();
+				while (miniBatch_stillToCome() >0) {
+					// (2) get normalized example out of buffer
+					actSave = layer*appendOneInline(miniBatch_passOnNormalized()); 
+					if (hierarchy != hierarchy_t::output) {
+						// (3) denormalize the output.
+						actSave = miniBatch_denormalize(actSave);
+						inBelow = actSave.unaryExpr(act); // apply non-linearity now
+						pars.batch_update = miniBatch_stillToCome() - 1; // refresh the batch_update counter
+						//(4) pass to higher layers
+						above->forProp(inBelow, pars, true); 
+					} else {
+						inBelow = actSave;
+					}
+				}
+				//(5) clear the buffer 
+				miniBatch_clearBuffer(); 
+			}
+		} else {
+			/* normal training forward pass
+			*/ 
+			actSave = layer*appendOneInline(inBelow); // save the activations before non-linearity
+			if (hierarchy != hierarchy_t::output) {
+				inBelow = actSave.unaryExpr(act);
+				above->forProp(inBelow, pars, true);
+			} else {
+				inBelow = actSave;
+			}
 		}
 	} else {
+		/* Non-training forward pass
+		*/
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = (layer*appendOneInline(inBelow)).unaryExpr(act);
-			above->forProp(inBelow, false);
-		}
-		else {
-			inBelow = (layer*appendOneInline(inBelow));
+			above->forProp(inBelow, pars, false);
+		} else {
+			inBelow = layer*appendOneInline(inBelow);
 		}
 	}
 }
+
 void FullyConnectedLayer::backPropDelta(MAT& const deltaAbove) {
 	//DACT(inAct).cwiseProduct(hiddenLayers[0].leftCols(hiddenLayers[0].cols() - 1).transpose()*hiddenDeltas[0]);
 	deltaSave = deltaAbove;

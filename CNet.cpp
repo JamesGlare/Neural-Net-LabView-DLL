@@ -109,15 +109,15 @@ void CNet::loadFromFile(string filePath) {
 	}
 }
 // Simply output the network
-fREAL CNet::forProp(MAT& in, MAT& const outDesired) {
-	layers.front()->forProp(in, false);
+fREAL CNet::forProp(MAT& in, learnPars& const pars, MAT& const outDesired) {
+	layers.front()->forProp(in, pars, false);
 	return error(errorMatrix(in, outDesired));
 }
 // Backpropagation 
-fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars pars) {
+fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars& const pars) {
 	// (1) for prop with saveActivations == true
 	MAT outPredicted = input;
-	layers.front()->forProp(outPredicted, true);
+	layers.front()->forProp(outPredicted, pars, true);
 	// (2) calculate error matrix and error
 	MAT diff = errorMatrix(outPredicted, outDesired);
 	// (3) back propagate the deltas
@@ -151,7 +151,7 @@ MAT CNet::errorMatrix(MAT& const outPrediction, MAT& const outDesired) {
 	return outPrediction - outDesired;
 }
 fREAL CNet::error(MAT& const diff) {
-	return 0.5*cumSum(matNorm(diff));
+	return 0.5f*cumSum(matNorm(diff));
 }
 
 
