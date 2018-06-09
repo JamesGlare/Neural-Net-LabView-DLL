@@ -51,14 +51,15 @@ void MaxPoolLayer::loadFromFile(ifstream& in) {
 	in >> NOUTY;
 }
 
-void MaxPoolLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
+void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
 	inBelow.resize(NINY, NINX);
 	inBelow = maxPool(inBelow, training);
 	inBelow.resize(NOUT, 1);
 	if (training)
 		actSave = inBelow;
 	if (hierarchy != hierarchy_t::output) {
-				above->forProp(inBelow, pars, training);
+		if(recursive)
+			above->forProp(inBelow,  training, true);
 	}
 }
 

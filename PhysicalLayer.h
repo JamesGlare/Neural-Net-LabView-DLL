@@ -1,7 +1,8 @@
 #pragma once
 #include "defininitions.h"
 #include "CNetLayer.h"
-#include "BatchNormalizer.h"
+#include "BatchBuffer.h"
+#include "Stepper.h"
 
 #ifndef CNET_PHYSICALLAYER
 #define CNET_PHSICALLAYER
@@ -15,52 +16,58 @@ public:
 	/* Constructors
 	* Initialize Base Class (CNetLayer) and internal instance of MiniBatchNormalization.
 	*/ 
-	PhysicalLayer(size_t _NOUT, size_t _NIN);
-	PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type);
-	PhysicalLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower);
+	PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
+	PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
+	PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& const lower);
 	virtual ~PhysicalLayer() {}; // purely abstract
 
 	/* Forward Propagation 
 	*  Implementation on child class level.
 	*/
-	virtual void forProp(MAT& in, learnPars& const pars, bool training) = 0; // recursive
+	virtual void forProp(MAT& in, bool training, bool recursive) = 0; // recursive
 															// backprop
 	virtual MAT grad(MAT& const input) = 0;
 	/* Backward propagation
 	* Implementation on child class level.
 	*/
 	virtual void backPropDelta(MAT& const delta) = 0; // recursive
-	fREAL applyUpdate(learnPars pars, MAT& const input); // recursive
-	void resetConjugate(MAT& const input);
-
+	void applyUpdate(learnPars pars, MAT& const input); // recursive
+	
 	// Read-only access to weight parameters.
 	void copyLayer(fREAL* const toCopyTo);
 
 protected:
-	/* MiniBatch Normalization
+	/* MiniBatch Buffering
 	*/
 	void miniBatch_updateBuffer(MAT& input);
 	MAT& miniBatch_normalize();
 	void miniBatch_updateModel();
-	MAT& miniBatch_passOnNormalized();
-	MAT& miniBatch_denormalize(MAT& toPassOn);
-	void miniBatch_clearBuffer();
-	inline bool miniBatch_stillToCome() { return batchNormalizer.stillToCome();};
-
+	inline bool miniBatch_stillToCome() { return batch.stillToCome();};
+	/* Weight normalization
+ 	*/
+	bool weightNormMode;
+	MAT G; // as many as NOUT for FC layers
+	MAT V; // store V and update W each time, keep V rowwise normalised
+	virtual void updateW() = 0; // to W
+	virtual void initV() = 0;
+	virtual void initG() =0;
+	virtual void normalizeV() = 0;
+	virtual MAT inversVNorm() = 0;
+	virtual MAT gGrad(MAT& const grad) = 0; // gradient in g's
+	virtual MAT vGrad(MAT& const grad, MAT& const ggrad) = 0; // gradient in V
+	
 	/* Internal weights and parameters
 	*/
 	MAT layer; // actual layer
-	MAT vel; // velocity for momentum OR previous gradient
-	MAT prevStep; // this is needed for conjugate gradient method
-	MAT gradient; // add gradients for minibatch before applying update.
+	/* Subclasses 
+	* initialized in derived classes
+	*/
+	Stepper stepper; // subclass - takes care of all the SDG stuff
+	Stepper GStepper;
+	Stepper VStepper;
+	BatchBuffer batch; // BatchNormalization instance
 
-	virtual void init()=0; // initialize all the weight matrices
-private:
-	// Some auxiliary functions
-	void NesterovParameterSetback(learnPars pars);
-	void NesterovParameterReset(learnPars pars);
-	// BatchNormalization instance
-	BatchNormalizer batchNormalizer;
+	void init(); // initialize all the weight matrices
 };
 
 #endif

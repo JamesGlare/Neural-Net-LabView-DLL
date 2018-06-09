@@ -20,8 +20,12 @@ typedef Matrix<fREAL, Dynamic,1> VEC;
 typedef Matrix<fREAL, Dynamic, Dynamic> MAT;
 typedef Matrix<fREAL, Dynamic, Dynamic, Dynamic> MAT3;
 typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
-typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX;
+typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX; // needed in MaxPool, Dropout
 
+struct MATIND {
+	size_t rows;
+	size_t cols;
+};
 typedef Map<MAT> MATMAP;
 typedef vector<MAT> MATVEC;
 typedef Map<MATU8> MATU8MAP;
@@ -38,8 +42,10 @@ struct learnPars {
 	fREAL gamma; // inertia term
 	fREAL lambda; // regularizer
 	uint32_t conjugate; // 0 or 1
+	uint32_t adam;
 	uint32_t batch_update;
-	uint32_t batch_normalization;
+	uint32_t weight_normalization;
+	uint32_t initializationPass;
 };
 // library functions
 
@@ -74,8 +80,9 @@ inline fREAL iden(fREAL f) {
 	return f;
 }
 inline fREAL DIden(fREAL f) {
-	return 0;
+	return 1.0f;
 }
+
 inline fREAL cumSum(const MAT& in) {
 	return in.sum();
 }
@@ -110,11 +117,14 @@ inline fREAL invSqrt(fREAL f) {
 inline MAT matNorm(const MAT& in) {
 	return in.unaryExpr(&norm);
 }
+inline fREAL normSum(const MAT& in) {
+	return sqrt(matNorm(in).sum());
+}
 inline uint32_t convoSize(uint32_t inSize, uint32_t kernelSize, uint32_t padding, uint32_t stride) {
 	return (inSize - kernelSize + 2 * padding) / stride + 1;
 }
 inline uint32_t inStrideConvoSize(uint32_t NOUTXY, uint32_t NINXY, uint32_t stride, uint32_t padding) {
-	return NOUTXY - stride*(NINXY - 1) - 2 * padding; 
+	return NOUTXY - stride*(NINXY - 1) + 2 * padding; 
 }
 
 inline uint32_t antiConvoSize(uint32_t inSize, uint32_t kernelSize,uint32_t antiPadding, uint32_t stride) {
@@ -126,6 +136,10 @@ inline uint32_t padSizeForEqualConv(uint32_t inSize, uint32_t kernelSize, uint32
 inline uint32_t padSize(uint32_t outSize, uint32_t inSize, uint32_t kernelSize, uint32_t stride) {
 	return (stride*outSize - stride - inSize + kernelSize) / 2; 
 }
+inline uint32_t antiConvPad(uint32_t inSize, uint32_t stride, uint32_t kernelSize, uint32_t outSize) {
+	return (stride*(inSize - 1) + kernelSize - outSize) / 2;
+}
+
 // MAT functions
 void appendOne(MAT&);
 void shrinkOne(MAT&);

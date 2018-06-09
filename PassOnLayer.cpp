@@ -23,22 +23,25 @@ void PassOnLayer::init() {
 	deltaSave = MAT(1, 1);
 	deltaSave.setConstant(0);
 }
-void PassOnLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
+void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	if (training) {
 		actSave = inBelow;
 	}
 	inBelow = inBelow.unaryExpr(act);
 	if (hierarchy != hierarchy_t::output) {
-		above->forProp(inBelow, pars, training);
+		if(recursive)
+			above->forProp(inBelow, training, true);
 	} 
 }
 
 void PassOnLayer::backPropDelta(MAT& const delta) {
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
+
 		MAT temp = (below->getDACT()).cwiseProduct(delta);
 		if (hierarchy == hierarchy_t::output) {
 			temp.cwiseProduct(this->getDACT());
 		}
+
 		below->backPropDelta(temp);
 	}
 }

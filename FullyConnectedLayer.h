@@ -12,14 +12,24 @@ class FullyConnectedLayer : public PhysicalLayer {
 		~FullyConnectedLayer();
 		layer_t whoAmI() const;
 
-		// propagation 
 		// forProp
-		void forProp(MAT& in, learnPars& const pars, bool training);
+		void forProp(MAT& in, bool training, bool recursive);
+
 		// backprop
-		MAT grad(MAT& const input);
 		void backPropDelta(MAT& const delta);
+		MAT grad(MAT& const input);
 
 private:
+	/* Weight normalization functions
+	*/
+	void updateW();
+	void normalizeV();
+	MAT inversVNorm();
+	MAT gGrad(MAT& const grad); // gradient in g's
+	MAT vGrad(MAT& const grad, MAT& const ggrad); // gradient in V
+	void initG();
+	void initV();
+
 	// initialization
 	void init();
 	void saveToFile(ostream& os) const;

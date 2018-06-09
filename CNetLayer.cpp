@@ -1,20 +1,22 @@
 #include "stdafx.h"
 #include "CNetLayer.h"
 
-CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN) : NOUT(_NOUT), NIN(_NIN){
+CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN) : NOUT(_NOUT), NIN(_NIN), actSave(_NOUT, 1), deltaSave(_NOUT, 1){
 	assignActFunc(actfunc_t::NONE);
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
 }
 
-CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : NOUT(_NOUT), NIN(_NIN) {
+CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : NOUT(_NOUT), NIN(_NIN), actSave(_NOUT, 1), deltaSave(_NOUT, 1) {
 	assignActFunc(type);
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
 };
-CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower): NOUT(_NOUT) {
+CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower): NOUT(_NOUT), actSave(_NOUT, 1), deltaSave(_NOUT, 1) {
+	actSave.setZero();
+	deltaSave.setZero();
 	assignActFunc(type);
 	NIN = lower.getNOUT();
 	below = &lower;
@@ -26,21 +28,11 @@ layer_t CNetLayer::whoAmI() const {
 }
 
 MAT CNetLayer::getDACT() const {
-	if (activationType != actfunc_t::NONE) {
-		return actSave.unaryExpr(dact);
-	}
-	else {
-		return MAT::Constant(NOUT,1,1);
-	}
+	return actSave.unaryExpr(dact);
 }
 
 MAT CNetLayer::getACT() const {
-	if (activationType != actfunc_t::NONE) {
-		return actSave.unaryExpr(act);
-	}
-	else {
-		return actSave;
-	}
+	return actSave.unaryExpr(act);
 }
 
 void CNetLayer::connectAbove(CNetLayer* ptr) {
@@ -73,7 +65,7 @@ void CNetLayer::assignActFunc(actfunc_t type) {
 }
 // save to file
 ostream& operator<<(ostream& os, const CNetLayer& toSave) {
-	os << to_string(toSave.whoAmI()) << endl; // first line - type identification - to be used in later versions
+	os << static_cast<int32_t>(toSave.whoAmI()) << endl; // first line - type identification - to be used in later versions
 	toSave.saveMother(os);
 	toSave.saveToFile(os);
 	return os;
@@ -83,19 +75,23 @@ void CNetLayer::saveMother(ostream& os) const {
 	os << static_cast<int32_t>(activationType) << "\t" << NOUT << "\t" << NIN << "\t"<< static_cast<int32_t>(hierarchy)<<endl;
 }
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
+	int32_t type;
+	in >> type;
+	assert(type == toReconstruct.whoAmI());
+
 	toReconstruct.reconstructMother(in);
 	toReconstruct.loadFromFile(in);
 	return in;
 }
 
-void CNetLayer::reconstructMother(istream& is) {
+void CNetLayer::reconstructMother(ifstream& in) {
 	
 	int32_t temp;
-	is >> temp;
+	in >> temp;
 	activationType = static_cast<actfunc_t>(temp);
 	assignActFunc(activationType);
-	is >> NOUT;
-	is >> NIN;
-	is >> temp;
+	in >> NOUT;
+	in >> NIN;
+	in >> temp;
 	hierarchy = static_cast<hierarchy_t>(temp);
 }

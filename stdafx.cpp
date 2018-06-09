@@ -35,7 +35,7 @@ __declspec(dllexport) uint32_t __stdcall addPassOnLayer(CNet* ptr) {
 }
 
 __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input, fREAL* const output) {
-	learnPars pars{0,0,0,0,0,0,0};
+	learnPars pars{0,0,0,0,0,0,0,0,0};
 
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP(output, ptr->getNOUT(), 1); // (NIN, 1) Matrix
@@ -46,9 +46,9 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	return error;
 }
 __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const outputDesired, fREAL* const eta, 
-	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const batch_update, uint32_t* const batch_normalization) {
+	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update, uint32_t* const weight_norm, uint32_t* const initPass) {
 	
-	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *batch_update,  *batch_normalization };
+	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *initPass };
 
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP(outputDesired, ptr->getNOUT(), 1);
@@ -56,15 +56,17 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	copyToOut(outputDesiredMatrix.data(), outputDesired, ptr->getNOUT());
 	return error;
 }
-
-__declspec(dllexport) void __stdcall resetConjugate(CNet* ptr, fREAL* const input) {
-	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
-	ptr->resetConjugate(inputMatrix);
+__declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
+	ptr->debugMsg(msg);
 }
 
 __declspec(dllexport) void __stdcall saveCNet(CNet* ptr) {
 	string filePath = "C:\\Jannes\\learnSamples\\";
 	ptr->saveToFile(filePath);
+}
+__declspec(dllexport) void __stdcall loadCNet(CNet* ptr) {
+	string filePath = "C:\\Jannes\\learnSamples\\";
+	ptr->loadFromFile(filePath);
 }
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 	ptr->~CNet();

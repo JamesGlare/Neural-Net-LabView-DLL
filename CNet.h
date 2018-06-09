@@ -21,12 +21,11 @@ class CNet {
 		fREAL forProp(MAT& in, learnPars& const pars, MAT& const outDesired);
 		// backprop
 		fREAL backProp(MAT& const in, MAT& outDesired, learnPars& const pars);
-		void resetConjugate(MAT& const input);
-
 		// save to file
 		void saveToFile(string filePath) const;
 		void loadFromFile(string filePath);
 
+		void debugMsg(fREAL* msg);
 		// Getter functions
 		inline size_t getLayerNumber() const { return layers.size(); };
 		inline size_t getNIN() const { return NIN; };

@@ -14,7 +14,7 @@ public:
 	~MaxPoolLayer();
 	layer_t whoAmI() const;
 	// forProp
-	void forProp(MAT& in, learnPars& const pars, bool saveActivation); // recursive
+	void forProp(MAT& in, bool saveActivation, bool recursive); // recursive
 	void backPropDelta(MAT& const delta); // recursive
 	
 	inline size_t getMaxOverX() { return maxOverX; }

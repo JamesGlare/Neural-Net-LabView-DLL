@@ -5,14 +5,16 @@
 	<Property Name="NI.Lib.Version" Type="Str">1.0.0.0</Property>
 	<Item Name="addAntiConvolutionalLayer.vi" Type="VI" URL="../addAntiConvolutionalLayer.vi"/>
 	<Item Name="addConvolutionalLayer.vi" Type="VI" URL="../addConvolutionalLayer.vi"/>
-	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../addFullyConnectedLayer.vi"/>
+	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../../../../../Users/jg754/Documents/Visual Studio 2015/Projects/CLearn/Neural-Net-LabView-DLL/CNetLib/addFullyConnectedLayer.vi"/>
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
 	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>
+	<Item Name="debugMsg.vi" Type="VI" URL="../debugMsg.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
 	<Item Name="getWeights.vi" Type="VI" URL="../getWeights.vi"/>
 	<Item Name="InitializeCNet.vi" Type="VI" URL="../InitializeCNet.vi"/>
-	<Item Name="resetConjugat.vi" Type="VI" URL="../resetConjugat.vi"/>
+	<Item Name="loadFromFile.vi" Type="VI" URL="../loadFromFile.vi"/>
 	<Item Name="saveToFile.vi" Type="VI" URL="../saveToFile.vi"/>
+	<Item Name="Start.vi" Type="VI" URL="../Start.vi"/>
 	<Item Name="train.vi" Type="VI" URL="../train.vi"/>
 	<Item Name="validate.vi" Type="VI" URL="../validate.vi"/>
 </Library>

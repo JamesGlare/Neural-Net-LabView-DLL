@@ -20,20 +20,18 @@ class CNetLayer {
 		// type
 		virtual layer_t whoAmI() const;
 		// forProp
-		virtual void forProp(MAT& in, learnPars& const pars, bool training) = 0; // recursive
+		virtual void forProp(MAT& in, bool training, bool recursive) = 0; // recursive
 		// backprop
 		virtual void backPropDelta(MAT& const delta) = 0; // recursive
-		virtual fREAL applyUpdate(learnPars pars, MAT& const input) =0 ; // recursive
+		virtual void applyUpdate(learnPars pars, MAT& const input) =0 ; // recursive
 
 		// getters
 		inline size_t getNIN() const { return NIN; };
 		inline size_t getNOUT() const { return NOUT; };
-		MAT getDACT() const; // rely on RVO
-		MAT getACT() const; // rely on RVO
+		MAT getDACT() const; // derivative of activation function
+		MAT getACT() const; // activation function
 		// Connect to layer above and change hierarchy from output to hidden
 		void connectAbove(CNetLayer* ptr);
-		virtual void resetConjugate(MAT& const input) = 0;
-
 		// save to file
 		friend ostream& operator<<(ostream& os, const CNetLayer& toSave); // almost virtual member
 		friend ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct);
@@ -43,7 +41,7 @@ class CNetLayer {
 		MAT deltaSave; // store deltas for backprop
 		// saving functions
 		void saveMother(ostream& os) const;
-		void reconstructMother(istream& is) ;
+		void reconstructMother(ifstream& in) ;
 		virtual void saveToFile(ostream& os) const = 0;
 		virtual void loadFromFile(ifstream& in) = 0;
 		// could be made private

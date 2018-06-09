@@ -90,24 +90,24 @@ MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t p
 	size_t outSizeX = inStrideConvoSize(NOUTX, NINX, stride, paddingX);
 
 	MAT out(outSizeY, outSizeX); // 
-//	MAT paddedIn(NINY + 2 * paddingY, NINX+ 2 * paddingX);
-//	paddedIn.setConstant(0);
-	// fill paddedIn matrix
-//	paddedIn.block(paddingY, paddingX, NINY, NINX) = input;
-
 	out.setConstant(0);
-	// convolution
 
+	MAT paddedDelta(NOUTY + 2 * paddingY, NOUTX + 2 * paddingX);
+	paddedDelta.setConstant(0);
+	// fill paddedIn matrix
+	paddedDelta.block(paddingY, paddingX, NOUTY, NOUTX) = delta;
+
+	// convolution
 	for (size_t i = 0; i < outSizeX; i++) { // 0, ...,7
 		for (size_t j = 0; j < outSizeY; j++) { // 0, ...,7
 			for (size_t n = 0; n < NINX; n++) { // 0, 1
 				for (size_t m = 0; m < NINY; m++) { // 0,1
-					out(j, i) += input(m, n)*delta(j + m*stride, i+ n*stride); // max -> 7+2 = 9
+					out(j, i) += input(m, n)*paddedDelta(j + m*stride, i+ n*stride); // max -> 7+2 = 9
 				}
-			}
+			}							  
 		}
 	} 
-	return out.block(paddingY, paddingX, outSizeY-2*paddingY, outSizeX-2*paddingX);
+	return out;
 }
 
 /*

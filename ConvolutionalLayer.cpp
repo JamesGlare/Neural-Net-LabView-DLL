@@ -1,27 +1,32 @@
 #include "stdafx.h"
 #include "ConvolutionalLayer.h"
+#include "BatchBuffer.h"
 
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _stride, actfunc_t type)
-	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), stride(_stride), PhysicalLayer(_NOUTX*_NOUTY, _NINX*_NINY, type){
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), stride(_stride), 
+	PhysicalLayer(_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _kernelX }, MATIND{ _kernelY, _kernelX }, MATIND{ 1,1 }) {
 	// the layer matrix will act as convolutional kernel
 	init();
 }
 
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _stride , actfunc_t type, CNetLayer& const lower)
-: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), stride(_stride), PhysicalLayer(_NOUTX*_NOUTY,  type, lower) {
+: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), stride(_stride), 
+PhysicalLayer(_NOUTX*_NOUTY,  type, MATIND{ _kernelY, _kernelX }, MATIND{ _kernelY, _kernelX }, MATIND{ 1,1 }, lower) {
 	init();
 	assertGeometry();
 }
 // second most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t _stride, actfunc_t type) 
-	: NOUTX(NOUTXY), NOUTY(NOUTXY), NINX(NINXY), NINY(NINXY), kernelX(kernelXY), kernelY(kernelXY), stride(_stride), PhysicalLayer(NOUTXY*NOUTXY, NINXY*NINXY, type) {
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, actfunc_t type) 
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), stride(_stride),
+	PhysicalLayer(_NOUTXY*_NOUTXY, _NINXY*_NINXY,  type, MATIND{ _kernelXY, _kernelXY }, MATIND{ _kernelXY, _kernelXY }, MATIND{ 1,1 }) {
 	init();
 	assertGeometry();
 }
 
 // most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t _stride, actfunc_t type, CNetLayer& const lower)
-	: NOUTX(NOUTXY), NOUTY(NOUTXY), NINX(sqrt(lower.getNOUT())), NINY(sqrt(lower.getNOUT())), kernelX(kernelXY), kernelY(kernelXY), stride(_stride), PhysicalLayer(NOUTXY*NOUTXY, type, lower) {
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, actfunc_t type, CNetLayer& const lower)
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(sqrt(lower.getNOUT())), NINY(sqrt(lower.getNOUT())), kernelX(_kernelXY), kernelY(_kernelXY), stride(_stride),
+	PhysicalLayer(_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _kernelXY }, MATIND{ _kernelXY, _kernelXY }, MATIND{ 1,1 }, lower) {
 	init();
 	assertGeometry();
 }
@@ -40,25 +45,46 @@ void ConvolutionalLayer::assertGeometry() {
 	assert((stride*NOUTY - stride - NINY + kernelY) % 2 == 0);
 }
 void ConvolutionalLayer::init() {
-	layer = MAT(kernelY, kernelX);
-	gradient = MAT(kernelY, kernelX);
-	vel = MAT(kernelY, kernelX);
-	actSave = MAT(NOUT,1);
-	deltaSave = MAT(NOUT,1);
-	prevStep = MAT(layer.rows(), layer.cols());
 
-	prevStep.setConstant(0);
-	layer.setRandom();
-	layer += MAT::Constant(layer.cols(), layer.rows(), 1);
+	layer += MAT::Constant(layer.rows(), layer.cols(), 1);
 	layer *= 1 / layer.size();
-
-	gradient.setConstant(0);
-	vel.setConstant(0);
-	actSave.setConstant(0);
-	deltaSave.setConstant(0);
+}
+// weight normalization reparametrize
+void ConvolutionalLayer::updateW() {
+	layer = G(0,0)* inversVNorm()(0, 0) *V;
 }
 
-void ConvolutionalLayer::forProp(MAT& inBelow, learnPars& const pars, bool training) {
+void ConvolutionalLayer::initV() {
+	V = layer;
+	//normalizeV();
+}
+void ConvolutionalLayer::normalizeV() {
+	V *= 1.0f / normSum(V);
+}
+void ConvolutionalLayer::initG() {
+	G(0, 0) = normSum(layer);
+}
+MAT ConvolutionalLayer::inversVNorm() {
+	MAT out(1, 1);
+	out.setOnes();
+	out /= normSum(V);
+	return out;
+}
+MAT ConvolutionalLayer::gGrad(MAT& const grad) {
+	MAT ret(1, 1);
+	ret(0,0)=grad.cwiseProduct(V).sum()*inversVNorm()(0, 0); //(1,1)
+	return ret;
+}
+MAT ConvolutionalLayer::vGrad(MAT& const grad, MAT& const ggrad) {
+	MAT out = grad; // same dimensions as grad
+					// (1) multiply rows of grad with G's
+	fREAL inversV = inversVNorm()(0, 0);
+	out *= G(0, 0)*inversV;
+	// (2) subtract 
+	out -= G(0, 0)*ggrad(0, 0)*V*inversV*inversV;
+	return out;
+}
+void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	inBelow.resize(NINY, NINX);
 	MAT convoluted = conv(inBelow, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride)); // square convolution
 	convoluted.resize(NOUTX*NOUTY, 1);
@@ -66,14 +92,16 @@ void ConvolutionalLayer::forProp(MAT& inBelow, learnPars& const pars, bool train
 		actSave = convoluted;
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act);
-			above->forProp(inBelow, pars, true);
+			if(recursive)
+				above->forProp(inBelow, true, true);
 		} else {
 			inBelow = actSave;
 		}
 	} else {
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = convoluted.unaryExpr(act);
-			above->forProp(inBelow, pars, false);
+			if(recursive)
+				above->forProp(inBelow, false, true);
 		}
 		else {
 			inBelow = convoluted;
@@ -89,6 +117,7 @@ void ConvolutionalLayer::backPropDelta(MAT& const deltaAbove) {
 		MAT convoluted = antiConv(deltaSave, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
 		//MAT convoluted = conv(deltaSave, layer, stride, padSize(NINY, NOUTY, kernelY, stride), padSize(NINX, NOUTX, kernelX, stride));
 		convoluted.resize(NIN, 1);
+		//assert(below->getDACT().size() == NIN);
 		convoluted = convoluted.cwiseProduct(below->getDACT()); // multiply with h'(aj)
 		deltaSave.resize(NOUT, 1); // resize back
 		below->backPropDelta(convoluted); // cascade...

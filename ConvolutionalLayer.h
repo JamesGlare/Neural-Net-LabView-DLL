@@ -16,7 +16,7 @@ class ConvolutionalLayer : public PhysicalLayer{
 		layer_t whoAmI() const;
 		// propagation 
 		// forProp
-		void forProp(MAT& in, learnPars& const pars, bool training);
+		void forProp(MAT& in, bool training, bool recursive);
 		MAT grad(MAT& const input);
 		void backPropDelta(MAT& const delta);
 
@@ -27,9 +27,18 @@ class ConvolutionalLayer : public PhysicalLayer{
 		inline size_t getKernelX() const { return kernelX; };
 		inline size_t getKernelY() const { return kernelY; };
 
-
 	private:
-		// backprop
+		/* Weight normalization functions
+		*/
+		void updateW();
+		void normalizeV();
+		MAT inversVNorm();
+		MAT gGrad(MAT& const grad);
+		MAT vGrad(MAT& const grad, MAT& const ggrad);
+		void initG();
+		void initV();
+
+		// sizes
 		size_t NOUTX;
 		size_t NOUTY;
 		size_t NINX;

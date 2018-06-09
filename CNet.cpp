@@ -9,6 +9,12 @@
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
 }
+void CNet::debugMsg(fREAL* msg) {
+	msg[0] = layers[0]->getNOUT();
+	msg[1] = layers[0]->getNIN();
+	msg[2] = layers[1]->getNOUT();
+	msg[3] = layers[1]->getNIN();
+}
 
 size_t CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	// now we need to check if there is a layer already
@@ -110,34 +116,27 @@ void CNet::loadFromFile(string filePath) {
 }
 // Simply output the network
 fREAL CNet::forProp(MAT& in, learnPars& const pars, MAT& const outDesired) {
-	layers.front()->forProp(in, pars, false);
+	layers.front()->forProp(in, false, true);
 	return error(errorMatrix(in, outDesired));
 }
+
 // Backpropagation 
 fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars& const pars) {
 	// (1) for prop with saveActivations == true
 	MAT outPredicted = input;
-	layers.front()->forProp(outPredicted, pars, true);
+	layers.front()->forProp(outPredicted, true, true);
 	// (2) calculate error matrix and error
 	MAT diff = errorMatrix(outPredicted, outDesired);
 	// (3) back propagate the deltas
-	// (3.1) if Nesterov then set weights back now
-	//if (!pars.conjugate) {
-	//	layers.front()->NesterovWeightSetback(pars);
-	//}
-	// (3.2) back propagate
 	(*layers.back()).backPropDelta(diff);
 	// (4) Apply update
 	if (diff.allFinite()) {
-		fREAL gamma = layers.front()->applyUpdate(pars, input);
+		layers.front()->applyUpdate(pars, input);
 	}
 	// ... DONE
 	outDesired = outPredicted;
 
 	return error(diff);
-}
-void CNet::resetConjugate(MAT& const input) {
-	layers.front()->resetConjugate(input);
 }
 
 void CNet::copyNthLayer(uint32_t layer, fREAL* const toCopyTo) {
