@@ -16,7 +16,7 @@ class FullyConnectedLayer : public PhysicalLayer {
 		void forProp(MAT& in, bool training, bool recursive);
 
 		// backprop
-		void backPropDelta(MAT& const delta);
+		void backPropDelta(MAT& delta, bool recursive);
 		MAT grad(MAT& const input);
 
 private:

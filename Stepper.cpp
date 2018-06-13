@@ -23,7 +23,6 @@ Stepper::Stepper(MATIND _layerIndex) {
 
 	vt.setZero();
 	mt.setZero();
-
 	mode_adamStep = false;
 	mode_conjugateGradient = false;
 }
@@ -64,13 +63,18 @@ void Stepper::resetAdam() {
 	vt.setZero();
 }
 void Stepper::doAdamStep(MAT& layer, MAT& const gradient, learnPars& const pars) {
-	beta1t *= beta1;
-	beta2t *= beta2;
+	if (gradient.allFinite()) {
+		beta1t *= beta1;
+		beta2t *= beta2;
 
-	mt = beta1*mt + (1 - beta1)*gradient;
-	vt = beta2*vt + (1 - beta2)*gradient.cwiseProduct(gradient);
+		mt = beta1*mt + (1 - beta1)*gradient;
+		vt = beta2*vt + (1 - beta2)*gradient.cwiseProduct(gradient);
 
-	layer = (1.0f - pars.lambda)*layer - (pars.eta / (1.0f - beta1t))*mt.cwiseQuotient((1.0f / (1.0f - beta2t)*vt).unaryExpr(&sqroot) + epsilon);
+		layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(1.0f - beta2t) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
+	}
+	//if (!mt.allFinite() || !vt.allFinite()) {
+	//	resetAdam();
+	//}
 }
 /* Nesterov accelerated Momentum AND Conjugate Gradient in one
 */

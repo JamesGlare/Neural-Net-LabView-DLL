@@ -28,21 +28,20 @@ void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		actSave = inBelow;
 	}
 	inBelow = inBelow.unaryExpr(act);
-	if (hierarchy != hierarchy_t::output) {
-		if(recursive)
+	if (hierarchy != hierarchy_t::output && recursive) {
 			above->forProp(inBelow, training, true);
 	} 
 }
 
-void PassOnLayer::backPropDelta(MAT& const delta) {
+void PassOnLayer::backPropDelta(MAT& const delta, bool recursive) {
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
 
 		MAT temp = (below->getDACT()).cwiseProduct(delta);
 		if (hierarchy == hierarchy_t::output) {
 			temp.cwiseProduct(this->getDACT());
 		}
-
-		below->backPropDelta(temp);
+		if(recursive)
+			below->backPropDelta(temp, true);
 	}
 }
 

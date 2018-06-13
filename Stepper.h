@@ -30,7 +30,7 @@ private:
 	
 	/* Adam optimization
 	*/
-	void doAdamStep(MAT& layer, MAT& const gradient, learnPars& const);
+	void doAdamStep(MAT& layer, MAT& const gradient, learnPars& const pars);
 	void resetAdam();
 	bool mode_adamStep;
 	MAT mt;

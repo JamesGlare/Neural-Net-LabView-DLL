@@ -17,8 +17,8 @@ public:
 	virtual ~DiscarnateLayer() {}; // purely abstract
 
 	virtual void forProp(MAT& in, bool saveActivation, bool recursive) = 0; // recursive
-	virtual void backPropDelta(MAT& const delta) = 0; // recursive
-	void applyUpdate(learnPars pars, MAT& const input); // recursive
+	virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
+	void applyUpdate(learnPars& const pars, MAT& const input, bool recursive); // recursive
 };
 
 #endif

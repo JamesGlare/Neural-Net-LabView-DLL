@@ -30,8 +30,8 @@ public:
 	/* Backward propagation
 	* Implementation on child class level.
 	*/
-	virtual void backPropDelta(MAT& const delta) = 0; // recursive
-	void applyUpdate(learnPars pars, MAT& const input); // recursive
+	virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
+	void applyUpdate(learnPars& const pars, MAT& const input, bool recursive); // recursive
 	
 	// Read-only access to weight parameters.
 	void copyLayer(fREAL* const toCopyTo);

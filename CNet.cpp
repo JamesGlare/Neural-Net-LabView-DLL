@@ -5,6 +5,7 @@
 #include "AntiConvolutionalLayer.h"
 #include "MaxPoolLayer.h"
 #include "PassOnLayer.h"
+#include "ConvFeatureMap.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
@@ -52,6 +53,18 @@ size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t st
 	return getLayerNumber();
 }
 
+size_t CNet::addConvFeatureMap(size_t features, size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type) {
+	if (getLayerNumber() > 0) {
+		//ConvFeatureMap(size_t featureNr, size_t feature_NOUTXY, size_t feature_kernelXY, uint32_t feature_stride, actfunc_t type, CNetLayer& const lower);
+		ConvFeatureMap* cfm = new ConvFeatureMap(features, NOUTXY, kernelXY, stride, type, *(layers.back()));
+		layers.push_back(cfm);
+	} else {
+		// (size_t featureNr, size_t feature_NOUTXY, size_t feature_NINXY, size_t feature_kernelXY, uint32_t feature_stride, actfunc_t type);
+		ConvFeatureMap* cfm = new ConvFeatureMap(features, NOUTXY, sqrt(NIN),kernelXY,stride,type );
+		layers.push_back(cfm);
+	}
+	return getLayerNumber();
+}
 size_t CNet::addPassOnLayer( actfunc_t type) {
 	if (getLayerNumber() > 0) {
 		PassOnLayer* pol = new PassOnLayer(type, *(layers.back()));
@@ -108,8 +121,6 @@ void CNet::loadFromFile(string filePath) {
 	for(uint32_t i =0; i< getLayerNumber(); i++) {
 		ifstream file(filePath + "CNetLayer_" + to_string(i) + ".dat");
 		if (file.is_open()) {
-			int type;
-			file >> type; //First line has to be taken away - to be used in later versions
 			file >> (*layers[i]);
 		}
 	}
@@ -127,16 +138,17 @@ fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars& const pars) {
 	layers.front()->forProp(outPredicted, true, true);
 	// (2) calculate error matrix and error
 	MAT diff = errorMatrix(outPredicted, outDesired);
+	fREAL errorOUT = error(diff);
 	// (3) back propagate the deltas
-	(*layers.back()).backPropDelta(diff);
+	layers.back()->backPropDelta(diff, true);
 	// (4) Apply update
 	if (diff.allFinite()) {
-		layers.front()->applyUpdate(pars, input);
+		layers.front()->applyUpdate(pars, input, true);
 	}
 	// ... DONE
 	outDesired = outPredicted;
 
-	return error(diff);
+	return errorOUT;
 }
 
 void CNet::copyNthLayer(uint32_t layer, fREAL* const toCopyTo) {
@@ -150,7 +162,7 @@ MAT CNet::errorMatrix(MAT& const outPrediction, MAT& const outDesired) {
 	return outPrediction - outDesired;
 }
 fREAL CNet::error(MAT& const diff) {
-	return 0.5f*cumSum(matNorm(diff));
+	return 0.5f*sqrt(cumSum(matNorm(diff)));
 }
 
 

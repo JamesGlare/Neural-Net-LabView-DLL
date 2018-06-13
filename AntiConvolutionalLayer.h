@@ -16,7 +16,7 @@ public:
 	// forProp
 	void forProp(MAT& in, bool training, bool recursive);
 	MAT grad(MAT& const input);
-	void backPropDelta(MAT& const delta);
+	void backPropDelta(MAT& delta, bool recursive);
 
 	inline size_t getNOUTX() const { return NOUTX; };
 	inline size_t getNOUTY() const { return NOUTY; };

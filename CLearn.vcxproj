@@ -159,6 +159,7 @@
     <ClInclude Include="defininitions.h" />
     <ClInclude Include="DiscarnateLayer.h" />
     <ClInclude Include="Dropout.h" />
+    <ClInclude Include="FeatureMap.h" />
     <ClInclude Include="FullyConnectedLayer.h" />
     <ClInclude Include="MaxPoolLayer.h" />
     <ClInclude Include="PassOnLayer.h" />
@@ -172,6 +173,7 @@
     <ClCompile Include="BatchBuffer.cpp" />
     <ClCompile Include="CNet.cpp" />
     <ClCompile Include="CNetLayer.cpp" />
+    <ClCompile Include="ConvFeatureMap.cpp" />
     <ClCompile Include="ConvolutionalLayer.cpp" />
     <ClCompile Include="definitions.cpp" />
     <ClCompile Include="DiscarnateLayer.cpp" />
@@ -189,6 +191,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="FeatureMap.cpp" />
     <ClCompile Include="FullyConnectedLayer.cpp" />
     <ClCompile Include="MaxPoolLayer.cpp" />
     <ClCompile Include="PassOnLayer.cpp" />

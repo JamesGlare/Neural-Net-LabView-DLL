@@ -2,6 +2,7 @@
 #include "AntiConvolutionalLayer.h"
 
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _stride, actfunc_t type)
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), stride(_stride), 
 	PhysicalLayer(_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _kernelX }, MATIND{ _kernelY, _kernelX }, MATIND{ 1,1 }) {
 	// the layer matrix will act as convolutional kernel
 	init();
@@ -52,7 +53,7 @@ void AntiConvolutionalLayer::updateW() {
 
 void AntiConvolutionalLayer::initV() {
 	V = layer;
-	//normalizeV();
+	normalizeV();
 }
 MAT AntiConvolutionalLayer::inversVNorm() {
 	MAT out(1, 1);
@@ -82,41 +83,35 @@ MAT AntiConvolutionalLayer::vGrad(MAT& const grad, MAT& const ggrad) {
 }
 void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	inBelow.resize(NINY, NINX);
-	MAT convoluted =  antiConv(inBelow, layer, stride, antiConvPad(NINY, stride, kernelY, NOUTY), antiConvPad(NINX, stride, kernelX, NOUTX)); // square convolution//
-	convoluted.resize(NOUTX*NOUTY, 1);
+	inBelow =  antiConv(inBelow, layer, stride, antiConvPad(NINY, stride, kernelY, NOUTY), antiConvPad(NINX, stride, kernelX, NOUTX)); // square convolution//
+	inBelow.resize(NOUTX*NOUTY, 1);
 	if (training) {
-		actSave = convoluted;
+		actSave = inBelow;
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act);
 			if(recursive)
 				above->forProp(inBelow, true, true);
 		}
-		else {
-			inBelow = actSave;
-		}
-	}
-	else {
+	} else {
 		if (hierarchy != hierarchy_t::output) {
-			inBelow = convoluted.unaryExpr(act);
+			inBelow = inBelow.unaryExpr(act);
 			if (recursive)
 				above->forProp(inBelow, false, true);
-		}
-		else {
-			inBelow = convoluted;
 		}
 	}
 }
 // backprop
-void AntiConvolutionalLayer::backPropDelta(MAT& const deltaAbove) {
+void AntiConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	deltaSave = deltaAbove;
 
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
 		deltaSave.resize(NOUTY, NOUTX); // keep track of this!!!
-		MAT convoluted = conv(deltaSave, layer, stride, antiConvPad(NINY, stride, kernelY, NOUTY), antiConvPad(NINX, stride, kernelX, NOUTX));
-		convoluted.resize(NIN, 1);
-		convoluted = convoluted.cwiseProduct(below->getDACT()); // multiply with h'(aj)
+		deltaAbove = conv(deltaSave, layer, stride, antiConvPad(NINY, stride, kernelY, NOUTY), antiConvPad(NINX, stride, kernelX, NOUTX));
+		deltaAbove.resize(NIN, 1);
+		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj)
 		deltaSave.resize(NOUT, 1); // resize back
-		below->backPropDelta(convoluted); // cascade...
+		if(recursive)
+			below->backPropDelta(deltaAbove, true); // cascade...
 	}
 }
 
@@ -151,6 +146,11 @@ void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> NINX;
 	in >> kernelY;
 	in >> kernelX;
+	layer = MAT(kernelY, kernelX);
+	V= MAT(kernelY, kernelX);
+	G = MAT(1, 1);
+	V.setZero();
+	G.setZero();
 
 	for (size_t i = 0; i < kernelY; i++) {
 		for (size_t j = 0; j < kernelX; j++) {

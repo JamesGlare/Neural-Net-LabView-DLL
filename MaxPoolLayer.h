@@ -15,7 +15,7 @@ public:
 	layer_t whoAmI() const;
 	// forProp
 	void forProp(MAT& in, bool saveActivation, bool recursive); // recursive
-	void backPropDelta(MAT& const delta); // recursive
+	void backPropDelta(MAT& delta, bool recursive); // recursive
 	
 	inline size_t getMaxOverX() { return maxOverX; }
 	inline size_t getMaxOverY() { return maxOverY; }

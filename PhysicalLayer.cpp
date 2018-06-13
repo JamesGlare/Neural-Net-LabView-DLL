@@ -27,7 +27,7 @@ void PhysicalLayer::copyLayer(fREAL* const toCopyTo) {
 	copyToOut(layer.data(), toCopyTo, layer.size());
 }
 // CHECK SIGNS!!
-void PhysicalLayer::applyUpdate(learnPars pars, MAT& const input) {
+void PhysicalLayer::applyUpdate(learnPars& const pars, MAT& const input, bool recursive) {
 
 	/* new version of this function
 	*/
@@ -44,9 +44,8 @@ void PhysicalLayer::applyUpdate(learnPars pars, MAT& const input) {
 				weightNormMode = true;
 			} 
 			MAT Ggradient = gGrad(batch.avgGradient());
-			MAT Vgradient = vGrad(batch.avgGradient(), Ggradient);
 			GStepper.stepLayer(G, Ggradient, pars);
-			VStepper.stepLayer(V, Vgradient, pars);
+			VStepper.stepLayer(V, vGrad(batch.avgGradient(), Ggradient), pars);
 			//normalizeV();
 			updateW();
 			
@@ -59,8 +58,8 @@ void PhysicalLayer::applyUpdate(learnPars pars, MAT& const input) {
 		batch.clearGradient();
 	}
 	// Recursion
-	if (hierarchy != hierarchy_t::output) {
-		above->applyUpdate(pars, input);
+	if (hierarchy != hierarchy_t::output && recursive) {
+		above->applyUpdate(pars, input, true);
 	}
 
 }

@@ -56,7 +56,7 @@ void ConvolutionalLayer::updateW() {
 
 void ConvolutionalLayer::initV() {
 	V = layer;
-	//normalizeV();
+	normalizeV();
 }
 void ConvolutionalLayer::normalizeV() {
 	V *= 1.0f / normSum(V);
@@ -86,41 +86,37 @@ MAT ConvolutionalLayer::vGrad(MAT& const grad, MAT& const ggrad) {
 }
 void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	inBelow.resize(NINY, NINX);
-	MAT convoluted = conv(inBelow, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride)); // square convolution
-	convoluted.resize(NOUTX*NOUTY, 1);
+	inBelow = conv(inBelow, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride)); // square convolution
+	inBelow.resize(NOUTX*NOUTY, 1);
 	if (training) {
-		actSave = convoluted;
+		actSave = inBelow;
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act);
 			if(recursive)
 				above->forProp(inBelow, true, true);
-		} else {
-			inBelow = actSave;
-		}
+		} 
 	} else {
 		if (hierarchy != hierarchy_t::output) {
-			inBelow = convoluted.unaryExpr(act);
+			inBelow = inBelow.unaryExpr(act);
 			if(recursive)
 				above->forProp(inBelow, false, true);
-		}
-		else {
-			inBelow = convoluted;
 		}
 	}
 }
 // backprop
-void ConvolutionalLayer::backPropDelta(MAT& const deltaAbove) {
+void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	deltaSave = deltaAbove;
 
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
 		deltaSave.resize(NOUTY, NOUTX); // keep track of this!!!
-		MAT convoluted = antiConv(deltaSave, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
+		deltaAbove = antiConv(deltaSave, layer, stride, padSize(NOUTY, NINY, kernelY, stride), padSize(NOUTX, NINX, kernelX, stride));
 		//MAT convoluted = conv(deltaSave, layer, stride, padSize(NINY, NOUTY, kernelY, stride), padSize(NINX, NOUTX, kernelX, stride));
-		convoluted.resize(NIN, 1);
+		deltaAbove.resize(NIN, 1);
 		//assert(below->getDACT().size() == NIN);
-		convoluted = convoluted.cwiseProduct(below->getDACT()); // multiply with h'(aj)
+		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj)
 		deltaSave.resize(NOUT, 1); // resize back
-		below->backPropDelta(convoluted); // cascade...
+		if(recursive)
+			below->backPropDelta(deltaAbove, true); // cascade...
 	}
 }
 // grad
@@ -157,6 +153,11 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> NINX;
 	in >> kernelY;
 	in >> kernelX;
+	layer = MAT(kernelY, kernelX);
+	V = MAT(kernelY, kernelX);
+	G = MAT(1, 1);
+	V.setZero();
+	G.setZero();
 
 	for (size_t i = 0; i < kernelY; i++) {
 		for (size_t j = 0; j < kernelX; j++) {

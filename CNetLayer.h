@@ -22,8 +22,8 @@ class CNetLayer {
 		// forProp
 		virtual void forProp(MAT& in, bool training, bool recursive) = 0; // recursive
 		// backprop
-		virtual void backPropDelta(MAT& const delta) = 0; // recursive
-		virtual void applyUpdate(learnPars pars, MAT& const input) =0 ; // recursive
+		virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
+		virtual void applyUpdate(learnPars& const pars, MAT& const input, bool recursive) =0 ; // recursive
 
 		// getters
 		inline size_t getNIN() const { return NIN; };
