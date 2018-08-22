@@ -1,7 +1,11 @@
 #pragma once
 
 #include "defininitions.h"
+#include <memory>
 #include "CNETLayer.h"
+
+typedef std::unique_ptr<CNetLayer> layerPtr;
+ 
 
 #ifndef CNET_CNET
 #define CNET_CNET
@@ -12,9 +16,8 @@ class CNet {
 		~CNet();
 		// add layers
 		size_t addFullyConnectedLayer(size_t NOUT, actfunc_t type);
-		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type);
-		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type);
-		size_t addConvFeatureMap(size_t features, size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type);
+		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
+		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
 		size_t addPoolingLayer(size_t maxOverXY, pooling_t type);
 		size_t addPassOnLayer(actfunc_t type);
 
@@ -41,6 +44,7 @@ class CNet {
 
 		size_t NIN;
 		vector<CNetLayer*> layers;
+
 };
 
 #endif 

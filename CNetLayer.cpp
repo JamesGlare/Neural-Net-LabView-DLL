@@ -3,6 +3,8 @@
 
 CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN) : NOUT(_NOUT), NIN(_NIN), actSave(_NOUT, 1), deltaSave(_NOUT, 1){
 	assignActFunc(actfunc_t::NONE);
+	actSave.setZero();
+	deltaSave.setZero();
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
@@ -10,6 +12,8 @@ CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN) : NOUT(_NOUT), NIN(_NIN), actSav
 
 CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : NOUT(_NOUT), NIN(_NIN), actSave(_NOUT, 1), deltaSave(_NOUT, 1) {
 	assignActFunc(type);
+	actSave.setZero();
+	deltaSave.setZero();
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
@@ -77,7 +81,7 @@ void CNetLayer::saveMother(ostream& os) const {
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 	int32_t type;
 	in >> type;
-	assert(type == toReconstruct.whoAmI());
+	assert(type == static_cast<int32_t>(toReconstruct.whoAmI()));
 
 	toReconstruct.reconstructMother(in);
 	toReconstruct.loadFromFile(in);
@@ -86,12 +90,16 @@ ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 
 void CNetLayer::reconstructMother(ifstream& in) {
 	
-	int32_t temp;
-	in >> temp;
-	activationType = static_cast<actfunc_t>(temp);
+	int32_t actType;
+	in >> actType;
+	activationType = static_cast<actfunc_t>(actType);
 	assignActFunc(activationType);
 	in >> NOUT;
 	in >> NIN;
-	in >> temp;
-	hierarchy = static_cast<hierarchy_t>(temp);
+	in >> actType;
+	hierarchy = static_cast<hierarchy_t>(actType);
+	actSave = MAT(NOUT, 1);
+	deltaSave = MAT(NOUT, 1);
+	actSave.setZero();
+	deltaSave.setZero();
 }

@@ -9,6 +9,7 @@
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
+	srand(42);
 }
 void CNet::debugMsg(fREAL* msg) {
 	msg[0] = layers[0]->getNOUT();
@@ -29,30 +30,30 @@ size_t CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	}
 	return getLayerNumber();
 }
-size_t CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type) {
+size_t CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type) {
 	// At the moment, I only allow for square-shaped input.
 	// this may need to change in the future.
 	if (getLayerNumber() > 0) {
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, type, *(layers.back()));
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, type, *(layers.back()));
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, type);
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, features, type);
 		layers.push_back(cl);
 	}
 	return getLayerNumber();
 }
-size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type) {
+size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, type, *(layers.back()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, type, *(layers.back()));
 		layers.push_back(acl);
 	} else {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, type);
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, type);
 		layers.push_back(acl);
 	}
 	return getLayerNumber();
 }
-
+/*
 size_t CNet::addConvFeatureMap(size_t features, size_t NOUTXY, size_t kernelXY, size_t stride, actfunc_t type) {
 	if (getLayerNumber() > 0) {
 		//ConvFeatureMap(size_t featureNr, size_t feature_NOUTXY, size_t feature_kernelXY, uint32_t feature_stride, actfunc_t type, CNetLayer& const lower);
@@ -64,7 +65,7 @@ size_t CNet::addConvFeatureMap(size_t features, size_t NOUTXY, size_t kernelXY, 
 		layers.push_back(cfm);
 	}
 	return getLayerNumber();
-}
+}*/
 size_t CNet::addPassOnLayer( actfunc_t type) {
 	if (getLayerNumber() > 0) {
 		PassOnLayer* pol = new PassOnLayer(type, *(layers.back()));
@@ -135,19 +136,35 @@ fREAL CNet::forProp(MAT& in, learnPars& const pars, MAT& const outDesired) {
 fREAL CNet::backProp(MAT& const input, MAT& outDesired, learnPars& const pars) {
 	// (1) for prop with saveActivations == true
 	MAT outPredicted = input;
+	assert(input.allFinite());
 	layers.front()->forProp(outPredicted, true, true);
 	// (2) calculate error matrix and error
-	MAT diff = errorMatrix(outPredicted, outDesired);
-	fREAL errorOUT = error(diff);
+	MAT diffMatrix = errorMatrix(outPredicted, outDesired);
+	fREAL errorOUT = error(diffMatrix);	 
+	//if (!isnan(errorOUT) && !isinf(errorOUT) ) {
 	// (3) back propagate the deltas
-	layers.back()->backPropDelta(diff, true);
+	layers.back()->backPropDelta(diffMatrix, true);
 	// (4) Apply update
-	if (diff.allFinite()) {
-		layers.front()->applyUpdate(pars, input, true);
-	}
+	layers.front()->applyUpdate(pars, input, true);
 	// ... DONE
 	outDesired = outPredicted;
-
+	assert(outPredicted.allFinite());
+	/*} else {
+		for (size_t i = 0; i < outPredicted.rows(); i++) {
+			for (size_t j = 0; j < outPredicted.cols(); j++) {
+				if (isnan(outPredicted(i, j)) ||
+					isinf(outPredicted(i, j))) {
+					outPredicted(i, j) = 0.0f;
+					diffMatrix(i, j) = 0.0f;
+				}
+			}
+		}
+		outDesired = outPredicted;
+		//layers.back()->backPropDelta(diffMatrix, true);
+		// (4) Apply update
+		//layers.front()->applyUpdate(pars, input, true);
+	}
+	*/
 	return errorOUT;
 }
 
@@ -162,7 +179,9 @@ MAT CNet::errorMatrix(MAT& const outPrediction, MAT& const outDesired) {
 	return outPrediction - outDesired;
 }
 fREAL CNet::error(MAT& const diff) {
-	return 0.5f*sqrt(cumSum(matNorm(diff)));
+	fREAL sum = cumSum(matNorm(diff));
+	return 0.5f*sum / sqrt( sum );
+
 }
 
 

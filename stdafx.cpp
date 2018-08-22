@@ -20,25 +20,21 @@ __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 __declspec(dllexport) uint32_t __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT) {
 	return ptr->addFullyConnectedLayer(NOUT, actfunc_t::RELU);
 }
-__declspec(dllexport) uint32_t __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride) {
-	return ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, actfunc_t::RELU);
+__declspec(dllexport) uint32_t __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features) {
+	return ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, actfunc_t::RELU);
 }
-__declspec(dllexport) uint32_t __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride) {
-	return ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, actfunc_t::RELU);
+__declspec(dllexport) uint32_t __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features) {
+	return ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, actfunc_t::RELU);
 }
-
 __declspec(dllexport) uint32_t __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	return ptr->addPoolingLayer(maxOverXY, pooling_t::max);
 }
 __declspec(dllexport) uint32_t __stdcall addPassOnLayer(CNet* ptr) {
 	return ptr->addPassOnLayer(actfunc_t::NONE);
 } 
-__declspec(dllexport) uint32_t __stdcall addConvFeatureMap(CNet* ptr, uint32_t features, uint32_t feature_NOUT, uint32_t kernelXY, uint32_t stride) {
-	return ptr->addConvFeatureMap(features, feature_NOUT, kernelXY, stride, actfunc_t::RELU);
-}
 __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input, fREAL* const output) {
 	learnPars pars{0,0,0,0,0,0,0,0,0};
-
+	
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP(output, ptr->getNOUT(), 1); // (NIN, 1) Matrix
 

@@ -15,7 +15,7 @@ public:
 	layer_t whoAmI() const;
 	// forProp
 	void forProp(MAT& in, bool saveActivation, bool recursive); // recursive
-	void backPropDelta(MAT& delta, bool recursive); // recursive
+	void backPropDelta(MAT& const delta, bool recursive); // recursive
 
 private:
 	void init();

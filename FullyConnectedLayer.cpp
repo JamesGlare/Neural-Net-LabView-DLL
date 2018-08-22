@@ -122,12 +122,12 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	}
 }
 
-void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
+void FullyConnectedLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
 	//DACT(inAct).cwiseProduct(hiddenLayers[0].leftCols(hiddenLayers[0].cols() - 1).transpose()*hiddenDeltas[0]);
 	deltaSave = deltaAbove;
 
 	if (hierarchy != hierarchy_t::input) {
-		deltaAbove = (below->getDACT()).cwiseProduct((layer.leftCols(NIN)).transpose() * deltaAbove); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
+		deltaAbove = (below->getDACT()).cwiseProduct((layer.leftCols(NIN)).transpose() * deltaSave); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
 		if(recursive)
 			below->backPropDelta(deltaAbove, true);
 	}

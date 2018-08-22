@@ -138,6 +138,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;CLEARN_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -154,12 +156,10 @@
     <ClInclude Include="BatchBuffer.h" />
     <ClInclude Include="CNet.h" />
     <ClInclude Include="CNetLayer.h" />
-    <ClInclude Include="ConvFeatureMap.h" />
     <ClInclude Include="ConvolutionalLayer.h" />
     <ClInclude Include="defininitions.h" />
     <ClInclude Include="DiscarnateLayer.h" />
     <ClInclude Include="Dropout.h" />
-    <ClInclude Include="FeatureMap.h" />
     <ClInclude Include="FullyConnectedLayer.h" />
     <ClInclude Include="MaxPoolLayer.h" />
     <ClInclude Include="PassOnLayer.h" />
@@ -173,7 +173,6 @@
     <ClCompile Include="BatchBuffer.cpp" />
     <ClCompile Include="CNet.cpp" />
     <ClCompile Include="CNetLayer.cpp" />
-    <ClCompile Include="ConvFeatureMap.cpp" />
     <ClCompile Include="ConvolutionalLayer.cpp" />
     <ClCompile Include="definitions.cpp" />
     <ClCompile Include="DiscarnateLayer.cpp" />
@@ -191,7 +190,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="FeatureMap.cpp" />
     <ClCompile Include="FullyConnectedLayer.cpp" />
     <ClCompile Include="MaxPoolLayer.cpp" />
     <ClCompile Include="PassOnLayer.cpp" />
@@ -201,6 +199,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MultiProcessorCompilation>
     </ClCompile>
     <ClCompile Include="Stepper.cpp" />
   </ItemGroup>

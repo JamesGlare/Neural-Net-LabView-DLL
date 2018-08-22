@@ -21,6 +21,8 @@ typedef Matrix<fREAL, Dynamic, Dynamic> MAT;
 typedef Matrix<fREAL, Dynamic, Dynamic, Dynamic> MAT3;
 typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
 typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX; // needed in MaxPool, Dropout
+typedef Eigen::Block<MAT, -1 - 1, false> MATBLOCK;
+#define _FEAT(i) block(0, kernelX*i, kernelY, kernelX)
 
 struct MATIND {
 	size_t rows;
@@ -49,10 +51,10 @@ struct learnPars {
 };
 // library functions
 
-MAT conv(const MAT& in, const MAT& _kernel, uint32_t kernelStride, uint32_t paddingY, uint32_t paddingX);
-MAT antiConv(const MAT& in, const MAT& kernel, uint32_t stride, uint32_t paddingY, uint32_t paddingX);
-MAT convGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX);
-MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t stride, uint32_t paddingY, uint32_t paddingX);
+MAT conv(const MAT& in, const MAT& _kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
+MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t antiPaddingY, uint32_t antiPaddingX, uint32_t features);
+MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
+MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
 
 MAT fourier(const MAT& in);
 

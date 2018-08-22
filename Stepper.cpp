@@ -68,9 +68,13 @@ void Stepper::doAdamStep(MAT& layer, MAT& const gradient, learnPars& const pars)
 		beta2t *= beta2;
 
 		mt = beta1*mt + (1 - beta1)*gradient;
-		vt = beta2*vt + (1 - beta2)*gradient.cwiseProduct(gradient);
-
-		layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(1.0f - beta2t) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
+		vt = beta2*vt + (1 - beta2)*gradient.unaryExpr(&norm);
+		if (mt.allFinite() && vt.allFinite())
+			layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(1.0f - beta2t) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
+		else
+			resetAdam();
+	} else {
+		resetAdam();
 	}
 	//if (!mt.allFinite() || !vt.allFinite()) {
 	//	resetAdam();
