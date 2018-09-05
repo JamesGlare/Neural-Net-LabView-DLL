@@ -205,16 +205,16 @@ MAT fourier(const MAT& in) {
 void gauss(MAT& in) {
 	//EIGEN stores matrices in column-major order! 
 	// iterate columns (second index)
-	int32_t nRows = in.rows();
-	int32_t nCols = in.cols();
+	size_t nRows = in.rows();
+	size_t nCols = in.cols();
 	// outer perimeter of window is at 3 sigma boundary
 	fREAL stdY =nRows;
 	fREAL stdX = nCols;
 	fREAL norm = 1.0f / ((stdX*stdX+stdY+stdY ) * M_PI);
 
-	for (int32_t j = 0; j < nCols; j++) {
-		for (int32_t i = 0; i < nRows; i++) {
-			in(i, j) = norm* exp(-(j - nCols / 2)*(j - nCols / 2) / (2 * stdX*stdX) - (i - nRows / 2)*(i - nRows / 2) / (2 * stdY*stdY));
+	for (size_t j = 0; j < nCols; j++) {
+		for (size_t i = 0; i < nRows; i++) {
+			in(i, j) = norm* exp(-(j - nCols / 2.0f)*(j - nCols / 2.0f) / (2.0f * stdX*stdX) - (i - nRows / 2.0f)*(i - nRows / 2.0f) / (2.0f * stdY*stdY));
 		}
 	}
 }

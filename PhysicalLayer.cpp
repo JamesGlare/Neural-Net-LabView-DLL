@@ -44,8 +44,10 @@ void PhysicalLayer::applyUpdate(learnPars& const pars, MAT& const input, bool re
 				weightNormMode = true;
 			} 
 			MAT Ggradient = gGrad(batch.avgGradient());
+
 			GStepper.stepLayer(G, Ggradient, pars);
 			VStepper.stepLayer(V, vGrad(batch.avgGradient(), Ggradient), pars);
+
 			//normalizeV();
 			updateW();
 			

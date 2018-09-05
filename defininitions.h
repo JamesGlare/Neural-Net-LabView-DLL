@@ -22,7 +22,7 @@ typedef Matrix<fREAL, Dynamic, Dynamic, Dynamic> MAT3;
 typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
 typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX; // needed in MaxPool, Dropout
 typedef Eigen::Block<MAT, -1 - 1, false> MATBLOCK;
-#define _FEAT(i) block(0, kernelX*i, kernelY, kernelX)
+#define _FEAT(i) block(0, kernelX*i, kernelY, kernelX) // break of style *** TODO REPLACE WITH FUNCTION ***
 
 struct MATIND {
 	size_t rows;

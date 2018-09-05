@@ -44,7 +44,12 @@ void AntiConvolutionalLayer::assertGeometry() {
 	assert(antiConvoSize(NINX, kernelX, antiConvPad(NINX, strideX, kernelX, NOUTX),strideX) == NOUTX);
 }
 void AntiConvolutionalLayer::init() {
-
+	MAT gauss_init = MAT::Constant(kernelY, kernelX, 1.0f);
+	gauss(gauss_init); // make a gaussian
+	for (size_t f = 0; f < features; ++f) {
+		layer._FEAT(f) = gauss_init + 1.0f/(kernelY*kernelX)*MAT::Random(kernelY, kernelX);
+	}
+		
 }
 // weight normalization reparametrize
 // weight normalization reparametrize

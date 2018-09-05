@@ -82,9 +82,9 @@ MAT FullyConnectedLayer::gGrad(MAT& const grad) {
 }
 MAT FullyConnectedLayer::vGrad(MAT& const grad, MAT& const ggrad) {
 	MAT temp = inversVNorm(); //(NOUT, NIN)
-	MAT out(NOUT, NIN + 1);
-	out = grad.cwiseProduct(temp).cwiseProduct(G.replicate(1, NIN+1)); // (NOUT, NIN)
-	out -= G.replicate(1, NIN+1 ).cwiseProduct(temp).cwiseProduct(temp).cwiseProduct(ggrad.replicate(1, NIN +1)).cwiseProduct(V); 
+	MAT out(NOUT, NIN+1);
+	out = grad.cwiseProduct(temp).cwiseProduct(G.replicate(1, NIN + 1));
+	out.noalias() -= G.replicate(1, NIN + 1).cwiseProduct(temp.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, NIN + 1)).cwiseProduct(V); // (NOUT, NIN)
 	out.rightCols(1) = grad.rightCols(1);
 	/*MAT inversV = inversVNorm();
 	for (size_t i = 0; i < NOUT; i++) {
@@ -98,12 +98,16 @@ MAT FullyConnectedLayer::vGrad(MAT& const grad, MAT& const ggrad) {
 }
 
 void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
+
 	if (training) {
 		/* normal training forward pass
 		*/ 
-		actSave = layer*appendOneInline(inBelow); // save the activations before non-linearity
+	
+		appendOne(inBelow);
+		// Eigen assumes aliasing by default for matrix products A*B type situations
+		actSave.noalias() = layer*inBelow; // save the activations before non-linearity
 		if (hierarchy != hierarchy_t::output) {
-			inBelow = actSave.unaryExpr(act);
+			inBelow = actSave.unaryExpr(act); 
 			if(recursive)
 				above->forProp(inBelow, true, true);
 		} else {
@@ -112,12 +116,18 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	} else {
 		/* Non-training forward pass
 		*/
+		MAT temp;
 		if (hierarchy != hierarchy_t::output) {
-			inBelow = (layer*appendOneInline(inBelow)).unaryExpr(act);
+			appendOne(inBelow);
+			// Eigen assumes aliasing by default for matrix products A*B type situations
+			temp.noalias() = (layer*inBelow).unaryExpr(act);
+			inBelow = temp;
 			if(recursive)
 				above->forProp(inBelow, false, true);
 		} else {
-			inBelow = layer*appendOneInline(inBelow);
+			appendOne(inBelow);
+			temp.noalias() = layer*inBelow;
+			inBelow = temp;
 		}
 	}
 }
@@ -127,7 +137,7 @@ void FullyConnectedLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
 	deltaSave = deltaAbove;
 
 	if (hierarchy != hierarchy_t::input) {
-		deltaAbove = (below->getDACT()).cwiseProduct((layer.leftCols(NIN)).transpose() * deltaSave); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
+		deltaAbove.noalias() = (below->getDACT()).cwiseProduct((layer.leftCols(NIN)).transpose() * deltaSave); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
 		if(recursive)
 			below->backPropDelta(deltaAbove, true);
 	}

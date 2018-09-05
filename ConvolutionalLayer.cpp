@@ -54,7 +54,7 @@ void ConvolutionalLayer::assertGeometry() {
 void ConvolutionalLayer::init() {
 
 	//layer += MAT::Constant(layer.rows(), layer.cols(), 1);
-	//layer *= features / layer.size();
+	layer *= ((fREAL) features) / layer.size();
 }
 // Select submatrix of ith feature
 const MAT& ConvolutionalLayer::getIthFeature(size_t i) {
