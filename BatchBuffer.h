@@ -9,7 +9,7 @@ public:
 	BatchBuffer(MATIND _layerInd, size_t NOUT, size_t NIN);
 	
 	// Standard gradient minibatch
-	void swallowGradient(MAT& const gradient);
+	void swallowGradient(const MAT& gradient);
 	MAT& avgGradient();
 	void clearGradient();
 	void notifyFormChange(MATIND _newForm);

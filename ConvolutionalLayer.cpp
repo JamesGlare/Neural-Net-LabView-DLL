@@ -15,7 +15,7 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NIN
 	init();
 }
 
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, uint32_t _features, actfunc_t type, CNetLayer& const lower)
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, uint32_t _features, actfunc_t type, CNetLayer& lower)
 : NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features),
 PhysicalLayer(_features*_NOUTX*_NOUTY,  type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }, lower) {
 	init();
@@ -30,7 +30,7 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _ke
 }
 
 // most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& const lower)
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(sqrt(lower.getNOUT())), NINY(sqrt(lower.getNOUT())), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
 	PhysicalLayer(_features*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }, lower) {
 	init();
@@ -86,14 +86,14 @@ MAT ConvolutionalLayer::inversVNorm() {
 		out(0,i) /= normSum(V._FEAT(i));
 	return out;
 }
-MAT ConvolutionalLayer::gGrad(MAT& const grad) {
+MAT ConvolutionalLayer::gGrad(MAT& grad) {
 	MAT ret(1, features);
 	MAT inversV = inversVNorm();
 	for (uint32_t i = 0; i < features; i++)
 		ret(0,i)=(grad._FEAT(i)).cwiseProduct(V._FEAT(i)).sum()*inversV(0, i); //(1,1)
 	return ret;
 }
-MAT ConvolutionalLayer::vGrad(MAT& const grad, MAT& const ggrad) {
+MAT ConvolutionalLayer::vGrad(MAT& grad, MAT& ggrad) {
 	MAT out = grad; // same dimensions as grad
 					// (1) multiply rows of grad with G's
 	MAT inversV = inversVNorm();
@@ -124,7 +124,7 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	}
 }
 // backprop
-void ConvolutionalLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
+void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	deltaSave = deltaAbove;
 
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
@@ -140,7 +140,7 @@ void ConvolutionalLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
 	}
 }
 // grad
-MAT ConvolutionalLayer::grad(MAT& const input) {
+MAT ConvolutionalLayer::grad(MAT& input) {
 	deltaSave.resize(NOUTY, features*NOUTX);
 	if (hierarchy == hierarchy_t::input) {
 		input.resize(NINY, NINX);

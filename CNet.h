@@ -22,9 +22,9 @@ class CNet {
 		size_t addPassOnLayer(actfunc_t type);
 
 		// forProp
-		fREAL forProp(MAT& in, learnPars& const pars, MAT& const outDesired);
+		fREAL forProp(MAT& in, const learnPars& pars, const MAT& outDesired);
 		// backprop
-		fREAL backProp(MAT& const in, MAT& outDesired, learnPars& const pars);
+		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars);
 		// save to file
 		void saveToFile(string filePath) const;
 		void loadFromFile(string filePath);
@@ -39,8 +39,8 @@ class CNet {
 		inline CNetLayer* getFirst() const { return layers.front(); };
 	private:
 		// error related functions
-		MAT errorMatrix(MAT& const outPrediction, MAT& const outDesired);
-		fREAL error(MAT& const diff);
+		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
+		fREAL error(const MAT& diff);
 
 		size_t NIN;
 		vector<CNetLayer*> layers;

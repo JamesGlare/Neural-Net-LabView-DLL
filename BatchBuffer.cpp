@@ -15,14 +15,15 @@ BatchBuffer::BatchBuffer(MATIND _layerInd, size_t _NOUT, size_t _NIN) :  NIN(_NI
 void BatchBuffer::notifyFormChange(MATIND _newForm) {
 	gradientBuffer.resize(_newForm.rows, _newForm.cols);
 }
-void BatchBuffer::swallowGradient(MAT& const gradient) {
-	gradientBuffer += gradient;
+void BatchBuffer::swallowGradient(const MAT& gradient) {
+	gradientBuffer.noalias() += gradient;
 	stillToGo++;
 }
+
 MAT& BatchBuffer::avgGradient() {
 	if(stillToGo > 0)
 		gradientBuffer /= stillToGo;
-	return gradientBuffer;
+		return gradientBuffer;
 }
 void BatchBuffer::clearGradient() {
 	gradientBuffer.setZero();

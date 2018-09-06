@@ -12,7 +12,7 @@ PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type, MATIND _
 	V(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN, type) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& const lower) :
+PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
 	batch(_layerIndex, _NOUT, lower.getNOUT()), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
 	V(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, type, lower) { 
 	init();
@@ -27,7 +27,7 @@ void PhysicalLayer::copyLayer(fREAL* const toCopyTo) {
 	copyToOut(layer.data(), toCopyTo, layer.size());
 }
 // CHECK SIGNS!!
-void PhysicalLayer::applyUpdate(learnPars& const pars, MAT& const input, bool recursive) {
+void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursive) {
 
 	/* new version of this function
 	*/

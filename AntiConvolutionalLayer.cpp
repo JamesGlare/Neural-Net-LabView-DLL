@@ -8,7 +8,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 	init();
 }
 
-AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY,  uint32_t _strideX, uint32_t _features, actfunc_t type, CNetLayer& const lower)
+AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY,  uint32_t _strideX, uint32_t _features, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features),
 	PhysicalLayer(_NOUTX*_NOUTY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features },lower) {
 	init();
@@ -23,7 +23,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, si
 }
 
 // most convenient constructor
-AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& const lower)
+AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(sqrt(lower.getNOUT() / _features)), NINY(sqrt(lower.getNOUT() / _features)), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
 	PhysicalLayer(_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features}, lower) {
 	init();
@@ -78,14 +78,14 @@ MAT AntiConvolutionalLayer::inversVNorm() {
 		out(0, i) /= normSum(V._FEAT(i));
 	return out;
 }
-MAT AntiConvolutionalLayer::gGrad(MAT& const grad) {
+MAT AntiConvolutionalLayer::gGrad(MAT& grad) {
 	MAT ret(1, features);
 	MAT inversV = inversVNorm();
 	for (uint32_t i = 0; i< features; i++)
 		ret(0, i) = (grad._FEAT(i)).cwiseProduct(V._FEAT(i)).sum()*inversV(0, i); //(1,1)
 	return ret;
 }
-MAT AntiConvolutionalLayer::vGrad(MAT& const grad, MAT& const ggrad) {
+MAT AntiConvolutionalLayer::vGrad(MAT& grad, MAT& ggrad) {
 	MAT out = grad; // same dimensions as grad
 					// (1) multiply rows of grad with G's
 	MAT inversV = inversVNorm();
@@ -116,7 +116,7 @@ void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive
 	}
 }
 // backprop
-void AntiConvolutionalLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
+void AntiConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	deltaSave = deltaAbove;
 
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
@@ -131,7 +131,7 @@ void AntiConvolutionalLayer::backPropDelta(MAT& const deltaAbove, bool recursive
 }
 
 // grad
-MAT AntiConvolutionalLayer::grad(MAT& const input) {
+MAT AntiConvolutionalLayer::grad(MAT& input) {
 	deltaSave.resize(NOUTY, NOUTX);
 
 	if (hierarchy == hierarchy_t::input) {

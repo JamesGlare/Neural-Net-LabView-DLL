@@ -8,8 +8,8 @@ class MaxPoolLayer : public DiscarnateLayer{
 
 public:
 	MaxPoolLayer(size_t NINXY, size_t maxOver);
-	MaxPoolLayer(size_t maxOver, CNetLayer& const lower);
-	MaxPoolLayer(CNetLayer& const lower);
+	MaxPoolLayer(size_t maxOver, CNetLayer& lower);
+	MaxPoolLayer(CNetLayer& lower);
 
 	~MaxPoolLayer();
 	layer_t whoAmI() const;

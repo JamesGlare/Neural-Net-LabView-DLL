@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "Eigen/Core"
+
 using namespace Eigen;
 using namespace std;
 
@@ -145,7 +146,7 @@ inline uint32_t antiConvPad(uint32_t inSize, uint32_t stride, uint32_t kernelSiz
 // MAT functions
 void appendOne(MAT&);
 void shrinkOne(MAT&);
+//MAT& appendOneInline(MAT&);
 MAT& appendOneInline(MAT&);
-
 void gauss(MAT& in);
 #endif // !DEFINITIONS_H_INCLUDE

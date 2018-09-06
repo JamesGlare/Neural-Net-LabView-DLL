@@ -13,12 +13,12 @@ public:
 	// constructors and initializers
 	DiscarnateLayer(size_t _NOUT, size_t _NIN);
 	DiscarnateLayer(size_t _NOUT, size_t _NIN, actfunc_t type);
-	DiscarnateLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower);
+	DiscarnateLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower);
 	virtual ~DiscarnateLayer() {}; // purely abstract
 
 	virtual void forProp(MAT& in, bool saveActivation, bool recursive) = 0; // recursive
-	virtual void backPropDelta(MAT& const delta, bool recursive) = 0; // recursive
-	void applyUpdate(learnPars& const pars, MAT& const input, bool recursive); // recursive
+	virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
+	void applyUpdate(const learnPars& pars, MAT& input, bool recursive); // recursive
 };
 
 #endif

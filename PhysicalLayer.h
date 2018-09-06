@@ -18,7 +18,7 @@ public:
 	*/ 
 	PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
 	PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& const lower);
+	PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower);
 	virtual ~PhysicalLayer() {}; // purely abstract
 
 	/* Forward Propagation 
@@ -26,12 +26,12 @@ public:
 	*/
 	virtual void forProp(MAT& in, bool training, bool recursive) = 0; // recursive
 															// backprop
-	virtual MAT grad(MAT& const input) = 0;
+	virtual MAT grad(MAT& input) = 0;
 	/* Backward propagation
 	* Implementation on child class level.
 	*/
-	virtual void backPropDelta(MAT& const delta, bool recursive) = 0; // recursive
-	void applyUpdate(learnPars& const pars, MAT& const input, bool recursive); // recursive
+	virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
+	void applyUpdate(const learnPars& pars, MAT& input, bool recursive); // recursive
 	
 	// Read-only access to weight parameters.
 	void copyLayer(fREAL* const toCopyTo);
@@ -53,8 +53,8 @@ protected:
 	virtual void initG() =0;
 	virtual void normalizeV() = 0;
 	virtual MAT inversVNorm() = 0;
-	virtual MAT gGrad(MAT& const grad) = 0; // gradient in g's
-	virtual MAT vGrad(MAT& const grad, MAT& const ggrad) = 0; // gradient in V
+	virtual MAT gGrad(MAT& grad) = 0; // gradient in g's
+	virtual MAT vGrad(MAT& grad, MAT& ggrad) = 0; // gradient in V
 	
 	/* Internal weights and parameters
 	*/

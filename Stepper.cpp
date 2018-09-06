@@ -32,12 +32,12 @@ void Stepper::notifyFormChange(MATIND _newForm) {
 	velocity.resize(_newForm.rows, _newForm.cols);
 }
 
-void Stepper::resetConjugate(MAT& const gradient) {
+void Stepper::resetConjugate(const MAT& gradient) {
 	gi_prev = gradient;
 	hi= gradient;
 }
 
-void Stepper::doConjugateStep(MAT& layer, MAT& gradient, learnPars& const pars) {
+void Stepper::doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
 	// Actually do the conjugate gradient step.
 	gamma = (gradient.cwiseProduct(gradient - gi_prev)).sum() / (gi_prev.cwiseProduct(gi_prev)).sum();
 	if (!isnan(gamma) && !isinf(gamma)) {
@@ -49,7 +49,7 @@ void Stepper::doConjugateStep(MAT& layer, MAT& gradient, learnPars& const pars) 
 		resetConjugate(gradient);
 	}
 }
-void Stepper::doMomentumStep(MAT& layer, MAT& const gradient, learnPars& const pars) {
+void Stepper::doMomentumStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
 	//layer += pars.gamma*velocity; // NESTEROV 1
 	// (2) apply the velocity step
 	velocity = pars.gamma*velocity - pars.eta*gradient;
@@ -62,27 +62,24 @@ void Stepper::resetAdam() {
 	mt.setZero();
 	vt.setZero();
 }
-void Stepper::doAdamStep(MAT& layer, MAT& const gradient, learnPars& const pars) {
-	if (gradient.allFinite()) {
+void Stepper::doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
+	//if (gradient.allFinite()) {
 		beta1t *= beta1;
 		beta2t *= beta2;
 
 		mt = beta1*mt + (1 - beta1)*gradient;
 		vt = beta2*vt + (1 - beta2)*gradient.unaryExpr(&norm);
-		if (mt.allFinite() && vt.allFinite())
+		//if (mt.allFinite() && vt.allFinite())
 			layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(1.0f - beta2t) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
-		else
-			resetAdam();
-	} else {
-		resetAdam();
-	}
-	//if (!mt.allFinite() || !vt.allFinite()) {
+		//else
+		//	resetAdam();
+	//} else {
 	//	resetAdam();
 	//}
 }
 /* Nesterov accelerated Momentum AND Conjugate Gradient in one
 */
-void Stepper::stepLayer(MAT& layer, MAT& gradient, learnPars& const pars) {
+void Stepper::stepLayer(MAT& layer, MAT& gradient, const learnPars& pars) {
 	if (pars.conjugate) {
 		/* Conjugate Gradient Method
 		* T Masters P 104
@@ -99,7 +96,7 @@ void Stepper::stepLayer(MAT& layer, MAT& gradient, learnPars& const pars) {
 		* hi -> h_i
 		* -gradient -> g_i
 		*/
-		gradient *= -1; // requires gradient to be writeable
+		gradient *= -1; 
 
 		if (!mode_conjugateGradient) { // user changed to conjugate gradient method
 			mode_conjugateGradient = true;
@@ -132,8 +129,6 @@ void Stepper::stepLayer(MAT& layer, MAT& gradient, learnPars& const pars) {
 		* theta = theta - v_t 
 		*/
 		// (1) The gradient was computed at  theta - gamma*v_t-1 so reset that
-		if (velocity.allFinite()&& gradient.allFinite()) {
-			doMomentumStep(layer, gradient, pars);
-		}
+		doMomentumStep(layer, gradient, pars);
 	}
 }

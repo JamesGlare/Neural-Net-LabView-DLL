@@ -7,7 +7,8 @@
 class Stepper {
 public:
 	Stepper(MATIND _layerIndex); // give all matrices, so that stepper can see dimensions
-	void stepLayer(MAT& layer, MAT& gradient, learnPars& const pars);
+	void stepLayer(MAT& layer, MAT& gradient, const learnPars&  pars);
+
 	void notifyFormChange(MATIND _newIndex);
 	//void stepLayer_weightNormalized(MAT& layer, MAT& const V_gradient, MAT& const G_gradient,  learnPars& const pars);
 
@@ -16,13 +17,13 @@ private:
 	/* Nesterov accelerated momentum 
 	*/
 	MAT velocity;
-	void doMomentumStep(MAT& layer, MAT& gradient, learnPars& const pars);
+	void doMomentumStep(MAT& layer, const MAT& gradient, const learnPars& pars);
 
 	/* Conjugate gradient 
 	*/
-	void doConjugateStep(MAT& layer, MAT& const gradient, learnPars& const pars);
+	void doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars);
 	bool mode_conjugateGradient;
-	void resetConjugate(MAT& const gradient);
+	void resetConjugate(const MAT& gradient);
 
 	MAT hi;
 	MAT gi_prev;
@@ -30,7 +31,7 @@ private:
 	
 	/* Adam optimization
 	*/
-	void doAdamStep(MAT& layer, MAT& const gradient, learnPars& const pars);
+	void doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars);
 	void resetAdam();
 	bool mode_adamStep;
 	MAT mt;

@@ -13,6 +13,7 @@ void appendOne(MAT& in) {
 void shrinkOne(MAT& in) {
 	in.conservativeResize(in.rows() - 1, in.cols());
 }
+
 MAT& appendOneInline(MAT& toAppend) {
 	//MAT temp = MAT(toAppend.rows() + 1, toAppend.cols());
 	//temp.setOnes();
@@ -21,6 +22,7 @@ MAT& appendOneInline(MAT& toAppend) {
 	toAppend.bottomRows(1).setConstant(1);
 	return toAppend;
 }
+
 MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features ) {
 
 	size_t inY = in.rows(); // we only accept square matrices 

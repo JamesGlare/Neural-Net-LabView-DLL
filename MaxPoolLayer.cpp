@@ -9,13 +9,13 @@ MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
 	assertGeometry();
 }
 
-MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, CNetLayer& const lower) 
+MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, CNetLayer& lower) 
 	: NINX((int)sqrt(lower.getNOUT())), NINY((int)sqrt(lower.getNOUT())), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT())) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT())) / _maxOverXY), 
 	DiscarnateLayer(((int)sqrt(lower.getNOUT()) / _maxOverXY)*((int)sqrt(lower.getNOUT()) / _maxOverXY), actfunc_t::NONE, lower) {
 	init();
 	assertGeometry();
 }
-MaxPoolLayer::MaxPoolLayer(CNetLayer& const lower) : MaxPoolLayer::MaxPoolLayer(2, lower) {}
+MaxPoolLayer::MaxPoolLayer(CNetLayer& lower) : MaxPoolLayer::MaxPoolLayer(2, lower) {}
 
 MaxPoolLayer::~MaxPoolLayer(){}
 

@@ -8,17 +8,17 @@
 class ConvolutionalLayer : public PhysicalLayer{
 	public:
 		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type);
-		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type,CNetLayer& const lower);
+		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type, CNetLayer& lower);
 		ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type);
-		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type,  CNetLayer& const lower);
+		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type, CNetLayer& lower);
 		~ConvolutionalLayer();
 		
 		layer_t whoAmI() const;
 		// propagation 
 		// forProp
 		void forProp(MAT& in, bool training, bool recursive);
-		MAT grad(MAT& const input);
-		void backPropDelta(MAT& const delta, bool recursive);
+		MAT grad(MAT& input);
+		void backPropDelta(MAT& delta, bool recursive);
 
 		inline size_t getNOUTX() const { return NOUTX; };
 		inline size_t getNOUTY() const { return NOUTY; };
@@ -33,8 +33,8 @@ class ConvolutionalLayer : public PhysicalLayer{
 		void updateW();
 		void normalizeV();
 		MAT inversVNorm();
-		MAT gGrad(MAT& const grad);
-		MAT vGrad(MAT& const grad, MAT& const ggrad);
+		MAT gGrad(MAT& grad);
+		MAT vGrad(MAT& grad, MAT& ggrad);
 		void initG();
 		void initV();
 		// Auxiliary feature-selection functions

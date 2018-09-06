@@ -4,10 +4,10 @@
 PassOnLayer::PassOnLayer(size_t NOUT, size_t NIN, actfunc_t type) : DiscarnateLayer(NOUT, NIN, type) {
 
 }
-PassOnLayer::PassOnLayer(size_t NOUT, actfunc_t type, CNetLayer& const lower) : DiscarnateLayer(NOUT, type, lower) {
+PassOnLayer::PassOnLayer(size_t NOUT, actfunc_t type, CNetLayer& lower) : DiscarnateLayer(NOUT, type, lower) {
 
 }
-PassOnLayer::PassOnLayer(actfunc_t type, CNetLayer& const lower) : DiscarnateLayer(lower.getNOUT(), type, lower) {
+PassOnLayer::PassOnLayer(actfunc_t type, CNetLayer& lower) : DiscarnateLayer(lower.getNOUT(), type, lower) {
 
 }
 
@@ -33,7 +33,7 @@ void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	} 
 }
 
-void PassOnLayer::backPropDelta(MAT& const delta, bool recursive) {
+void PassOnLayer::backPropDelta(MAT& delta, bool recursive) {
 	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
 
 		MAT temp = (below->getDACT()).cwiseProduct(delta);

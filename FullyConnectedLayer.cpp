@@ -8,7 +8,7 @@ FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, size_t _NIN, actfunc_t ty
 	init();
 }
 // constructor - for hidden layers and output layers
-FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, actfunc_t type, CNetLayer& const lower) : 
+FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower) : 
 	PhysicalLayer(_NOUT, type, MATIND{ _NOUT, lower.getNOUT() + 1 }, MATIND{ _NOUT, lower.getNOUT() +1 }, MATIND{ _NOUT, 1 },lower) {
 	// layer and velocity matrices
 	init();
@@ -61,10 +61,10 @@ void FullyConnectedLayer::normalizeV() {
 */
 MAT FullyConnectedLayer::inversVNorm() {
 	MAT out(NOUT, NIN+1);
-	out.setOnes();
-
+	//out.setOnes();
+	MAT oneRow = MAT::Constant(1, NIN,1.0f);
 	for (size_t i = 0; i < NOUT; i++) {
-		out.leftCols(NIN).row(i) /= normSum(V.leftCols(NIN).row(i)); //
+		out.leftCols(NIN).row(i) = oneRow/normSum(V.leftCols(NIN).row(i)); //
 	}
 	return out;
 }
@@ -74,17 +74,18 @@ void FullyConnectedLayer::initG() {
 //	}
 	G.setOnes();
 }
-MAT FullyConnectedLayer::gGrad(MAT& const grad) {
+MAT FullyConnectedLayer::gGrad(MAT& grad) {
 	// = MAT(NOUT, 1);  //(NOUT, NIN)
 	MAT out=grad.leftCols(NIN).cwiseProduct( (inversVNorm().cwiseProduct(V)).leftCols(NIN) ); //(NOUT, NIN)
 	
-	return  out.rowwise().sum(); //(NOUT,1)
+	return {std::move(out.rowwise().sum())}; //(NOUT,1)
 }
-MAT FullyConnectedLayer::vGrad(MAT& const grad, MAT& const ggrad) {
+MAT FullyConnectedLayer::vGrad(MAT& grad, MAT& ggrad) {
 	MAT temp = inversVNorm(); //(NOUT, NIN)
 	MAT out(NOUT, NIN+1);
-	out = grad.cwiseProduct(temp).cwiseProduct(G.replicate(1, NIN + 1));
-	out.noalias() -= G.replicate(1, NIN + 1).cwiseProduct(temp.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, NIN + 1)).cwiseProduct(V); // (NOUT, NIN)
+	MAT gRep = G.replicate(1, NIN + 1);
+	out = grad.cwiseProduct(temp).cwiseProduct(gRep);
+	out.noalias() -= gRep.cwiseProduct(temp.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, NIN + 1)).cwiseProduct(V); // (NOUT, NIN)
 	out.rightCols(1) = grad.rightCols(1);
 	/*MAT inversV = inversVNorm();
 	for (size_t i = 0; i < NOUT; i++) {
@@ -103,9 +104,9 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		/* normal training forward pass
 		*/ 
 	
-		appendOne(inBelow);
+		//appendOne(inBelow);
 		// Eigen assumes aliasing by default for matrix products A*B type situations
-		actSave.noalias() = layer*inBelow; // save the activations before non-linearity
+		actSave.noalias() = layer*appendOneInline(inBelow); // save the activations before non-linearity
 		if (hierarchy != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act); 
 			if(recursive)
@@ -118,21 +119,19 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		*/
 		MAT temp;
 		if (hierarchy != hierarchy_t::output) {
-			appendOne(inBelow);
 			// Eigen assumes aliasing by default for matrix products A*B type situations
-			temp.noalias() = (layer*inBelow).unaryExpr(act);
+			temp.noalias() = (layer*appendOneInline(inBelow)).unaryExpr(act);
 			inBelow = temp;
 			if(recursive)
 				above->forProp(inBelow, false, true);
 		} else {
-			appendOne(inBelow);
-			temp.noalias() = layer*inBelow;
+			temp.noalias() = layer*appendOneInline(inBelow);
 			inBelow = temp;
 		}
 	}
 }
 
-void FullyConnectedLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
+void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	//DACT(inAct).cwiseProduct(hiddenLayers[0].leftCols(hiddenLayers[0].cols() - 1).transpose()*hiddenDeltas[0]);
 	deltaSave = deltaAbove;
 
@@ -144,12 +143,13 @@ void FullyConnectedLayer::backPropDelta(MAT& const deltaAbove, bool recursive) {
 }
 /* Same dimensionality as layer.
 */
-MAT FullyConnectedLayer::grad(MAT& const input) {
+MAT FullyConnectedLayer::grad(MAT& input) {
 	if (hierarchy == hierarchy_t::input) {
-		return deltaSave*appendOneInline(input).transpose(); //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
+			// VC does not perform RVO for some reason :/
+		return {std::move(deltaSave*appendOneInline(input).transpose())}; //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
 	}
 	else {
-		return deltaSave * appendOneInline(below->getACT()).transpose();
+		return {std::move(deltaSave * appendOneInline(below->getACT()).transpose()) };
 	}
 }
 
