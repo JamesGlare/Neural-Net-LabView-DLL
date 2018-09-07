@@ -26,6 +26,9 @@ void PhysicalLayer::init() {
 void PhysicalLayer::copyLayer(fREAL* const toCopyTo) {
 	copyToOut(layer.data(), toCopyTo, layer.size());
 }
+void PhysicalLayer::setLayer(fREAL* const copyFrom) {
+	layer = MATMAP(copyFrom, layer.rows(), layer.cols());
+}
 // CHECK SIGNS!!
 void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursive) {
 
@@ -65,7 +68,11 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 	}
 
 }
-
+MATIND PhysicalLayer::layerDimensions() const {
+	size_t rows_ = layer.rows();
+	size_t cols_ = layer.cols();
+	return MATIND{rows_, cols_};
+}
 void PhysicalLayer::miniBatch_updateBuffer(MAT& input) {
 	batch.updateBuffer(input);
 }

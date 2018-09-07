@@ -57,20 +57,27 @@ __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
 }
 
-__declspec(dllexport) void __stdcall saveCNet(CNet* ptr) {
-	string filePath = "C:\\Jannes\\learnSamples\\";
+__declspec(dllexport) void __stdcall saveCNet(CNet* ptr, string filePath) {
 	ptr->saveToFile(filePath);
 }
-__declspec(dllexport) void __stdcall loadCNet(CNet* ptr) {
-	string filePath = "C:\\Jannes\\learnSamples\\";
+__declspec(dllexport) void __stdcall loadCNet(CNet* ptr, string filePath) {
 	ptr->loadFromFile(filePath);
 }
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 	ptr->~CNet();
 }
 __declspec(dllexport) void __stdcall writeLayer(CNet* ptr, uint32_t layer, fREAL* const toCopyTo) {
-	if(layer < ptr->getLayerNumber())
-		ptr->copyNthLayer(layer, toCopyTo);
+	ptr->copyNthLayer(layer, toCopyTo);
+}
+__declspec(dllexport) void __stdcall getLayerDimension(CNet* ptr, uint32_t layer, uint32_t* rows, uint32_t* cols) {
+	size_t rows_ = 0;
+	size_t cols_ = 0;
+	ptr->inquireDimensions(layer, rows_, cols_);
+	*rows = rows_;
+	*cols = cols_;
+}
+__declspec(dllexport) void __stdcall setLayer(CNet* ptr, uint32_t layer, fREAL* const copyFrom) {
+	ptr->setNthLayer(layer, copyFrom);
 }
 __declspec(dllexport) uint32_t __stdcall test() {
 	return 0;

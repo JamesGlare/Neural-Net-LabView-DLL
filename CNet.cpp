@@ -106,7 +106,7 @@ void CNet::saveToFile(string filePath) const {
 	}
 }
 void CNet::loadFromFile(string filePath) {
-	for(uint32_t i =0; i< getLayerNumber(); i++) {
+	for(size_t i =0; i< getLayerNumber(); i++) {
 		ifstream file(filePath + "CNetLayer_" + to_string(i) + ".dat");
 		if (file.is_open()) {
 			file >> (*layers[i]);
@@ -137,16 +137,31 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	outDesired = outPredicted;
 	return errorOUT;
 }
-
-void CNet::copyNthLayer(uint32_t layer, fREAL* const toCopyTo) {
-	if (layers[layer]->whoAmI() != layer_t::maxPooling
-		&& layers[layer]->whoAmI() != layer_t::passOn) {
-		((PhysicalLayer*) layers[layer])->copyLayer(toCopyTo);
+void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
+	if (layer < getLayerNumber()) {
+		if (isPhysical(layer)) {
+			MATIND layerDimension = ((PhysicalLayer*)layers[layer])->layerDimensions();
+			rows = layerDimension.rows;
+			cols = layerDimension.cols;
+		}
 	}
 }
-
+void CNet::copyNthLayer(size_t layer, fREAL* const toCopyTo) const {
+	if (layer < getLayerNumber()) {
+		if (isPhysical(layer)) {
+			((PhysicalLayer*)layers[layer])->copyLayer(toCopyTo);
+		}
+	}
+}
+void CNet::setNthLayer(size_t layer, fREAL* const copyFrom) {
+	if (layer < getLayerNumber()) {
+		if (isPhysical(layer)) {
+			((PhysicalLayer*)layers[layer])->setLayer(copyFrom);
+		}
+	}
+}
 MAT CNet::errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
-	return {std::move(outPrediction - outDesired)};
+	return {std::move(outPrediction - outDesired)}; // force Visual C++ to return without temporary - since RVO doesn't work ???!
 }
 fREAL CNet::error(const MAT& diff) {
 	fREAL sum = cumSum(matNorm(diff));

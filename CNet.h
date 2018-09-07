@@ -33,15 +33,22 @@ class CNet {
 		// Getter functions
 		inline size_t getLayerNumber() const { return layers.size(); };
 		inline size_t getNIN() const { return NIN; };
-		void copyNthLayer(uint32_t layer, fREAL* const toCopyTo);
+		void copyNthLayer(size_t layer, fREAL* const toCopyTo) const;
+		void setNthLayer(size_t layer, fREAL* const copyFrom);
 		size_t getNOUT() const;
 		inline CNetLayer* getLast() const { return layers.back(); };
 		inline CNetLayer* getFirst() const { return layers.front(); };
+		void inquireDimensions (size_t layer, size_t& rows, size_t& cols) const;
+
 	private:
 		// error related functions
 		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
 		fREAL error(const MAT& diff);
-
+		inline bool isPhysical(size_t layer) const {
+			return (layers[layer]->whoAmI() != layer_t::maxPooling
+				&& layers[layer]->whoAmI() != layer_t::passOn
+				&& layers[layer]->whoAmI() != layer_t::dropout);
+		}
 		size_t NIN;
 		vector<CNetLayer*> layers;
 
