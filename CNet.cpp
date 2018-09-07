@@ -98,7 +98,7 @@ size_t CNet::getNOUT() const {
 
 void CNet::saveToFile(string filePath) const {
 	for (size_t i = 0; i < getLayerNumber(); i++) {
-		ofstream file(filePath+"CNetLayer_"+ to_string(i) + ".dat");
+		ofstream file(filePath+"\\CNetLayer_"+ to_string(i) + ".dat");
 		if (file.is_open()) {
 			file << (*layers[i]);
 		}
@@ -107,7 +107,7 @@ void CNet::saveToFile(string filePath) const {
 }
 void CNet::loadFromFile(string filePath) {
 	for(size_t i =0; i< getLayerNumber(); i++) {
-		ifstream file(filePath + "CNetLayer_" + to_string(i) + ".dat");
+		ifstream file(filePath + "\\CNetLayer_" + to_string(i) + ".dat");
 		if (file.is_open()) {
 			file >> (*layers[i]);
 		}

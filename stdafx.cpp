@@ -57,11 +57,11 @@ __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
 }
 
-__declspec(dllexport) void __stdcall saveCNet(CNet* ptr, string filePath) {
-	ptr->saveToFile(filePath);
+__declspec(dllexport) void __stdcall saveCNet(CNet* ptr, char* filePath) {
+	ptr->saveToFile(string(filePath));
 }
-__declspec(dllexport) void __stdcall loadCNet(CNet* ptr, string filePath) {
-	ptr->loadFromFile(filePath);
+__declspec(dllexport) void __stdcall loadCNet(CNet* ptr, char* filePath) {
+	ptr->loadFromFile(string(filePath));
 }
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 	ptr->~CNet();

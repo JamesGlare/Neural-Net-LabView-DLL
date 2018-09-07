@@ -61,10 +61,10 @@ void FullyConnectedLayer::normalizeV() {
 */
 MAT FullyConnectedLayer::inversVNorm() {
 	MAT out(NOUT, NIN+1);
-	//out.setOnes();
-	MAT oneRow = MAT::Constant(1, NIN,1.0f);
+	out.setOnes();
+	//MAT oneRow = MAT::Constant(1, NIN,1.0f);
 	for (size_t i = 0; i < NOUT; i++) {
-		out.leftCols(NIN).row(i) = oneRow/normSum(V.leftCols(NIN).row(i)); //
+		out.leftCols(NIN).row(i) /=  normSum(V.leftCols(NIN).row(i)); //
 	}
 	return out;
 }
