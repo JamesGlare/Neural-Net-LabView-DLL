@@ -7,7 +7,7 @@
 class Stepper {
 public:
 	Stepper(MATIND _layerIndex); // give all matrices, so that stepper can see dimensions
-	void stepLayer(MAT& layer, MAT& gradient, const learnPars&  pars);
+	void stepLayer(MAT& layer, const MAT& gradient, const learnPars&  pars);
 
 	void notifyFormChange(MATIND _newIndex);
 	//void stepLayer_weightNormalized(MAT& layer, MAT& const V_gradient, MAT& const G_gradient,  learnPars& const pars);

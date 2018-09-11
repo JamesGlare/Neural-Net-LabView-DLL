@@ -4,23 +4,24 @@
 // pass constructor to base class
 PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) : 
 	batch(_layerIndex, _NOUT, _NIN ), stepper(_layerIndex), VStepper(_VIndex),GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols), 
-	V(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN) {
+	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN) {
 	init();
 }
 PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
 	batch(_layerIndex, _NOUT,_NIN), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
-	V(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN, type) {
+	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN, type) {
 	init();
 }
 PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
 	batch(_layerIndex, _NOUT, lower.getNOUT()), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
-	V(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, type, lower) { 
+	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, type, lower) {
 	init();
 }
 void PhysicalLayer::init() {
 	layer.setRandom();
 	G.setZero();
 	V.setZero();
+	VInversNorm.setZero();
 	weightNormMode = false;
 }
 void PhysicalLayer::copyLayer(fREAL* const toCopyTo) {
@@ -45,18 +46,24 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				initG();
 				initV();
 				weightNormMode = true;
+				inversVNorm();
 			} 
+			// (1) Update the InversVNorm matrix, since it is used several times
 			MAT Ggradient = gGrad(batch.avgGradient());
-
+			// (2) Perform stoch grad steps on G and V
 			GStepper.stepLayer(G, Ggradient, pars);
 			VStepper.stepLayer(V, vGrad(batch.avgGradient(), Ggradient), pars);
-
-			//normalizeV();
+			// (3) Recompute inversNorm and update the layer weight matrix
+			inversVNorm();
 			updateW();
-			
 		} else {
 			/* Standard step.
 			*/
+			/*if (weightNormMode) {
+				// We were in weight normalization mode before!
+				// So we have to switch back to layer as weight matrix.
+				updateW(); 
+			}*/
 			weightNormMode = false;
 			stepper.stepLayer(layer, batch.avgGradient(), pars);
 		}

@@ -12,7 +12,7 @@ Stepper::Stepper(MATIND _layerIndex) {
 	hi.setZero();
 	gi_prev = MAT(_layerIndex.rows, _layerIndex.cols);  // gradient
 	gi_prev.setZero();
-	gamma = 0.0f;
+	gamma = 1.0f;
 
 	/* Adam step
 	*/
@@ -33,19 +33,18 @@ void Stepper::notifyFormChange(MATIND _newForm) {
 }
 
 void Stepper::resetConjugate(const MAT& gradient) {
-	gi_prev = gradient;
-	hi= gradient;
+	gi_prev = -gradient;
+	hi= -gradient;
 }
 
 void Stepper::doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
 	// Actually do the conjugate gradient step.
-	gamma = (gradient.cwiseProduct(gradient - gi_prev)).sum() / (gi_prev.cwiseProduct(gi_prev)).sum();
+	gamma = (gradient.cwiseProduct(gradient + gi_prev)).sum() / (gi_prev.cwiseProduct(gi_prev)).sum();
 	if (!isnan(gamma) && !isinf(gamma)) {
-		hi = gradient + gamma*hi; // hi = gi + gamma*h(i-1)
+		hi = -gradient + gamma*hi; // hi = gi + gamma*h(i-1)
 		layer = (1.0f - pars.lambda)*layer + pars.eta*hi; // !!!! do the actual step
-		gi_prev = gradient; // save negative gradient	
-	}
-	else { // something went wrong - reset.
+		gi_prev = -gradient; // save negative gradient	
+	} else { // something went wrong - reset.
 		resetConjugate(gradient);
 	}
 }
@@ -79,7 +78,7 @@ void Stepper::doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars)
 }
 /* Nesterov accelerated Momentum AND Conjugate Gradient in one
 */
-void Stepper::stepLayer(MAT& layer, MAT& gradient, const learnPars& pars) {
+void Stepper::stepLayer(MAT& layer, const MAT& gradient, const learnPars& pars) {
 	if (pars.conjugate) {
 		/* Conjugate Gradient Method
 		* T Masters P 104
@@ -96,8 +95,6 @@ void Stepper::stepLayer(MAT& layer, MAT& gradient, const learnPars& pars) {
 		* hi -> h_i
 		* -gradient -> g_i
 		*/
-		gradient *= -1; 
-
 		if (!mode_conjugateGradient) { // user changed to conjugate gradient method
 			mode_conjugateGradient = true;
 			resetConjugate(gradient);

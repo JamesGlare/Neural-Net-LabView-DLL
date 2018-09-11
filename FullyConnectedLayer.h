@@ -24,9 +24,9 @@ private:
 	*/
 	void updateW();
 	void normalizeV();
-	MAT inversVNorm();
-	MAT gGrad(MAT& grad); // gradient in g's
-	MAT vGrad(MAT& grad, MAT& ggrad); // gradient in V
+	void inversVNorm();
+	MAT gGrad(const MAT& grad); // gradient in g's
+	MAT vGrad(const MAT& grad, MAT& ggrad); // gradient in V
 	void initG();
 	void initV();
 

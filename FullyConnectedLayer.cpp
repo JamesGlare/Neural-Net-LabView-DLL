@@ -43,13 +43,12 @@ void FullyConnectedLayer::updateW() {
 	}
 	layer.rightCols(1) = V.rightCols(1); // keep bias weights
 	*/
-	layer = V.cwiseProduct(inversVNorm());
+	layer = V.cwiseProduct(VInversNorm);
 	layer.leftCols(NIN) = layer.leftCols(NIN).cwiseProduct(G.replicate(1, NIN ));
 }
 
 void FullyConnectedLayer::initV() {
 	V = layer;
-	V.setRandom();
 	//normalizeV();
 }
 void FullyConnectedLayer::normalizeV() {
@@ -59,33 +58,31 @@ void FullyConnectedLayer::normalizeV() {
 }
 /* take cwiseProduct with this matrix to obtain X/||V|| or V/||V||^2
 */
-MAT FullyConnectedLayer::inversVNorm() {
-	MAT out(NOUT, NIN+1);
-	out.setOnes();
+void FullyConnectedLayer::inversVNorm() {
+	//MAT out(NOUT, NIN+1);
+	VInversNorm.setOnes();
 	//MAT oneRow = MAT::Constant(1, NIN,1.0f);
 	for (size_t i = 0; i < NOUT; i++) {
-		out.leftCols(NIN).row(i) /=  normSum(V.leftCols(NIN).row(i)); //
+		VInversNorm.leftCols(NIN).row(i) /=  normSum(V.leftCols(NIN).row(i)); //
 	}
-	return out;
 }
 void FullyConnectedLayer::initG() {
-//	for (size_t i = 0; i < NOUT; i++) {
-//		G(i,0) = normSum(layer.leftCols(NIN).row(i));
-//	}
+	//for (size_t i = 0; i < NOUT; i++) {
+	//	G(i,0) = normSum(layer.leftCols(NIN).row(i));
+	//}
 	G.setOnes();
 }
-MAT FullyConnectedLayer::gGrad(MAT& grad) {
+MAT FullyConnectedLayer::gGrad(const MAT& grad) {
 	// = MAT(NOUT, 1);  //(NOUT, NIN)
-	MAT out=grad.leftCols(NIN).cwiseProduct( (inversVNorm().cwiseProduct(V)).leftCols(NIN) ); //(NOUT, NIN)
+	MAT out=grad.leftCols(NIN).cwiseProduct( (VInversNorm.cwiseProduct(V)).leftCols(NIN) ); //(NOUT, NIN)
 	
-	return {std::move(out.rowwise().sum())}; //(NOUT,1)
+	return {std::move(1.0f/NOUT*out.rowwise().sum())}; //(NOUT,1)
 }
-MAT FullyConnectedLayer::vGrad(MAT& grad, MAT& ggrad) {
-	MAT temp = inversVNorm(); //(NOUT, NIN)
-	MAT out(NOUT, NIN+1);
+MAT FullyConnectedLayer::vGrad(const MAT& grad, MAT& ggrad) {
+	//MAT out(NOUT, NIN+1);
 	MAT gRep = G.replicate(1, NIN + 1);
-	out = grad.cwiseProduct(temp).cwiseProduct(gRep);
-	out.noalias() -= gRep.cwiseProduct(temp.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, NIN + 1)).cwiseProduct(V); // (NOUT, NIN)
+	MAT out = grad.cwiseProduct(VInversNorm).cwiseProduct(gRep);
+	out -= gRep.cwiseProduct(VInversNorm.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, NIN + 1)).cwiseProduct(V); // (NOUT, NIN)
 	out.rightCols(1) = grad.rightCols(1);
 	/*MAT inversV = inversVNorm();
 	for (size_t i = 0; i < NOUT; i++) {

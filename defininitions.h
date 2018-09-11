@@ -117,7 +117,7 @@ inline fREAL invSqrt(fREAL f) {
 	return 1.0f/sqrt(f);
 }
 inline MAT matNorm(const MAT& in) {
-	return in.unaryExpr(&norm);
+	return {std::move(in.unaryExpr(&norm))};
 }
 inline fREAL normSum(const MAT& in) {
 	return sqrt(matNorm(in).sum());

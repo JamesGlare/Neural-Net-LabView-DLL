@@ -54,9 +54,10 @@ void AntiConvolutionalLayer::init() {
 // weight normalization reparametrize
 // weight normalization reparametrize
 void AntiConvolutionalLayer::updateW() {
-	MAT inversV = inversVNorm();
-	for (uint32_t i = 0; i< features; i++)
-		layer._FEAT(i) = G(0, i)*inversV(0, i) *V._FEAT(i);
+	for (uint32_t i = 0; i < features; i++) {
+		fREAL vInversEntry = (VInversNorm._FEAT(i))(0, 0);
+		layer._FEAT(i) = G(0, i)*vInversEntry *V._FEAT(i);
+	}
 }
 
 void AntiConvolutionalLayer::initV() {
@@ -71,28 +72,30 @@ void AntiConvolutionalLayer::initG() {
 	for (uint32_t i = 0; i< features; i++)
 		G(0, i) = normSum(layer._FEAT(i));
 }
-MAT AntiConvolutionalLayer::inversVNorm() {
-	MAT out(1, features);
-	out.setOnes();
+void AntiConvolutionalLayer::inversVNorm() {
+	
+	VInversNorm.setOnes();
 	for (uint32_t i = 0; i< features; i++)
-		out(0, i) /= normSum(V._FEAT(i));
-	return out;
+		VInversNorm._FEAT(i) /= normSum(V._FEAT(i));
 }
-MAT AntiConvolutionalLayer::gGrad(MAT& grad) {
+MAT AntiConvolutionalLayer::gGrad(const MAT& grad) {
 	MAT ret(1, features);
-	MAT inversV = inversVNorm();
-	for (uint32_t i = 0; i< features; i++)
-		ret(0, i) = (grad._FEAT(i)).cwiseProduct(V._FEAT(i)).sum()*inversV(0, i); //(1,1)
+
+	for (uint32_t i = 0; i < features; i++) {
+		fREAL vInversEntry = (VInversNorm._FEAT(i))(0, 0);
+		ret(0, i) = (grad._FEAT(i)).cwiseProduct(V._FEAT(i)).sum()*vInversEntry; //(1,1)
+	}
 	return ret;
 }
-MAT AntiConvolutionalLayer::vGrad(MAT& grad, MAT& ggrad) {
+MAT AntiConvolutionalLayer::vGrad(const MAT& grad, MAT& ggrad) {
 	MAT out = grad; // same dimensions as grad
 					// (1) multiply rows of grad with G's
-	MAT inversV = inversVNorm();
 	for (uint32_t i = 0; i < features; i++) {
-		out._FEAT(i) *= G(0, i)*inversV(0, i);
+		fREAL vInversEntry = (VInversNorm._FEAT(i))(0, 0);
+		out._FEAT(i) *= G(0, i)*vInversEntry;
 		// (2) subtract 
-		out._FEAT(i) -= G(0, i)*ggrad(0, i)*V._FEAT(i)*inversV(0, i)*inversV(0, i);
+		vInversEntry *= vInversEntry;
+		out._FEAT(i) -= G(0, i)*ggrad(0, i)*V._FEAT(i)*vInversEntry;
 	}
 	return out;
 }

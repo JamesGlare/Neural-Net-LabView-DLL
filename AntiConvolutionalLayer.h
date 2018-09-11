@@ -32,9 +32,9 @@ private:
 	*/
 	void updateW();
 	void normalizeV();
-	MAT inversVNorm();
-	MAT gGrad(MAT& grad);
-	MAT vGrad(MAT& grad, MAT& ggrad);
+	void inversVNorm();
+	MAT gGrad(const MAT& grad);
+	MAT vGrad(const MAT& grad, MAT& ggrad);
 	void initG();
 	void initV();
 

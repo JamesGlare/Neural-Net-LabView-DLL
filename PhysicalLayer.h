@@ -50,14 +50,16 @@ protected:
  	*/
 	bool weightNormMode;
 	MAT G; // as many as NOUT for FC layers
-	MAT V; // store V and update W each time, keep V rowwise normalised
+	MAT V; // store V and update W each time
+	MAT VInversNorm;
+
 	virtual void updateW() = 0; // to W
 	virtual void initV() = 0;
 	virtual void initG() =0;
 	virtual void normalizeV() = 0;
-	virtual MAT inversVNorm() = 0;
-	virtual MAT gGrad(MAT& grad) = 0; // gradient in g's
-	virtual MAT vGrad(MAT& grad, MAT& ggrad) = 0; // gradient in V
+	virtual void inversVNorm() = 0;
+	virtual MAT gGrad(const MAT& grad) = 0; // gradient in g's
+	virtual MAT vGrad(const MAT& grad, MAT& ggrad) = 0; // gradient in V
 	
 	/* Internal weights and parameters
 	*/
