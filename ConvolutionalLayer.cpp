@@ -167,7 +167,10 @@ MAT ConvolutionalLayer::grad(MAT& input) {
 }
 void ConvolutionalLayer::saveToFile(ostream& os) const {
 	os << NOUTY << "\t" << NOUTX << "\t" << NINY << "\t" << NINX << "\t" << kernelY << "\t" << kernelX << "\t"  << strideY<< "\t" << strideX<< "\t" << features<<endl;
-	os << layer;
+	for (size_t f = 0; f < features; ++f) {
+		os << (layer._FEAT(f)); // write feature-wise for better readability
+		os << endl;
+	}
 }
 // first line has been read already
 void ConvolutionalLayer::loadFromFile(ifstream& in) {
@@ -185,10 +188,12 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	G = MAT(1, features);
 	V.setZero();
 	G.setZero();
-
-	for (size_t i = 0; i < kernelY; i++) {
-		for (size_t j = 0; j < features*kernelX; j++) {
-			in >> layer(i, j);
+	
+	for (size_t f = 0; f < features; ++f){
+		for (size_t i = 0; i < kernelY; ++i) {
+			for (size_t j = 0; j < kernelX; ++j) {
+				in >> layer(i, j+f*kernelX);
+			}
 		}
 	}
-}
+}	

@@ -4,7 +4,8 @@
 
 // Constructors
 MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
-	: NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), DiscarnateLayer(((int)(NINXY / _maxOverXY))*((int)(NINXY / _maxOverXY)),NINXY*NINXY, actfunc_t::NONE){
+	: NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), 
+	DiscarnateLayer(((int)(NINXY / _maxOverXY))*((int)(NINXY / _maxOverXY)),NINXY*NINXY, actfunc_t::NONE){
 	init();
 	assertGeometry();
 }

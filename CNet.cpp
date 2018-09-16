@@ -5,6 +5,7 @@
 #include "AntiConvolutionalLayer.h"
 #include "MaxPoolLayer.h"
 #include "PassOnLayer.h"
+#include "DropoutLayer.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
@@ -63,7 +64,16 @@ size_t CNet::addPassOnLayer( actfunc_t type) {
 	}
 	return getLayerNumber(); 
 }
-
+size_t CNet::addDropoutLayer(fREAL ratio) {
+	if (getLayerNumber() > 0) {
+		DropoutLayer* dl = new DropoutLayer(ratio, *(layers.back()) );
+		layers.push_back(dl);
+	} else {
+		DropoutLayer* dl = new DropoutLayer(ratio, NIN);
+		layers.push_back(dl);
+	}
+	return getLayerNumber();
+}
 size_t CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
 	switch (type) {
 		case pooling_t::max:

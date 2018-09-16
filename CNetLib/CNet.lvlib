@@ -5,6 +5,7 @@
 	<Property Name="NI.Lib.Version" Type="Str">1.0.0.0</Property>
 	<Item Name="addAntiConvolutionalLayer.vi" Type="VI" URL="../addAntiConvolutionalLayer.vi"/>
 	<Item Name="addConvolutionalLayer.vi" Type="VI" URL="../addConvolutionalLayer.vi"/>
+	<Item Name="addDropoutLayer.vi" Type="VI" URL="../addDropoutLayer.vi"/>
 	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../addFullyConnectedLayer.vi"/>
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
 	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>

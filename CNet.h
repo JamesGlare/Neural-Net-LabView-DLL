@@ -19,6 +19,7 @@ class CNet {
 		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
 		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
 		size_t addPoolingLayer(size_t maxOverXY, pooling_t type);
+		size_t addDropoutLayer(fREAL ratio);
 		size_t addPassOnLayer(actfunc_t type);
 
 		// forProp

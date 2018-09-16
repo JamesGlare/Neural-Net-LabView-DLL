@@ -22,7 +22,18 @@ MAT& appendOneInline(MAT& toAppend) {
 	toAppend.bottomRows(1).setConstant(1);
 	return toAppend;
 }
+void extract(MAT& out, const MAT& full, const MATINDEX& ind) {
+	size_t num_indices = ind.rows();
 
+	for (size_t i = 0; i < num_indices; ++i) {
+		out(ind(i, 0), 0) = full(ind(i, 0), 0);
+	}
+}
+void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop) {
+	for (size_t i = 0; i < nrFromTop; ++i) {
+		in(ind(i, 0), 0) = 0.0f;
+	}
+}
 MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features ) {
 
 	size_t inY = in.rows(); // we only accept square matrices 

@@ -64,6 +64,11 @@ inline bool is_finite(const Eigen::MatrixBase<Derived>& x)
 {
 	return ((x - x).array() == (x - x).array()).all();
 }
+/* Extract a submatrix out of a full matrix
+* given a number of indices.
+*/
+void extract(MAT& out, const MAT& full, const MATINDEX& ind);
+void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop);
 
 template<typename Derived>
 inline bool is_nan(const Eigen::MatrixBase<Derived>& x)
