@@ -29,11 +29,16 @@ void extract(MAT& out, const MAT& full, const MATINDEX& ind) {
 		out(ind(i, 0), 0) = full(ind(i, 0), 0);
 	}
 }
+/* ind specifies a set of indices where matrix in is set to zero.
+*  Caller has responsibility to check whether indices are in range.
+*/
 void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop) {
 	for (size_t i = 0; i < nrFromTop; ++i) {
 		in(ind(i, 0), 0) = 0.0f;
 	}
 }
+/* Parallelized convolution routine.
+*/
 MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features ) {
 
 	size_t inY = in.rows(); // we only accept square matrices 
@@ -54,12 +59,14 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kern
 	uint32_t f = 0;
 	uint32_t iDim = 0;
 	// convolution
-	for (size_t i = 0; i < features*outSizeX; i++) { // max(i) = outSizeX-1, //max(f*outSizeX+i) = (features-1)*outSizeX + outSizeX-1 = features*outSizeX-1
+	int32_t i = 0;
+	#pragma omp parallel for private(i)
+	for (i = 0; i < features*outSizeX; ++i) { // max(i) = outSizeX-1, //max(f*outSizeX+i) = (features-1)*outSizeX + outSizeX-1 = features*outSizeX-1
 		f = i / outSizeX;
 		iDim = i%outSizeX;
-		for (size_t n = 0; n < kernelX; n++) {
-			for (size_t j = 0; j < outSizeY; j++) {
-				for (size_t m = 0; m < kernelY; m++) {
+		for (size_t n = 0; n < kernelX; ++n) {
+			for (size_t j = 0; j < outSizeY; ++j) {
+				for (size_t m = 0; m < kernelY; ++m) {
 
 					out(j, f*outSizeX + iDim) += kernel(m, f*kernelX + n)*paddedIn(j*kernelStrideY + m, iDim*kernelStrideX + n);
 				}
@@ -68,6 +75,8 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kern
 	}
 	return out;
 }
+/* Parallelized routine to calculate convolution gradient.
+*/
 MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t features) {
 
 	size_t NOUTY = delta.rows(); // we only accept square matrices 
@@ -89,12 +98,14 @@ MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t stri
 	// convolution
 	// NOTE: Eigen matrices are stored column-major.
 	// Y array should be continguous.
-	for (size_t i = 0; i < kernelX*features; i++) { // 0, ...,7
+	int32_t i = 0;
+	#pragma omp parallel for private(i)
+	for (i = 0; i < kernelX*features; ++i) { // 0, ...,7
 		f = i / kernelX;
 		iDim = i%kernelX;
-		for (size_t n = 0; n < NOUTX; n++) { // 0, 1
-			for (size_t j = 0; j < kernelY; j++) { // 0, ...,7
-				for (size_t m = 0; m < NOUTY; m++) { // 0,1
+		for (size_t n = 0; n < NOUTX; ++n) { // 0, 1
+			for (size_t j = 0; j < kernelY; ++j) { // 0, ...,7
+				for (size_t m = 0; m < NOUTY; ++m) { // 0,1
 					out(j, f*kernelX+ iDim) += paddedIn(j + m*strideY, iDim + n*strideX)*delta(m, f*NOUTX+n); // max[j+m*stride] == K-1+(NO-1)*stride => [K+NO*stride - stride] -1
 				}
 			}
@@ -102,6 +113,8 @@ MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t stri
 	}
 	return out;
 }
+/* Parallelized routine to calculate gradient for anticonvolutional layers.
+*/
 MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features) {
 
 	size_t NOUTY = delta.rows(); 
@@ -124,12 +137,14 @@ MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t 
 	uint32_t iDim = 0;
 
 	// convolution
-	for (size_t i = 0; i < features*outSizeX; i++) { // 0, ...,7
+	int32_t i = 0;
+	#pragma omp parallel for private(i)
+	for (i = 0; i < features*outSizeX; ++i) { // 0, ...,7
 		f = i / outSizeX;
 		iDim = i%outSizeX;
-		for (size_t n = 0; n < NINX; n++) { // 0, 1
-			for (size_t j = 0; j < outSizeY; j++) { // 0, ...,7
-				for (size_t m = 0; m < NINY; m++) { // 0,1
+		for (size_t n = 0; n < NINX; ++n) { // 0, 1
+			for (size_t j = 0; j < outSizeY; ++j) { // 0, ...,7
+				for (size_t m = 0; m < NINY; ++m) { // 0,1
 					out(j, f*outSizeX+iDim) += input(m, f*NINX+n)*paddedDelta(j + m*strideY, iDim + n*strideX); // max -> 7+2 = 9
 				}
 			}
@@ -160,6 +175,8 @@ MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSize
 	}
 	return out;
 }*/
+/* Parallelized deconvolution operation (in this library referred to as Anticonvolution.
+*/
 MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t antiPaddingY, uint32_t antiPaddingX, uint32_t features) {
 
 	size_t inY = in.rows(); 
@@ -177,12 +194,14 @@ MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t stride
 	uint32_t iDim = 0;
 
 	// convolution
-	for (size_t i = 0; i < features*inX; i++) {
+	int32_t i = 0;
+	#pragma omp parallel for private(i)
+	for (i = 0; i < features*inX; ++i) {
 		f = i / inX;
 		iDim = i%inX;
-		for (size_t n = 0; n < kernelX; n++) {
-			for (size_t j = 0; j < inY; j++) {
-				for (size_t m = 0; m < kernelY; m++) {
+		for (size_t n = 0; n < kernelX; ++n) {
+			for (size_t j = 0; j < inY; ++j) {
+				for (size_t m = 0; m < kernelY; ++m) {
 					out(j*strideY + m, iDim*strideX + n) += kernel._FEAT(f)(m, n)*in(j, f*inX+iDim); // max[j*stride+m] = (inY-1)*stride + kernelY-1 = inY*stride-stride + kernelY-1 == outSizeY-1 -> correct
 				}
 			}

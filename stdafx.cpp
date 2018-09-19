@@ -8,7 +8,6 @@
 #include "FullyConnectedLayer.h"
 #include "MaxPoolLayer.h"
 #include "PassOnLayer.h"
-#include "CLearn.h"
 // TODO: reference any additional headers you need in STDAFX.H
 // and not in this file
 typedef std::shared_ptr<CNet> CNETPTR;
