@@ -20,7 +20,8 @@ Stepper::Stepper(MATIND _layerIndex) {
 	mt = MAT(_layerIndex.rows, _layerIndex.cols);
 	epsilon = MAT(_layerIndex.rows, _layerIndex.cols);
 	epsilon.setConstant(1E-8);
-
+	beta1t = beta1;
+	beta2t = beta2;
 	vt.setZero();
 	mt.setZero();
 	mode_adamStep = false;
@@ -69,9 +70,9 @@ void Stepper::doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars)
 		mt = beta1*mt + (1 - beta1)*gradient;
 		vt = beta2*vt + (1 - beta2)*gradient.unaryExpr(&norm);
 		//if (mt.allFinite() && vt.allFinite())
-			layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(1.0f - beta2t) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
+		layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(abs(1.0f - beta2t)) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
 		//else
-			resetAdam();
+			//resetAdam();
 	//} else {
 	//	resetAdam();
 	//}
@@ -112,8 +113,8 @@ void Stepper::stepLayer(MAT& layer, const MAT& gradient, const learnPars& pars) 
 		*	theta_t = theta_t - eta*m^_t/ (sqrt( v^_t) +eps) (element wise)
 		*/
 		if (!mode_adamStep) {
-			mode_adamStep = true;
 			resetAdam();
+			mode_adamStep = true;
 		} else {
 			mode_conjugateGradient = false;
 			doAdamStep(layer, gradient, pars);

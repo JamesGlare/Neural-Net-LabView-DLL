@@ -17,19 +17,17 @@ public:
 	void forProp(MAT& in, bool training, bool recursive);
 	MAT grad(MAT& input);
 	void backPropDelta(MAT& delta, bool recursive);
-
+	// Getter Function
 	inline size_t getNOUTX() const { return NOUTX; };
 	inline size_t getNOUTY() const { return NOUTY; };
 	inline size_t getNINX() const { return NINX; };
 	inline size_t getNINY() const { return NINY; };
 	inline size_t getKernelX() const { return kernelX; };
 	inline size_t getKernelY() const { return kernelY; };
-
-	
+	uint32_t getFeatures() const ;
 
 private:
-	/* Weight normalization functions
-	*/
+	// Weight normalization functions
 	void updateW();
 	void normalizeV();
 	void inversVNorm();
@@ -38,7 +36,7 @@ private:
 	void initG();
 	void initV();
 
-	// sizes
+	// Geometry
 	size_t NOUTX;
 	size_t NOUTY;
 	size_t NINX;
@@ -47,11 +45,14 @@ private:
 	size_t kernelY;
 	size_t strideY;
 	size_t strideX;
-	size_t features;
+	size_t inFeatures;
+	uint32_t features;
+	void assertGeometry();
+
+	// File function
 	void saveToFile(ostream& os) const;
 	void loadFromFile(ifstream& in);
 
-	void assertGeometry();
 	void init();
 };
 #endif

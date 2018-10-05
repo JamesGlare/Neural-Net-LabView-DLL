@@ -19,6 +19,7 @@ public:
 	virtual void forProp(MAT& in, bool saveActivation, bool recursive) = 0; // recursive
 	virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
 	void applyUpdate(const learnPars& pars, MAT& input, bool recursive); // recursive
+	uint32_t getFeatures() const;
 };
 
 #endif

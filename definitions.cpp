@@ -39,19 +39,19 @@ void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop) {
 }
 /* Parallelized convolution routine.
 */
-MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features ) {
+MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features) {
 
 	size_t inY = in.rows(); // we only accept square matrices 
 	size_t inX = in.cols();
 
 	size_t kernelY = kernel.rows();
-	size_t kernelX = kernel.cols()/features;
-	
+	size_t kernelX = kernel.cols() / features;
+
 	size_t outSizeY = convoSize(inY, kernelY, paddingY, kernelStrideY);
 	size_t outSizeX = convoSize(inX, kernelX, paddingX, kernelStrideX);
 
 	MAT out(outSizeY, features*outSizeX); // 
-	MAT paddedIn(inY + 2 * paddingY, inX+ 2 * paddingX);
+	MAT paddedIn(inY + 2 * paddingY, inX + 2 * paddingX);
 	// Set padding and out matrix zero, then fill inner part.
 	paddedIn.setZero();
 	out.setZero();
@@ -60,7 +60,7 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kern
 	uint32_t iDim = 0;
 	// convolution
 	int32_t i = 0;
-	#pragma omp parallel for private(i)
+#pragma omp parallel for private(i)
 	for (i = 0; i < features*outSizeX; ++i) { // max(i) = outSizeX-1, //max(f*outSizeX+i) = (features-1)*outSizeX + outSizeX-1 = features*outSizeX-1
 		f = i / outSizeX;
 		iDim = i%outSizeX;
@@ -75,6 +75,222 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kern
 	}
 	return out;
 }
+/* Parallelized convolution routine with in/out features.
+*/
+MAT conv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures) {
+	
+	// (1) Geometry of the situation
+	size_t NINY = in.rows();
+	size_t NINX = in.cols() / inFeatures;
+	size_t kernelY = kernel.rows();
+	size_t kernelX = kernel.cols()/outFeatures;
+	size_t NOUTY = convoSize(NINY,kernelY,paddingY, strideY);
+	size_t NOUTX = convoSize(NINX, kernelX, paddingX, strideX);
+	
+	/*MAT paddedIn(NINY + 2 * paddingY, NINX + 2 * paddingX);
+	// Set padding and out matrix zero, then fill inner part.
+	paddedIn.setZero();
+	paddedIn.block(paddingY, paddingX, NINY, NINX) = in;
+	*/
+	// (2) Allocate matrices 
+	MAT out(NOUTY, NOUTX*inFeatures*outFeatures); // stack features along x in accord with convention
+	out.setZero();
+
+	// (3) Begin loop
+	int32_t i = 0;
+	int32_t f = 0;
+	int32_t xInd = 0;
+	int32_t yInd = 0;
+
+#pragma omp parallel for private(i, xInd,yInd,f) shared(out) // Choose (probably) smallest rowwise loop size for parallelization.
+	for (i = 0; i < NOUTX; ++i) {
+		for (size_t n = 0; n < kernelX; ++n) {
+			for (size_t inF = 0; inF < inFeatures; ++inF) {
+				for (size_t outF = 0; outF < outFeatures; ++outF) {
+					for (size_t m = 0; m < kernelY; ++m) {
+						for (size_t j = 0; j < NOUTY; ++j) { // Eigen matrices are stored in column-major order.
+							f = inF + inFeatures*outF;
+							yInd = j*strideY + m - paddingY;
+							xInd = i*strideX + n - paddingX;
+							 if(yInd < NINY &&
+								yInd >= 0 &&
+								xInd < NINX &&
+								xInd >= 0) { // Check we're not in the padding.
+								out(j, i + f*NOUTX) += kernel(m, outF*kernelX + n) * in(yInd, xInd + inF*NINX);
+							} 
+						}
+					}
+				}
+			}
+		}
+	}
+	return out;
+}
+/* Routine specifically for backpropagating deltas through a convolutional layer.
+*/
+MAT backPropConv_(const MAT& deltaIn, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t inFeatures) {
+	// (1) Geometry of the situation
+	size_t deltaNINY = deltaIn.rows();
+	size_t deltaNINX = deltaIn.cols() / (features*inFeatures);
+	size_t kernelY = kernel.rows();
+	size_t kernelX = kernel.cols() / features;
+	size_t deltaNOUTY = antiConvoSize(deltaNINY, kernelY, paddingY, strideY);
+	size_t deltaNOUTX = antiConvoSize(deltaNINX, kernelX, paddingX, strideX);
+
+	// (2) Allocate matrices 
+	MAT deltaOut(deltaNOUTY, deltaNOUTX*features); // stack features along x in accord with convention
+	deltaOut.setZero();
+
+	// (3) Begin loop
+	int32_t i = 0;
+	int32_t f = 0;
+	int32_t xInd = 0;
+	int32_t yInd = 0;
+
+#pragma omp parallel for private(i,xInd,yInd,f) shared(deltaOut) // Choose (probably) smallest rowwise loop size for parallelization.
+	for ( i = 0; i < deltaNINX; ++i) {
+		for (size_t inF = 0; inF < inFeatures; ++inF) {
+			for (size_t outF = 0; outF < features; ++outF) {
+				for (size_t n = 0; n < kernelX; ++n) {
+					for (size_t m = 0; m < kernelY; ++m) {
+						for (size_t j = 0; j < deltaNINX; ++j) { // Eigen matrices are stored in column-major order.
+							f = inF + inFeatures*outF;
+							yInd = j*strideY + m - paddingY ;
+							xInd = i*strideX + n -paddingX ; // max[xInd] = (NOUTX-1)*strideX+kernelX - 1 = (NINX-kernelX+2*paddingX)+kernelX - 1 = NINX + 2*paddingX - 1 
+							if (yInd < deltaNINX  &&
+								yInd >= 0&&
+								xInd < deltaNINX &&
+								xInd >= paddingX ) { // Check we're not in the padding.
+								deltaOut(yInd, xInd+ outF*deltaNOUTX) += kernel(m, outF*kernelX + n) * deltaIn(j, i + f*deltaNINX);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return deltaOut;
+}
+MAT convGrad_(const MAT& in, const MAT& delta, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t inFeatures) {
+
+	// (1) Geometry of the situation
+	size_t NINY = in.rows();
+	size_t NINX = in.cols() / inFeatures;
+	size_t NINY_padded = convoSize(NINY, kernelY, paddingY, strideY);
+	size_t NINX_padded = convoSize(NINX, kernelX, paddingX, strideX);
+	size_t deltaY = delta.rows(); // deltaX = (NINX-kernelX+2*paddingX)/strideX +1 
+	size_t deltaX = delta.cols() /(inFeatures* features);
+
+	// (2) Allocate matrices 
+	MAT kernelGrad(kernelY, kernelX*features); // stack features along x in accord with convention
+	kernelGrad.setZero();
+
+	// (3) Begin loop
+	int32_t n = 0;
+	size_t f = 0;
+	int32_t xInd = 0;
+	int32_t yInd = 0;
+
+#pragma omp parallel for private(n,xInd, yInd,f) shared(kernelGrad)// Choose (probably) smallest rowwise loop size for parallelization.
+	for (n = 0; n < deltaX; ++n) {
+		for (size_t inF = 0; inF < inFeatures; ++inF) {
+			for (size_t outF = 0; outF < features; ++outF) {
+				for (size_t i = 0; i < kernelX; ++i) {
+					for (size_t m = 0; m < deltaY; ++m) {
+						for (size_t j = 0; j < kernelY; ++j) { // Eigen matrices are stored in column-major order.
+							f = inF + inFeatures*outF;
+							yInd = j + m*strideY -paddingY;
+							xInd = i+ n*strideX -paddingX; // max [xInd] = (kernelX-1)+ (deltaX-1)*strideX = (kernelX-1)+ (NINX-kernelX+2*paddingX) = NINX+2*paddingX-1 -> correct
+							
+							if (yInd < NINY &&
+								yInd >= 0 &&
+								xInd < NINX &&
+								xInd >= 0) { // Check we're not in the padding.
+								kernelGrad(j, i + outF*kernelX) += delta(m, f*deltaX + n) * in(yInd, xInd+ inF*NINX);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return kernelGrad;
+}
+/* Parallelized deconvolution operation (in this library referred to as Anticonvolution).
+*/
+MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t antiPaddingY, uint32_t antiPaddingX, uint32_t features) {
+
+	size_t inY = in.rows();
+	size_t inX = in.cols() / features; // features are in X direction 
+
+	size_t kernelY = kernel.rows();
+	size_t kernelX = kernel.cols() / features; // features are in X direction 
+
+	size_t outSizeY = antiConvoSize(inY, kernelY, antiPaddingY, strideY); // inSize*stride - stride + kernelSize-2*padding
+	size_t outSizeX = antiConvoSize(inX, kernelX, antiPaddingX, strideX);
+	MAT out(outSizeY + 2 * antiPaddingY, outSizeX + 2 * antiPaddingX); // make it bigger, we need to cut out later
+	out.setConstant(0);
+
+	uint32_t f = 0;
+	uint32_t iDim = 0;
+
+	// convolution
+	int32_t i = 0;
+#pragma omp parallel for private(i)
+	for (i = 0; i < features*inX; ++i) {
+		f = i / inX;
+		iDim = i%inX;
+		for (size_t n = 0; n < kernelX; ++n) {
+			for (size_t j = 0; j < inY; ++j) {
+				for (size_t m = 0; m < kernelY; ++m) {
+					out(j*strideY + m, iDim*strideX + n) += kernel._FEAT(f)(m, n)*in(j, f*inX + iDim); // max[j*stride+m] = (inY-1)*stride + kernelY-1 = inY*stride-stride + kernelY-1 == outSizeY-1 -> correct
+				}
+			}
+		}
+	}
+	return out.block(antiPaddingY, antiPaddingX, outSizeY, outSizeX);
+}
+MAT antiConv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures) {
+	// (1) Geometry of the situation
+	size_t NINY = in.rows();
+	size_t NINX = in.cols() / inFeatures;
+	size_t kernelY = kernel.rows();
+	size_t kernelX = kernel.cols() / outFeatures;
+	size_t NOUTY = antiConvoSize(NINY, kernelY, paddingY, strideY);
+	size_t NOUTX = antiConvoSize(NINX, kernelX, paddingX, strideX);
+
+	// (2) Allocate matrices 
+	MAT out(NOUTY, NOUTX*inFeatures*outFeatures); // stack features along x in accord with convention
+	out.setZero();
+
+	// (3) Begin loop
+	int32_t n = 0;
+	size_t f = 0;
+	size_t xInd = 0;
+	size_t yInd = 0;
+
+#pragma omp parallel for private(n) // Choose (probably) smallest rowwise loop size for parallelization.
+	for (n = 0; n < kernelX; ++n) {
+		for (size_t inF = 0; inF < inFeatures; ++inF) {
+			for (size_t outF = 0; outF < outFeatures; ++outF) {
+				for (size_t i = 0; i < NOUTX; ++i) {
+					for (size_t m = 0; m < kernelY; ++m) {
+						for (size_t j = 0; j < NOUTY; ++j) { // Eigen matrices are stored in column-major order.
+							f = inF + inFeatures*outF;
+							yInd = j*strideY + m;
+							xInd = i*strideX + n;
+							if (yInd < NOUTY && xInd < NOUTX) { // Check we're not in the padding.
+								out(yInd, xInd + f*NOUTX) += kernel(m, outF*kernelX + n) * in(j, i + inF*NINX);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return out;
+}
+
 /* Parallelized routine to calculate convolution gradient.
 */
 MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t features) {
@@ -106,7 +322,7 @@ MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t stri
 		for (size_t n = 0; n < NOUTX; ++n) { // 0, 1
 			for (size_t j = 0; j < kernelY; ++j) { // 0, ...,7
 				for (size_t m = 0; m < NOUTY; ++m) { // 0,1
-					out(j, f*kernelX+ iDim) += paddedIn(j + m*strideY, iDim + n*strideX)*delta(m, f*NOUTX+n); // max[j+m*stride] == K-1+(NO-1)*stride => [K+NO*stride - stride] -1
+					out(j, f*kernelX+ iDim) += delta(m, f*NOUTX + n)*paddedIn(j + m*strideY, iDim + n*strideX); // max[j+m*stride] == K-1+(NO-1)*stride => [K+NO*stride - stride] -1
 				}
 			}
 		}
@@ -175,40 +391,7 @@ MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSize
 	}
 	return out;
 }*/
-/* Parallelized deconvolution operation (in this library referred to as Anticonvolution.
-*/
-MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t antiPaddingY, uint32_t antiPaddingX, uint32_t features) {
 
-	size_t inY = in.rows(); 
-	size_t inX = in.cols() / features; // features are in X direction 
-
-	size_t kernelY = kernel.rows();
-	size_t kernelX = kernel.cols()/features; // features are in X direction 
-
-	size_t outSizeY = antiConvoSize(inY,kernelY, antiPaddingY, strideY); // inSize*stride - stride + kernelSize-2*padding
-	size_t outSizeX = antiConvoSize(inX, kernelX, antiPaddingX, strideX) ;
-	MAT out(outSizeY + 2 * antiPaddingY, outSizeX + 2 * antiPaddingX); // make it bigger, we need to cut out later
-	out.setConstant(0);
-
-	uint32_t f = 0;
-	uint32_t iDim = 0;
-
-	// convolution
-	int32_t i = 0;
-	#pragma omp parallel for private(i)
-	for (i = 0; i < features*inX; ++i) {
-		f = i / inX;
-		iDim = i%inX;
-		for (size_t n = 0; n < kernelX; ++n) {
-			for (size_t j = 0; j < inY; ++j) {
-				for (size_t m = 0; m < kernelY; ++m) {
-					out(j*strideY + m, iDim*strideX + n) += kernel._FEAT(f)(m, n)*in(j, f*inX+iDim); // max[j*stride+m] = (inY-1)*stride + kernelY-1 = inY*stride-stride + kernelY-1 == outSizeY-1 -> correct
-				}
-			}
-		}
-	}
-	return out.block(antiPaddingY, antiPaddingX, outSizeY, outSizeX);
-}
 MAT fourier(const MAT& in) {
 	size_t L = in.rows(); // == in.cols() 
 	MAT Z = MAT(L*(L + 1) / 2, 2); // number of unique elements - should match inLayer's dimensionality 

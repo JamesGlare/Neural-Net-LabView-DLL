@@ -70,7 +70,7 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 		batch.clearGradient();
 	}
 	// Recursion
-	if (hierarchy != hierarchy_t::output && recursive) {
+	if (getHierachy() != hierarchy_t::output && recursive) {
 		above->applyUpdate(pars, input, true);
 	}
 

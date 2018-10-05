@@ -18,7 +18,7 @@ layer_t PassOnLayer::whoAmI() const {
 PassOnLayer::~PassOnLayer() {}
 void PassOnLayer::init() {
 
-	actSave = MAT(NOUT, 1);
+	actSave = MAT(getNOUT(), 1);
 	actSave.setConstant(0);
 	deltaSave = MAT(1, 1);
 	deltaSave.setConstant(0);
@@ -28,16 +28,16 @@ void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		actSave = inBelow;
 	}
 	inBelow = inBelow.unaryExpr(act);
-	if (hierarchy != hierarchy_t::output && recursive) {
+	if (getHierachy() != hierarchy_t::output && recursive) {
 			above->forProp(inBelow, training, true);
 	} 
 }
 
 void PassOnLayer::backPropDelta(MAT& delta, bool recursive) {
-	if (hierarchy != hierarchy_t::input) { // ... this is not an input layer.
+	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 
 		MAT temp = (below->getDACT()).cwiseProduct(delta);
-		if (hierarchy == hierarchy_t::output) {
+		if (getHierachy() == hierarchy_t::output) {
 			temp.cwiseProduct(this->getDACT());
 		}
 		if(recursive)

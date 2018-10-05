@@ -175,8 +175,10 @@ MAT CNet::errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
 }
 fREAL CNet::error(const MAT& diff) {
 	fREAL sum = cumSum(matNorm(diff));
-	return 0.5f*sum / sqrt( sum );
-
+	//if (sum > 0.0f)
+		return 0.5f*sqrt(sum); //  / sqrt(sum)
+	//else
+	//	return 0.0f;
 }
 
 

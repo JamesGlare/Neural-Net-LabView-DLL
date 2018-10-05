@@ -8,7 +8,7 @@
 class ConvolutionalLayer : public PhysicalLayer{
 	public:
 		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type);
-		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type, CNetLayer& lower);
+		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX,  uint32_t features, actfunc_t type, CNetLayer& lower);
 		ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type);
 		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type, CNetLayer& lower);
 		~ConvolutionalLayer();
@@ -26,10 +26,9 @@ class ConvolutionalLayer : public PhysicalLayer{
 		inline size_t getNINY() const { return NINY; };
 		inline size_t getKernelX() const { return kernelX; };
 		inline size_t getKernelY() const { return kernelY; };
-
+		uint32_t getFeatures() const;
 	private:
-		/* Weight normalization functions
-		*/
+		// Weight normalization functions
 		void updateW();
 		void normalizeV();
 		void inversVNorm();
@@ -37,23 +36,27 @@ class ConvolutionalLayer : public PhysicalLayer{
 		MAT vGrad(const MAT& grad, MAT& ggrad);
 		void initG();
 		void initV();
+
 		// Auxiliary feature-selection functions
 		const MAT& getIthFeature(size_t i);
-		// sizes
+		
+		// Geometry
 		size_t NOUTX;
 		size_t NOUTY;
 		size_t NINX;
 		size_t NINY;
 		size_t kernelX;
 		size_t kernelY;
-		size_t strideX;
-		size_t strideY;
-		size_t features;
+		uint32_t strideX;
+		uint32_t strideY;
+		uint32_t inFeatures;
+		uint32_t features;
+		void assertGeometry();
 
+		// File functions
 		void saveToFile(ostream& os) const;
 		void loadFromFile(ifstream& in);
 
-		void assertGeometry();
 		void init();
 };
 #endif

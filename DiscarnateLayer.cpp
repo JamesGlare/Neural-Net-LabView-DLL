@@ -6,7 +6,14 @@ DiscarnateLayer::DiscarnateLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : CN
 DiscarnateLayer::DiscarnateLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower) : CNetLayer(_NOUT, type, lower) {};
 
 void DiscarnateLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursive) {
-	if (hierarchy != hierarchy_t::output && recursive) {
+	if (getHierachy() != hierarchy_t::output && recursive) {
 		above->applyUpdate(pars, input, true);
+	}
+}
+uint32_t DiscarnateLayer::getFeatures() const {
+	if (getHierachy() != hierarchy_t::input) {
+		return below->getFeatures();
+	} else {
+		return 1;
 	}
 }

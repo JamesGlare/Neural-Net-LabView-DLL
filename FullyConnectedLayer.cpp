@@ -25,15 +25,15 @@ layer_t FullyConnectedLayer::whoAmI() const {
 void FullyConnectedLayer::init() {
 
 
-	fREAL max = 1.0f / NIN;
-	fREAL min = -1.0f / NIN;
+	fREAL max = 1.0f / getNIN();
+	fREAL min = -1.0f / getNIN();
 	layer *= (max-min)/2.0f ; // (-max, max)
 
 	//layer = (layer.array() + (max+min)/2.0f).matrix(); // (min,  2+min)
-	assert(actSave.rows() == NOUT);
-	assert(deltaSave.rows() == NOUT);
-	assert(layer.rows() == NOUT);
-	assert(layer.cols() == NIN + 1);
+	assert(actSave.rows() == getNOUT());
+	assert(deltaSave.rows() == getNOUT());
+	assert(layer.rows() == getNOUT());
+	assert(layer.cols() == getNIN() + 1);
 }
 // weight normalization reparametrize
 void FullyConnectedLayer::updateW() {
@@ -44,7 +44,7 @@ void FullyConnectedLayer::updateW() {
 	layer.rightCols(1) = V.rightCols(1); // keep bias weights
 	*/
 	layer = V.cwiseProduct(VInversNorm);
-	layer.leftCols(NIN) = layer.leftCols(NIN).cwiseProduct(G.replicate(1, NIN ));
+	layer.leftCols(getNIN()) = layer.leftCols(getNIN()).cwiseProduct(G.replicate(1, getNIN() ));
 }
 
 void FullyConnectedLayer::initV() {
@@ -53,8 +53,8 @@ void FullyConnectedLayer::initV() {
 	//normalizeV();
 }
 void FullyConnectedLayer::normalizeV() {
-	for (size_t i = 0; i < NOUT; i++) {
-		V.leftCols(NIN).row(i) /= normSum(V.leftCols(NIN).row(i));
+	for (size_t i = 0; i < getNOUT(); i++) {
+		V.leftCols(getNIN()).row(i) /= normSum(V.leftCols(getNIN()).row(i));
 	}
 }
 /* take cwiseProduct with this matrix to obtain X/||V|| or V/||V||^2
@@ -63,8 +63,8 @@ void FullyConnectedLayer::inversVNorm() {
 	//MAT out(NOUT, NIN+1);
 	VInversNorm.setOnes();
 	//MAT oneRow = MAT::Constant(1, NIN,1.0f);
-	for (size_t i = 0; i < NOUT; i++) {
-		VInversNorm.leftCols(NIN).row(i) /=  normSum(V.leftCols(NIN).row(i)); //
+	for (size_t i = 0; i < getNOUT(); i++) {
+		VInversNorm.leftCols(getNIN()).row(i) /=  normSum(V.leftCols(getNIN()).row(i)); //
 	}
 }
 void FullyConnectedLayer::initG() {
@@ -75,15 +75,15 @@ void FullyConnectedLayer::initG() {
 }
 MAT FullyConnectedLayer::gGrad(const MAT& grad) {
 	// = MAT(NOUT, 1);  //(NOUT, NIN)
-	MAT out=grad.leftCols(NIN).cwiseProduct( (VInversNorm.cwiseProduct(V)).leftCols(NIN) ); //(NOUT, NIN)
+	MAT out=grad.leftCols(getNIN()).cwiseProduct( (VInversNorm.cwiseProduct(V)).leftCols(getNIN()) ); //(NOUT, NIN)
 	
-	return {std::move(1.0f/NOUT*out.rowwise().sum())}; //(NOUT,1)
+	return {std::move(1.0f/getNOUT()*out.rowwise().sum())}; //(NOUT,1)
 }
 MAT FullyConnectedLayer::vGrad(const MAT& grad, MAT& ggrad) {
 	//MAT out(NOUT, NIN+1);
-	MAT gRep = G.replicate(1, NIN + 1);
+	MAT gRep = G.replicate(1, getNIN() + 1);
 	MAT out = grad.cwiseProduct(VInversNorm).cwiseProduct(gRep);
-	out -= gRep.cwiseProduct(VInversNorm.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, NIN + 1)).cwiseProduct(V); // (NOUT, NIN)
+	out -= gRep.cwiseProduct(VInversNorm.unaryExpr(&norm)).cwiseProduct(ggrad.replicate(1, getNIN() + 1)).cwiseProduct(V); // (NOUT, NIN)
 	out.rightCols(1) = grad.rightCols(1);
 	/*MAT inversV = inversVNorm();
 	for (size_t i = 0; i < NOUT; i++) {
@@ -105,7 +105,7 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		//appendOne(inBelow);
 		// Eigen assumes aliasing by default for matrix products A*B type situations
 		actSave.noalias() = layer*appendOneInline(inBelow); // save the activations before non-linearity
-		if (hierarchy != hierarchy_t::output) {
+		if (getHierachy() != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act); 
 			if(recursive)
 				above->forProp(inBelow, true, true);
@@ -116,7 +116,7 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		/* Non-training forward pass
 		*/
 		MAT temp;
-		if (hierarchy != hierarchy_t::output) {
+		if (getHierachy() != hierarchy_t::output) {
 			// Eigen assumes aliasing by default for matrix products A*B type situations
 			temp.noalias() = (layer*appendOneInline(inBelow)).unaryExpr(act);
 			inBelow = temp;
@@ -133,8 +133,8 @@ void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	//DACT(inAct).cwiseProduct(hiddenLayers[0].leftCols(hiddenLayers[0].cols() - 1).transpose()*hiddenDeltas[0]);
 	deltaSave = deltaAbove;
 
-	if (hierarchy != hierarchy_t::input) {
-		deltaAbove.noalias() = (below->getDACT()).cwiseProduct((layer.leftCols(NIN)).transpose() * deltaSave); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
+	if (getHierachy() != hierarchy_t::input) {
+		deltaAbove.noalias() = (below->getDACT()).cwiseProduct((layer.leftCols(getNIN())).transpose() * deltaSave); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
 		if(recursive)
 			below->backPropDelta(deltaAbove, true);
 	}
@@ -142,7 +142,7 @@ void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 /* Same dimensionality as layer.
 */
 MAT FullyConnectedLayer::grad(MAT& input) {
-	if (hierarchy == hierarchy_t::input) {
+	if (getHierachy() == hierarchy_t::input) {
 			// VC does not perform RVO for some reason :/
 		return {std::move(deltaSave*appendOneInline(input).transpose())}; //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
 	}
@@ -152,21 +152,18 @@ MAT FullyConnectedLayer::grad(MAT& input) {
 }
 
 void FullyConnectedLayer::saveToFile(ostream& os) const {
-	os<< NOUT << "\t" << NIN <<endl; // header line 2
 	os << layer;
 }
 void FullyConnectedLayer::loadFromFile(ifstream& in) {
-	in >> NOUT;
-	in >> NIN;
 	
-	layer = MAT(NOUT, NIN + 1);  
-	V = MAT(NOUT, NIN + 1);
-	G = MAT(NOUT, 1);
+	layer = MAT(getNOUT(), getNIN() + 1);  
+	V = MAT(getNOUT(), getNIN() + 1);
+	G = MAT(getNOUT(), 1);
 	V.setZero();
 	G.setZero();
 
-	for (size_t i = 0; i < NOUT; i++) {
-		for (size_t j = 0; j < NIN+1; j++) {
+	for (size_t i = 0; i < getNOUT(); i++) {
+		for (size_t j = 0; j < getNIN()+1; j++) {
 			in >> layer(i, j);
 		}
 	}

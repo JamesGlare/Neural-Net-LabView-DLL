@@ -17,7 +17,8 @@ CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : NOUT(_NOUT), N
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
-};
+}
+
 CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT), actSave(_NOUT, 1), deltaSave(_NOUT, 1) {
 	actSave.setZero();
 	deltaSave.setZero();
@@ -27,8 +28,13 @@ CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT
 	below->connectAbove(this);
 	hierarchy = hierarchy_t::output;
 }
+
 layer_t CNetLayer::whoAmI() const {
 	return layer_t::cnet;
+}
+
+uint32_t CNetLayer::getFeatures() const {
+	return 1;
 }
 
 MAT CNetLayer::getDACT() const {

@@ -32,13 +32,13 @@ void DropoutLayer::forProp(MAT& in, bool saveActivation, bool recursive) {
 	// (4) Pass on
 	if (saveActivation)
 		actSave = in;
-	if (hierarchy != hierarchy_t::output && recursive)
+	if (getHierachy() != hierarchy_t::output && recursive)
 		above->forProp(in, saveActivation, recursive);
 }
 
 void DropoutLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 
-	if (hierarchy != hierarchy_t::input || !recursive) {
+	if (getHierachy() != hierarchy_t::input || !recursive) {
 		// we make use of a C++11 construct below
 		// unaryExpr takes functors which can be matrices
 		// the output should have the same dimensionality

@@ -30,7 +30,7 @@ void MaxPoolLayer::init() {
 	indexX.setConstant(0);
 	indexY = MATINDEX(NOUTY, NOUTX);
 	indexY.setConstant(0);
-	actSave = MAT(NOUT, 1); 
+	actSave = MAT(getNOUT(), 1); 
 	actSave.setConstant(0);
 	deltaSave = MAT(1, 1);
 	deltaSave.setConstant(0);
@@ -55,10 +55,10 @@ void MaxPoolLayer::loadFromFile(ifstream& in) {
 void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
 	inBelow.resize(NINY, NINX);
 	inBelow = maxPool(inBelow, training);
-	inBelow.resize(NOUT, 1);
+	inBelow.resize(getNOUT(), 1);
 	if (training)
 		actSave = inBelow;
-	if (hierarchy != hierarchy_t::output) {
+	if (getHierachy() != hierarchy_t::output) {
 		if(recursive)
 			above->forProp(inBelow,  training, true);
 	}
@@ -66,7 +66,7 @@ void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
 
 void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 
-	if (hierarchy != hierarchy_t::input || !recursive) { // ... this is not an input layer.
+	if (getHierachy() != hierarchy_t::input || !recursive) { // ... this is not an input layer.
 		deltaAbove.resize(NOUTY, NOUTX);
 
 		MAT newDelta(NINY, NINX);
@@ -78,7 +78,7 @@ void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 					newDelta(indexY(m, n), indexX(m, n)) = deltaAbove(m, n);
 			}
 		}
-		newDelta.resize(NIN, 1);
+		newDelta.resize(getNIN(), 1);
 		deltaAbove = newDelta; // convention - the "deltaAbove" instance should carry the deltas.
 		if(recursive)
 			below->backPropDelta(deltaAbove, true);
