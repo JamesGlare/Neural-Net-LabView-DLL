@@ -55,6 +55,9 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	copyToOut(outputDesiredMatrix.data(), outputDesired, ptr->getNOUT());
 	return error;
 }
+__declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t K, size_t NOUT) {
+	ptr->addMixtureDensity(K, NOUT);
+}
 __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
 }

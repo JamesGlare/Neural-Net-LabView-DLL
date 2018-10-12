@@ -433,3 +433,25 @@ void gauss(MAT& in) {
 		}
 	}
 }
+fREAL normalDistribution(const MAT& t, const MAT& mu, fREAL var) {
+	const fREAL logSqrt2Pi = 0.5f*std::log(2.0f * M_PI);
+	fREAL diffSq = (t - mu).squaredNorm();
+	return exp(-0.5f*diffSq / (var)-t.size()*logSqrt2Pi) / sqrt(var);
+}
+/* Calculate probability to find t in given distribution.
+*/
+fREAL multiNormalDistribution(const MAT& t, const MAT& mu, const MAT& corvar) {
+	// (1) by contract: x.rows == t.rows
+
+	const fREAL logSqrt2Pi = 0.5f*std::log(2.0f * M_PI);
+
+	int32_t i = 0;
+	CHOL cholesky(corvar); // Compute cholesky decomposition
+	if (cholesky.info() != Eigen::Success) {
+		// problem !!
+		return NAN;
+	}
+	const CHOL::Traits::MatrixL& L = cholesky.matrixL();
+	fREAL quadform = (L.solve(mu - t)).squaredNorm();
+	return exp(-t.rows()*logSqrt2Pi - 0.5f*quadform) / L.determinant();
+}

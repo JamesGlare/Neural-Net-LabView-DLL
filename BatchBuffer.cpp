@@ -20,7 +20,7 @@ void BatchBuffer::swallowGradient(const MAT& gradient) {
 	stillToGo++;
 }
 
-MAT& BatchBuffer::avgGradient() {
+MAT BatchBuffer::avgGradient() {
 	if(stillToGo > 0)
 		gradientBuffer /= stillToGo;
 		return gradientBuffer;

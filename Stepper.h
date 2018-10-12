@@ -11,6 +11,7 @@ public:
 
 	void notifyFormChange(MATIND _newIndex);
 	//void stepLayer_weightNormalized(MAT& layer, MAT& const V_gradient, MAT& const G_gradient,  learnPars& const pars);
+	void reset();
 
 private:
 	
@@ -24,7 +25,7 @@ private:
 	void doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars);
 	bool mode_conjugateGradient;
 	void resetConjugate(const MAT& gradient);
-
+	
 	MAT hi;
 	MAT gi_prev;
 	fREAL gamma;
@@ -36,6 +37,7 @@ private:
 	bool mode_adamStep;
 	MAT mt;
 	MAT vt;
+	fREAL alphat = 0;
 	fREAL beta1 = 0.9;
 	fREAL beta1t = 0.9;
 	fREAL beta2 = 0.999;

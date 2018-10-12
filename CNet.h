@@ -3,7 +3,7 @@
 #include "defininitions.h"
 #include <memory>
 #include "CNETLayer.h"
-
+#include "MixtureDensityModel.h"
 typedef std::unique_ptr<CNetLayer> layerPtr;
  
 
@@ -14,13 +14,15 @@ class CNet {
 	public:
 		CNet(size_t NIN);
 		~CNet();
-		// add layers
+		// add network layers
 		size_t addFullyConnectedLayer(size_t NOUT, actfunc_t type);
 		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
 		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
 		size_t addPoolingLayer(size_t maxOverXY, pooling_t type);
 		size_t addDropoutLayer(fREAL ratio);
 		size_t addPassOnLayer(actfunc_t type);
+		// Mixture Density Output interpretation
+		void addMixtureDensity(size_t K, size_t L);
 
 		// forProp
 		fREAL forProp(MAT& in, const learnPars& pars, const MAT& outDesired);
@@ -44,7 +46,7 @@ class CNet {
 	private:
 		// error related functions
 		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
-		fREAL error(const MAT& diff);
+		fREAL l2_error(const MAT& diff);
 		inline bool isPhysical(size_t layer) const {
 			return (layers[layer]->whoAmI() != layer_t::maxPooling
 				&& layers[layer]->whoAmI() != layer_t::passOn
@@ -52,7 +54,7 @@ class CNet {
 		}
 		size_t NIN;
 		vector<CNetLayer*> layers;
-
+		MixtureDensityModel* mixtureDensity;
 };
 
 #endif 

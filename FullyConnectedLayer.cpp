@@ -25,9 +25,9 @@ layer_t FullyConnectedLayer::whoAmI() const {
 void FullyConnectedLayer::init() {
 
 
-	fREAL max = 1.0f / getNIN();
-	fREAL min = -1.0f / getNIN();
-	layer *= (max-min)/2.0f ; // (-max, max)
+	//fREAL max = 1.0f / getNIN();
+	//fREAL min = -1.0f / getNIN();
+	layer *=1.0f/sqrt(getNIN()) ; // (-max, max)
 
 	//layer = (layer.array() + (max+min)/2.0f).matrix(); // (min,  2+min)
 	assert(actSave.rows() == getNOUT());
@@ -48,8 +48,9 @@ void FullyConnectedLayer::updateW() {
 }
 
 void FullyConnectedLayer::initV() {
-	V = layer;
+	//V = layer;
 	V.setRandom();
+	V /= sqrt(getNIN());
 	//normalizeV();
 }
 void FullyConnectedLayer::normalizeV() {
@@ -68,16 +69,16 @@ void FullyConnectedLayer::inversVNorm() {
 	}
 }
 void FullyConnectedLayer::initG() {
-	//for (size_t i = 0; i < NOUT; i++) {
-	//	G(i,0) = normSum(layer.leftCols(NIN).row(i));
-	//}
-	G.setOnes();
+	for (size_t i = 0; i < getNOUT(); i++) {
+		G(i,0) = normSum(layer.leftCols(getNIN()).row(i));
+	}
+	//G.setOnes();
 }
 MAT FullyConnectedLayer::gGrad(const MAT& grad) {
 	// = MAT(NOUT, 1);  //(NOUT, NIN)
 	MAT out=grad.leftCols(getNIN()).cwiseProduct( (VInversNorm.cwiseProduct(V)).leftCols(getNIN()) ); //(NOUT, NIN)
 	
-	return {std::move(1.0f/getNOUT()*out.rowwise().sum())}; //(NOUT,1)
+	return 1.0f/getNOUT()*out.rowwise().sum(); //(NOUT,1)
 }
 MAT FullyConnectedLayer::vGrad(const MAT& grad, MAT& ggrad) {
 	//MAT out(NOUT, NIN+1);
@@ -110,7 +111,7 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 			if(recursive)
 				above->forProp(inBelow, true, true);
 		} else {
-			inBelow = actSave;
+				inBelow = actSave;
 		}
 	} else {
 		/* Non-training forward pass
@@ -144,15 +145,18 @@ void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 MAT FullyConnectedLayer::grad(MAT& input) {
 	if (getHierachy() == hierarchy_t::input) {
 			// VC does not perform RVO for some reason :/
-		return {std::move(deltaSave*appendOneInline(input).transpose())}; //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
-	}
-	else {
-		return {std::move(deltaSave * appendOneInline(below->getACT()).transpose()) };
+		return deltaSave*appendOneInline(input).transpose(); //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
+	} else {
+		return deltaSave * appendOneInline(below->getACT()).transpose();
 	}
 }
 
 void FullyConnectedLayer::saveToFile(ostream& os) const {
-	os << layer;
+	for (size_t j = 0; j < getNIN() + 1; j++) {
+		for (size_t i = 0; i < getNOUT(); i++) {
+			os<< layer(i, j);
+		}
+	}
 }
 void FullyConnectedLayer::loadFromFile(ifstream& in) {
 	
@@ -161,9 +165,10 @@ void FullyConnectedLayer::loadFromFile(ifstream& in) {
 	G = MAT(getNOUT(), 1);
 	V.setZero();
 	G.setZero();
+	stepper.reset();
 
-	for (size_t i = 0; i < getNOUT(); i++) {
-		for (size_t j = 0; j < getNIN()+1; j++) {
+	for (size_t j = 0; j < getNIN() + 1; j++) {
+		for (size_t i = 0; i < getNOUT(); i++) {
 			in >> layer(i, j);
 		}
 	}

@@ -47,6 +47,7 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				initV();
 				weightNormMode = true;
 				inversVNorm();
+				updateW();
 			} 
 			// (1) Update the InversVNorm matrix, since it is used several times
 			MAT Ggradient = gGrad(batch.avgGradient());
@@ -59,11 +60,11 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 		} else {
 			/* Standard step.
 			*/
-			/*if (weightNormMode) {
+			if (weightNormMode) {
 				// We were in weight normalization mode before!
-				// So we have to switch back to layer as weight matrix.
-				updateW(); 
-			}*/
+				// So we have to reset all the velocity, vt, mt ...etc matrices.
+				stepper.reset();
+			}
 			weightNormMode = false;
 			stepper.stepLayer(layer, batch.avgGradient(), pars);
 		}

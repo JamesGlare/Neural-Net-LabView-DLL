@@ -68,7 +68,7 @@ void ConvolutionalLayer::assertGeometry() {
 }
 void ConvolutionalLayer::init() {
 
-	layer *= ((fREAL) features) / layer.size();
+	//layer *= ((fREAL) features) / layer.size();
 }
 // Select submatrix of ith feature
 const MAT& ConvolutionalLayer::getIthFeature(size_t i) {
@@ -91,9 +91,9 @@ void ConvolutionalLayer::normalizeV() {
 		V._FEAT(i) *= 1.0f / normSum(V._FEAT(i));
 }
 void ConvolutionalLayer::initG() {
-	//for (uint32_t i = 0; i< features; i++)
-	//	G(0, i) = normSum(layer._FEAT(i));
-	G.setOnes();
+	for (uint32_t i = 0; i< features; i++)
+		G(0, i) = normSum(layer._FEAT(i));
+	//G.setOnes();
 }
 void ConvolutionalLayer::inversVNorm() {
 
@@ -187,11 +187,15 @@ MAT ConvolutionalLayer::grad(MAT& input) {
 	}
 }
 void ConvolutionalLayer::saveToFile(ostream& os) const {
-	os << NOUTY << "\t" << NOUTX << "\t" << NINY << "\t" << NINX << "\t" << kernelY << "\t" << kernelX << "\t"  << strideY<< "\t" << strideX<< "\t" << features<< inFeatures<<endl;
+	os << NOUTY << "\t" << NOUTX << "\t" << NINY << "\t" << NINX << "\t" << kernelY << "\t" << kernelX << "\t"  << strideY<< "\t" << strideX<< "\t" << features<<  "\t" <<inFeatures<<endl;
 	for (size_t f = 0; f < features; ++f) {
-		os << (layer._FEAT(f)); // write feature-wise for better readability
-		os << endl;
+		for (size_t i = 0; i < kernelY; ++i) {
+			for (size_t j = 0; j < kernelX; ++j) {
+				os << layer(i, j + f*kernelX) << "\t";
+			}
+		}
 	}
+	os << endl;
 }
 // first line has been read already
 void ConvolutionalLayer::loadFromFile(ifstream& in) {
@@ -210,11 +214,12 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	G = MAT(1, features);
 	V.setZero();
 	G.setZero();
-	
-	for (size_t f = 0; f < features; ++f){
+	stepper.reset();
+
+	for (size_t f = 0; f < features; ++f) {
 		for (size_t i = 0; i < kernelY; ++i) {
 			for (size_t j = 0; j < kernelX; ++j) {
-				in >> layer(i, j+f*kernelX);
+				in >> layer(i, j + f*kernelX);
 			}
 		}
 	}

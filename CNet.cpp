@@ -9,7 +9,9 @@
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
-	srand(42);
+	srand(42); // constant seed
+
+	mixtureDensity = nullptr;
 }
 void CNet::debugMsg(fREAL* msg) {
 	msg[0] = layers[0]->getNOUT();
@@ -92,14 +94,20 @@ size_t CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
 }
 // Destructor
 CNet::~CNet() {
-	for (size_t i = 0; i < getLayerNumber(); i++) {
-		delete layers[i];
+	for (std::vector< CNetLayer* >::iterator it = layers.begin(); it != layers.end(); ++it) {
+		delete (*it);
 	}
+	layers.clear();
+	if (mixtureDensity)
+		delete mixtureDensity;
 }
 
 size_t CNet::getNOUT() const {
 	if (getLayerNumber() > 0) {
-		return (*layers.back()).getNOUT();
+		if (!mixtureDensity)
+			return (*layers.back()).getNOUT();
+		else
+			return mixtureDensity->getNOUT();
 	}
 	else {
 		return 0;
@@ -126,31 +134,51 @@ void CNet::loadFromFile(string filePath) {
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const learnPars& pars, const MAT& outDesired) {
 	layers.front()->forProp(in, false, true);
-	return error(errorMatrix(in, outDesired));
+	if (!mixtureDensity)
+		return l2_error(errorMatrix(in, outDesired));
+	else {
+		in = mixtureDensity->conditionalMean(in); // turns a K*(L+2) matrix into a (L,1)
+		return mixtureDensity->negativeLogLikelihood(outDesired);
+	}
+		
 }
 
 // Backpropagation 
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
+	// (0) 
+	MAT diffMatrix;
+	fREAL errorOut = 0.0f;
 	// (1) for prop with saveActivations == true
 	MAT outPredicted = input;
-	assert(input.allFinite());
 	layers.front()->forProp(outPredicted, true, true);
 	// (2) calculate error matrix and error
-	MAT diffMatrix = errorMatrix(outPredicted, outDesired);
-	fREAL errorOUT = error(diffMatrix);	 
-	//if (!isnan(errorOUT) && !isinf(errorOUT) ) {
+	if (mixtureDensity){
+		errorOut = mixtureDensity->negativeLogLikelihood(outDesired);
+		outPredicted = mixtureDensity->conditionalMean(outPredicted); // this reduces the (K,L+2)-matrix to a (L,1)-sized matrix !
+		diffMatrix = mixtureDensity->computeErrorGradient(outDesired);
+
+	} else {
+		diffMatrix = errorMatrix(outPredicted, outDesired);
+		errorOut = l2_error(diffMatrix);
+	}
+
 	// (3) back propagate the deltas
 	layers.back()->backPropDelta(diffMatrix, true);
 	// (4) Apply update
 	layers.front()->applyUpdate(pars, input, true);
-	// ... DONE
+	// (5) Write predicted output to output matrix
 	outDesired = outPredicted;
-	return errorOUT;
+	// ... DONE
+	return errorOut;
+}
+void CNet::addMixtureDensity(size_t K, size_t L) {
+	assert(getNOUT() == (L + 2)*K);
+	this->mixtureDensity = new MixtureDensityModel(K, L);
 }
 void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			MATIND layerDimension = ((PhysicalLayer*)layers[layer])->layerDimensions();
+			MATIND layerDimension = dynamic_cast<PhysicalLayer*>(layers[layer])->layerDimensions();
 			rows = layerDimension.rows;
 			cols = layerDimension.cols;
 		}
@@ -159,21 +187,21 @@ void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 void CNet::copyNthLayer(size_t layer, fREAL* const toCopyTo) const {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			((PhysicalLayer*)layers[layer])->copyLayer(toCopyTo);
+			dynamic_cast<PhysicalLayer*>(layers[layer])->copyLayer(toCopyTo);
 		}
 	}
 }
 void CNet::setNthLayer(size_t layer, fREAL* const copyFrom) {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			((PhysicalLayer*)layers[layer])->setLayer(copyFrom);
+			dynamic_cast<PhysicalLayer*>(layers[layer])->setLayer(copyFrom);
 		}
 	}
 }
 MAT CNet::errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
-	return {std::move(outPrediction - outDesired)}; // force Visual C++ to return without temporary - since RVO doesn't work ???!
+	return move(outPrediction - outDesired); // force Visual C++ to return without temporary - since RVO doesn't work ???!
 }
-fREAL CNet::error(const MAT& diff) {
+fREAL CNet::l2_error(const MAT& diff) {
 	fREAL sum = cumSum(matNorm(diff));
 	//if (sum > 0.0f)
 		return 0.5f*sqrt(sum); //  / sqrt(sum)

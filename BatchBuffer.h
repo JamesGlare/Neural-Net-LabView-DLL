@@ -10,7 +10,7 @@ public:
 	
 	// Standard gradient minibatch
 	void swallowGradient(const MAT& gradient);
-	MAT& avgGradient();
+	MAT avgGradient();
 	void clearGradient();
 	void notifyFormChange(MATIND _newForm);
 	// Buffer for actual inputs - if we are interested in statistics etc

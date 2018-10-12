@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "Eigen/Core"
+#include "Eigen/Cholesky"
 using namespace Eigen;
 using namespace std;
 
@@ -32,6 +33,7 @@ typedef Map<MAT> MATMAP;
 typedef vector<MAT> MATVEC;
 typedef Map<MATU8> MATU8MAP;
 typedef fREAL(*ACTFUNC)(fREAL);
+typedef LLT<MAT> CHOL;
 
 enum actfunc_t {RELU =1, TANH=2, SIG=3, NONE=4};
 enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6, dropout=7}; // enumerators: 1, 2, 4 range: 0..7
@@ -99,19 +101,19 @@ inline fREAL cumSum(const MAT& in) {
 }
 // Activation functions & derivatives
 inline fREAL Tanh(fREAL f) {
-	return std::tanh(f);
+	return tanh(f);
 }
 inline fREAL DTanh(fREAL f) {
 	return 1.0f - Tanh(f)*Tanh(f);
 }
 inline fREAL Sig(fREAL f) {
-	return 1.0f / (1.0f + std::exp(-1.0f*f));
+	return 1.0f / (1.0f + exp(-1.0f*f));
 }
 inline fREAL DSig(fREAL f) {
 	return Sig(f)*(1.0f - Sig(f));
 }
 inline fREAL ReLu(fREAL f) {
-	return f;//f > 0.0f ? f : 0.0f;
+	return f > 0.0f ? f : 0.0f;
 	//return std::log(1.0f + std::exp(f));
 }
 inline fREAL DReLu(fREAL f) {
@@ -127,8 +129,11 @@ inline fREAL sqroot(fREAL f) {
 inline fREAL invSqrt(fREAL f) {
 	return 1.0f/sqrt(f);
 }
+inline fREAL exp_fREAL(fREAL f) {
+	return exp(f);
+}
 inline MAT matNorm(const MAT& in) {
-	return {std::move(in.unaryExpr(&norm))};
+	return in.unaryExpr(&norm);
 }
 inline fREAL normSum(const MAT& in) {
 	return sqrt(matNorm(in).sum());
@@ -159,4 +164,7 @@ void shrinkOne(MAT&);
 //MAT& appendOneInline(MAT&);
 MAT& appendOneInline(MAT&);
 void gauss(MAT& in);
+fREAL multiNormalDistribution(const MAT& t, const MAT& mu, const MAT& corvar);
+fREAL normalDistribution(const MAT& t, const MAT& mu, fREAL var);
+
 #endif // !DEFINITIONS_H_INCLUDE

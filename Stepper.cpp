@@ -22,6 +22,7 @@ Stepper::Stepper(MATIND _layerIndex) {
 	epsilon.setConstant(1E-8);
 	beta1t = beta1;
 	beta2t = beta2;
+	alphat = 0;
 	vt.setZero();
 	mt.setZero();
 	mode_adamStep = false;
@@ -37,7 +38,11 @@ void Stepper::resetConjugate(const MAT& gradient) {
 	gi_prev = -gradient;
 	hi= -gradient;
 }
-
+void Stepper::reset() {
+	resetAdam();
+//	resetConjugate();
+	velocity.setZero();
+}
 void Stepper::doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
 	// Actually do the conjugate gradient step.
 	gamma = (gradient.cwiseProduct(gradient + gi_prev)).sum() / (gi_prev.cwiseProduct(gi_prev)).sum();
@@ -66,11 +71,11 @@ void Stepper::doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars)
 	//if (gradient.allFinite()) {
 		beta1t *= beta1;
 		beta2t *= beta2;
-
-		mt = beta1*mt + (1 - beta1)*gradient;
-		vt = beta2*vt + (1 - beta2)*gradient.unaryExpr(&norm);
-		//if (mt.allFinite() && vt.allFinite())
-		layer = (1.0f - pars.lambda)*layer - pars.eta* sqrt(abs(1.0f - beta2t)) / (1.0f - beta1t)*(mt.cwiseQuotient(vt.unaryExpr(&sqroot)) + epsilon);
+		alphat = pars.eta *  sqrt(abs(1.0f - beta2t)) / (1.0f - beta1t);
+		mt = beta1*mt + (1.0f - beta1)*gradient;
+		vt = beta2*vt + (1.0f - beta2)*gradient.unaryExpr(&norm);
+		
+		layer = (1.0f - pars.lambda)*layer - alphat*mt.cwiseQuotient(vt.unaryExpr(&sqroot) + epsilon);
 		//else
 			//resetAdam();
 	//} else {
@@ -98,6 +103,7 @@ void Stepper::stepLayer(MAT& layer, const MAT& gradient, const learnPars& pars) 
 		*/
 		if (!mode_conjugateGradient) { // user changed to conjugate gradient method
 			mode_conjugateGradient = true;
+			velocity.setZero(); //set the momentum velocity to zero, in case we switch back to momentum-descent.B
 			resetConjugate(gradient);
 		} else {
 			mode_adamStep = false;
@@ -114,6 +120,7 @@ void Stepper::stepLayer(MAT& layer, const MAT& gradient, const learnPars& pars) 
 		*/
 		if (!mode_adamStep) {
 			resetAdam();
+			velocity.setZero(); //set the momentum velocity to zero, in case we switch back to momentum-descent.
 			mode_adamStep = true;
 		} else {
 			mode_conjugateGradient = false;

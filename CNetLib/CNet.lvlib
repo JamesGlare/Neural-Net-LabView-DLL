@@ -8,6 +8,7 @@
 	<Item Name="addDropoutLayer.vi" Type="VI" URL="../addDropoutLayer.vi"/>
 	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../addFullyConnectedLayer.vi"/>
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
+	<Item Name="addMixtureDensity.vi" Type="VI" URL="../addMixtureDensity.vi"/>
 	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>
 	<Item Name="debugMsg.vi" Type="VI" URL="../debugMsg.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
