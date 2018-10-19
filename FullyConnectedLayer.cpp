@@ -27,9 +27,9 @@ void FullyConnectedLayer::init() {
 
 	//fREAL max = 1.0f / getNIN();
 	//fREAL min = -1.0f / getNIN();
-	layer *=1.0f/sqrt(getNIN()) ; // (-max, max)
+	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
+	layer /= sqrt(getNIN()); // ... but small.
 
-	//layer = (layer.array() + (max+min)/2.0f).matrix(); // (min,  2+min)
 	assert(actSave.rows() == getNOUT());
 	assert(deltaSave.rows() == getNOUT());
 	assert(layer.rows() == getNOUT());
@@ -78,7 +78,7 @@ MAT FullyConnectedLayer::gGrad(const MAT& grad) {
 	// = MAT(NOUT, 1);  //(NOUT, NIN)
 	MAT out=grad.leftCols(getNIN()).cwiseProduct( (VInversNorm.cwiseProduct(V)).leftCols(getNIN()) ); //(NOUT, NIN)
 	
-	return 1.0f/getNOUT()*out.rowwise().sum(); //(NOUT,1)
+	return out.rowwise().sum(); //(NOUT,1)
 }
 MAT FullyConnectedLayer::vGrad(const MAT& grad, MAT& ggrad) {
 	//MAT out(NOUT, NIN+1);
@@ -152,24 +152,36 @@ MAT FullyConnectedLayer::grad(MAT& input) {
 }
 
 void FullyConnectedLayer::saveToFile(ostream& os) const {
-	for (size_t j = 0; j < getNIN() + 1; j++) {
-		for (size_t i = 0; i < getNOUT(); i++) {
-			os<< layer(i, j);
+	/*for (size_t j = 0; j < getNIN() + 1; ++j) {
+		for (size_t i = 0; i < getNOUT(); ++i) {
+			os<< layer(i, j)<<"\t";
 		}
-	}
+	} */
+	MAT temp = layer;
+	temp.resize(layer.size(), 1);
+	os << temp;
+	os << endl;
 }
 void FullyConnectedLayer::loadFromFile(ifstream& in) {
 	
-	layer = MAT(getNOUT(), getNIN() + 1);  
+	layer = MAT(getNOUT()*(getNIN() + 1),1);    // initialize as a column vector
 	V = MAT(getNOUT(), getNIN() + 1);
 	G = MAT(getNOUT(), 1);
 	V.setZero();
 	G.setZero();
 	stepper.reset();
 
-	for (size_t j = 0; j < getNIN() + 1; j++) {
-		for (size_t i = 0; i < getNOUT(); i++) {
-			in >> layer(i, j);
+	/*for (size_t j = 0; j< getNIN()+1; ++j) {
+		for (size_t i = 0; i < getNOUT(); ++i) {
+			in >> layer(i,j);
 		}
+	}*/
+	for (size_t i = 0; i < layer.size(); ++i) {
+		in >> layer(i);
 	}
+	layer.resize(getNOUT(), getNIN() + 1);
+	//layer.rowwise().reverseInPlace();
+	//layer.transposeInPlace();
+	//layer.colwise().reverseInPlace();
+
 }

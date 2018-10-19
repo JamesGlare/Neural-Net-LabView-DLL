@@ -105,7 +105,7 @@ CNet::~CNet() {
 size_t CNet::getNOUT() const {
 	if (getLayerNumber() > 0) {
 		if (!mixtureDensity)
-			return (*layers.back()).getNOUT();
+			return layers.back()->getNOUT();
 		else
 			return mixtureDensity->getNOUT();
 	}
@@ -115,7 +115,7 @@ size_t CNet::getNOUT() const {
 }
 
 void CNet::saveToFile(string filePath) const {
-	for (size_t i = 0; i < getLayerNumber(); i++) {
+	for (size_t i = 0; i < getLayerNumber(); ++i) {
 		ofstream file(filePath+"\\CNetLayer_"+ to_string(i) + ".dat");
 		if (file.is_open()) {
 			file << (*layers[i]);
@@ -124,20 +124,24 @@ void CNet::saveToFile(string filePath) const {
 	}
 }
 void CNet::loadFromFile(string filePath) {
-	for(size_t i =0; i< getLayerNumber(); i++) {
+	for(size_t i =0; i< getLayerNumber(); ++i) {
 		ifstream file(filePath + "\\CNetLayer_" + to_string(i) + ".dat");
 		if (file.is_open()) {
 			file >> (*layers[i]);
 		}
+		file.close();
 	}
 }
 // Simply output the network
-fREAL CNet::forProp(MAT& in, const learnPars& pars, const MAT& outDesired) {
+fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 	layers.front()->forProp(in, false, true);
 	if (!mixtureDensity)
 		return l2_error(errorMatrix(in, outDesired));
 	else {
-		in = mixtureDensity->conditionalMean(in); // turns a K*(L+2) matrix into a (L,1)
+		mixtureDensity->updateParameters(in); // resizes output
+		//mixtureDensity->getParameters(in);
+		mixtureDensity->maxMixtureCoefficient(in); // turns a K*(L+2) matrix into a (L,1)
+		//mixtureDensity->conditionalMean(in);
 		return mixtureDensity->negativeLogLikelihood(outDesired);
 	}
 		
@@ -149,16 +153,18 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;
 	// (1) for prop with saveActivations == true
-	MAT outPredicted = input;
+	MAT outPredicted(input);
 	layers.front()->forProp(outPredicted, true, true);
 	// (2) calculate error matrix and error
 	if (mixtureDensity){
+		mixtureDensity->updateParameters(outPredicted); // resizes output
+		//mixtureDensity->getParameters(outPredicted);
+		mixtureDensity->maxMixtureCoefficient(outPredicted);
+		//mixtureDensity->conditionalMean(outPredicted); // this reduces the (K,L+2)-matrix to a (L,1)-sized matrix !
 		errorOut = mixtureDensity->negativeLogLikelihood(outDesired);
-		outPredicted = mixtureDensity->conditionalMean(outPredicted); // this reduces the (K,L+2)-matrix to a (L,1)-sized matrix !
-		diffMatrix = mixtureDensity->computeErrorGradient(outDesired);
-
+		diffMatrix = move(mixtureDensity->computeErrorGradient(outDesired));
 	} else {
-		diffMatrix = errorMatrix(outPredicted, outDesired);
+		diffMatrix = move(errorMatrix(outPredicted, outDesired));
 		errorOut = l2_error(diffMatrix);
 	}
 
@@ -167,13 +173,15 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	// (4) Apply update
 	layers.front()->applyUpdate(pars, input, true);
 	// (5) Write predicted output to output matrix
-	outDesired = outPredicted;
+	
 	// ... DONE
+	outDesired = outPredicted;
 	return errorOut;
 }
 void CNet::addMixtureDensity(size_t K, size_t L) {
 	assert(getNOUT() == (L + 2)*K);
-	this->mixtureDensity = new MixtureDensityModel(K, L);
+	if(!mixtureDensity)
+		this->mixtureDensity = new MixtureDensityModel(K, L);
 }
 void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 	if (layer < getLayerNumber()) {
@@ -199,7 +207,7 @@ void CNet::setNthLayer(size_t layer, fREAL* const copyFrom) {
 	}
 }
 MAT CNet::errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
-	return move(outPrediction - outDesired); // force Visual C++ to return without temporary - since RVO doesn't work ???!
+	return outPrediction - outDesired; // force Visual C++ to return without temporary - since RVO doesn't work ???!
 }
 fREAL CNet::l2_error(const MAT& diff) {
 	fREAL sum = cumSum(matNorm(diff));

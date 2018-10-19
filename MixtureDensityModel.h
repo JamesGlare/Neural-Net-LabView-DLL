@@ -33,10 +33,15 @@
 class MixtureDensityModel {
 public:
 	MixtureDensityModel(size_t _K, size_t L);
-	MAT conditionalMean(const MAT& networkOut);
-	MAT computeErrorGradient(const MAT& t) const;
+	MixtureDensityModel(const MixtureDensityModel* other) = delete;
+	~MixtureDensityModel();
+	void conditionalMean(MAT& networkOut); // output function
+	void maxMixtureCoefficient(MAT& networkOut); // output function
+	void updateParameters(MAT& networkOut);
+	void getParameters(MAT& toCopyTo); // output function
+	MAT computeErrorGradient(const MAT& t);
 	fREAL negativeLogLikelihood(const MAT& t) const;
-	inline size_t getNOUT() const { return K*(L + 2); };
+	inline size_t getNOUT() const { return L; };
 
 private:
 
@@ -46,14 +51,14 @@ private:
 	
 	MAT param; // Matrix(K,L) of kernel centres mu_j. For each mixture kernel, a scalar variance. We assume the gaussian to be spherical.
 				// Mixture coefficients - sum to one.
+
 	void init();
-	void updateParameters(const MAT& networkOut);
 	// Private getter functions for insertion into other functions
 	// return rvalue references
-	const MAT& getMixtureCoefficients() const ;
-	const MAT& getMus() const;
-	const MAT& getSpecificMu( size_t k) const;
-	const MAT& getVariances() const;
+	MATBLOCK getMixtureCoefficients() const ;
+	MATBLOCK getMus() const;
+	MATBLOCK getSpecificMu( size_t k) const;
+	MATBLOCK getVariances() const;
 	fREAL getSpecificVariance( size_t k) const;
 
 };

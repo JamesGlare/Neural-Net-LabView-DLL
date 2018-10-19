@@ -68,6 +68,7 @@ void ConvolutionalLayer::assertGeometry() {
 }
 void ConvolutionalLayer::init() {
 
+	layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
 	//layer *= ((fREAL) features) / layer.size();
 }
 // Select submatrix of ith feature
@@ -187,15 +188,10 @@ MAT ConvolutionalLayer::grad(MAT& input) {
 	}
 }
 void ConvolutionalLayer::saveToFile(ostream& os) const {
-	os << NOUTY << "\t" << NOUTX << "\t" << NINY << "\t" << NINX << "\t" << kernelY << "\t" << kernelX << "\t"  << strideY<< "\t" << strideX<< "\t" << features<<  "\t" <<inFeatures<<endl;
-	for (size_t f = 0; f < features; ++f) {
-		for (size_t i = 0; i < kernelY; ++i) {
-			for (size_t j = 0; j < kernelX; ++j) {
-				os << layer(i, j + f*kernelX) << "\t";
-			}
-		}
-	}
-	os << endl;
+	os << NOUTY << " " << NOUTX << " " << NINY << " " << NINX << " " << kernelY << " " << kernelX << " " << strideY<< " " << strideX<< " " << features<< " " << inFeatures << endl;
+	MAT temp = layer;
+	temp.resize(layer.size(), 1);
+	os << temp<< endl;
 }
 // first line has been read already
 void ConvolutionalLayer::loadFromFile(ifstream& in) {
@@ -209,18 +205,18 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> strideX;
 	in >> features;
 	in >> inFeatures;
-	layer = MAT(kernelY, features*kernelX);
+
+	layer = MAT(kernelY*features*kernelX,1); // initialize as a column vector
 	V = MAT(kernelY, features*kernelX);
 	G = MAT(1, features);
+
 	V.setZero();
 	G.setZero();
 	stepper.reset();
 
-	for (size_t f = 0; f < features; ++f) {
-		for (size_t i = 0; i < kernelY; ++i) {
-			for (size_t j = 0; j < kernelX; ++j) {
-				in >> layer(i, j + f*kernelX);
-			}
-		}
+	for (size_t i = 0; i < layer.size(); ++i) {
+		in >> layer(i);
 	}
+	layer.resize(kernelY, features*kernelX);
+
 }	

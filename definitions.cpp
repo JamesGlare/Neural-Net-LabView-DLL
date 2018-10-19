@@ -60,14 +60,14 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kern
 	uint32_t iDim = 0;
 	// convolution
 	int32_t i = 0;
-#pragma omp parallel for private(i)
+#pragma omp parallel for private(i) shared(out, kernel, paddedIn)
 	for (i = 0; i < features*outSizeX; ++i) { // max(i) = outSizeX-1, //max(f*outSizeX+i) = (features-1)*outSizeX + outSizeX-1 = features*outSizeX-1
 		f = i / outSizeX;
 		iDim = i%outSizeX;
 		for (size_t n = 0; n < kernelX; ++n) {
 			for (size_t j = 0; j < outSizeY; ++j) {
 				for (size_t m = 0; m < kernelY; ++m) {
-
+					#pragma omp critical
 					out(j, f*outSizeX + iDim) += kernel(m, f*kernelX + n)*paddedIn(j*kernelStrideY + m, iDim*kernelStrideX + n);
 				}
 			}
@@ -101,8 +101,9 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, 
 	int32_t f = 0;
 	int32_t xInd = 0;
 	int32_t yInd = 0;
+	fREAL temp = 0.0f;
 
-#pragma omp parallel for private(i, xInd,yInd,f) shared(out) // Choose (probably) smallest rowwise loop size for parallelization.
+#pragma omp parallel for private(i, xInd,yInd,f, temp) shared(out, kernel, in) // Choose (probably) smallest rowwise loop size for parallelization.
 	for (i = 0; i < NOUTX; ++i) {
 		for (size_t n = 0; n < kernelX; ++n) {
 			for (size_t inF = 0; inF < inFeatures; ++inF) {
@@ -116,7 +117,9 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, 
 								yInd >= 0 &&
 								xInd < NINX &&
 								xInd >= 0) { // Check we're not in the padding.
-								out(j, i + f*NOUTX) += kernel(m, outF*kernelX + n) * in(yInd, xInd + inF*NINX);
+								 temp = kernel(m, outF*kernelX + n) * in(yInd, xInd + inF*NINX);
+								#pragma omp critical
+								out(j, i + f*NOUTX) += temp;
 							} 
 						}
 					}
@@ -146,8 +149,9 @@ MAT backPropConv_(const MAT& deltaIn, const MAT& kernel, uint32_t strideY, uint3
 	int32_t f = 0;
 	int32_t xInd = 0;
 	int32_t yInd = 0;
+	fREAL temp = 0.0f;
 
-#pragma omp parallel for private(i,xInd,yInd,f) shared(deltaOut) // Choose (probably) smallest rowwise loop size for parallelization.
+#pragma omp parallel for private(i,xInd,yInd,f, temp) shared(deltaOut, kernel, deltaIn) // Choose (probably) smallest rowwise loop size for parallelization.
 	for ( i = 0; i < deltaNINX; ++i) {
 		for (size_t inF = 0; inF < inFeatures; ++inF) {
 			for (size_t outF = 0; outF < features; ++outF) {
@@ -161,7 +165,9 @@ MAT backPropConv_(const MAT& deltaIn, const MAT& kernel, uint32_t strideY, uint3
 								yInd >= 0&&
 								xInd < deltaNINX &&
 								xInd >= paddingX ) { // Check we're not in the padding.
-								deltaOut(yInd, xInd+ outF*deltaNOUTX) += kernel(m, outF*kernelX + n) * deltaIn(j, i + f*deltaNINX);
+								temp = kernel(m, outF*kernelX + n) * deltaIn(j, i + f*deltaNINX);
+								#pragma omp critical
+								deltaOut(yInd, xInd+ outF*deltaNOUTX) += temp;
 							}
 						}
 					}
@@ -190,8 +196,9 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t strideY, uint32_t stride
 	size_t f = 0;
 	int32_t xInd = 0;
 	int32_t yInd = 0;
+	fREAL temp = 0.0f;
 
-#pragma omp parallel for private(n,xInd, yInd,f) shared(kernelGrad)// Choose (probably) smallest rowwise loop size for parallelization.
+#pragma omp parallel for private(n,xInd, yInd,f, temp) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (n = 0; n < deltaX; ++n) {
 		for (size_t inF = 0; inF < inFeatures; ++inF) {
 			for (size_t outF = 0; outF < features; ++outF) {
@@ -206,7 +213,9 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t strideY, uint32_t stride
 								yInd >= 0 &&
 								xInd < NINX &&
 								xInd >= 0) { // Check we're not in the padding.
-								kernelGrad(j, i + outF*kernelX) += delta(m, f*deltaX + n) * in(yInd, xInd+ inF*NINX);
+								temp = delta(m, f*deltaX + n) * in(yInd, xInd + inF*NINX);
+								#pragma omp critical
+								kernelGrad(j, i + outF*kernelX) += temp;
 							}
 						}
 					}
@@ -233,17 +242,19 @@ MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t stride
 
 	uint32_t f = 0;
 	uint32_t iDim = 0;
-
+	fREAL temp = 0;
 	// convolution
 	int32_t i = 0;
-#pragma omp parallel for private(i)
+	#pragma omp parallel for private(i, temp) shared(out, kernel, in)
 	for (i = 0; i < features*inX; ++i) {
 		f = i / inX;
 		iDim = i%inX;
 		for (size_t n = 0; n < kernelX; ++n) {
 			for (size_t j = 0; j < inY; ++j) {
 				for (size_t m = 0; m < kernelY; ++m) {
-					out(j*strideY + m, iDim*strideX + n) += kernel._FEAT(f)(m, n)*in(j, f*inX + iDim); // max[j*stride+m] = (inY-1)*stride + kernelY-1 = inY*stride-stride + kernelY-1 == outSizeY-1 -> correct
+					temp = kernel._FEAT(f)(m, n)*in(j, f*inX + iDim);
+					#pragma omp critical
+					out(j*strideY + m, iDim*strideX + n) += temp; // max[j*stride+m] = (inY-1)*stride + kernelY-1 = inY*stride-stride + kernelY-1 == outSizeY-1 -> correct
 				}
 			}
 		}
@@ -268,8 +279,9 @@ MAT antiConv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strid
 	size_t f = 0;
 	size_t xInd = 0;
 	size_t yInd = 0;
+	fREAL temp = 0;
 
-#pragma omp parallel for private(n) // Choose (probably) smallest rowwise loop size for parallelization.
+#pragma omp parallel for private(n, temp) shared(out, kernel, in) // Choose (probably) smallest rowwise loop size for parallelization.
 	for (n = 0; n < kernelX; ++n) {
 		for (size_t inF = 0; inF < inFeatures; ++inF) {
 			for (size_t outF = 0; outF < outFeatures; ++outF) {
@@ -280,7 +292,9 @@ MAT antiConv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strid
 							yInd = j*strideY + m;
 							xInd = i*strideX + n;
 							if (yInd < NOUTY && xInd < NOUTX) { // Check we're not in the padding.
-								out(yInd, xInd + f*NOUTX) += kernel(m, outF*kernelX + n) * in(j, i + inF*NINX);
+								temp = kernel(m, outF*kernelX + n) * in(j, i + inF*NINX);
+								#pragma omp critical
+								out(yInd, xInd + f*NOUTX) += temp;
 							}
 						}
 					}
@@ -315,13 +329,14 @@ MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t stri
 	// NOTE: Eigen matrices are stored column-major.
 	// Y array should be continguous.
 	int32_t i = 0;
-	#pragma omp parallel for private(i)
+	#pragma omp parallel for private(i) shared(out, delta, paddedIn)
 	for (i = 0; i < kernelX*features; ++i) { // 0, ...,7
 		f = i / kernelX;
 		iDim = i%kernelX;
 		for (size_t n = 0; n < NOUTX; ++n) { // 0, 1
 			for (size_t j = 0; j < kernelY; ++j) { // 0, ...,7
 				for (size_t m = 0; m < NOUTY; ++m) { // 0,1
+					#pragma omp critical
 					out(j, f*kernelX+ iDim) += delta(m, f*NOUTX + n)*paddedIn(j + m*strideY, iDim + n*strideX); // max[j+m*stride] == K-1+(NO-1)*stride => [K+NO*stride - stride] -1
 				}
 			}
@@ -354,13 +369,14 @@ MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t 
 
 	// convolution
 	int32_t i = 0;
-	#pragma omp parallel for private(i)
+	#pragma omp parallel for private(i) shared(out, input, paddedDelta)
 	for (i = 0; i < features*outSizeX; ++i) { // 0, ...,7
 		f = i / outSizeX;
 		iDim = i%outSizeX;
 		for (size_t n = 0; n < NINX; ++n) { // 0, 1
 			for (size_t j = 0; j < outSizeY; ++j) { // 0, ...,7
 				for (size_t m = 0; m < NINY; ++m) { // 0,1
+					#pragma omp critical
 					out(j, f*outSizeX+iDim) += input(m, f*NINX+n)*paddedDelta(j + m*strideY, iDim + n*strideX); // max -> 7+2 = 9
 				}
 			}
@@ -434,9 +450,11 @@ void gauss(MAT& in) {
 	}
 }
 fREAL normalDistribution(const MAT& t, const MAT& mu, fREAL var) {
-	const fREAL logSqrt2Pi = 0.5f*std::log(2.0f * M_PI);
+	const fREAL epsilon = 1E-8;
+	const fREAL TwoPi= 2.0f*M_PI;
+	fREAL norm = pow(TwoPi, t.size() / 2.0f)*sqrt(var);
 	fREAL diffSq = (t - mu).squaredNorm();
-	return exp(-0.5f*diffSq / (var)-t.size()*logSqrt2Pi) / sqrt(var);
+	return exp(-0.5f*diffSq / (var)) / norm;
 }
 /* Calculate probability to find t in given distribution.
 */

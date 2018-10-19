@@ -39,20 +39,20 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP(output, ptr->getNOUT(), 1); // (NIN, 1) Matrix
 
-	fREAL error = ptr->forProp(inputMatrix, pars, outputDesiredMatrix);
+	fREAL error = ptr->forProp(inputMatrix, outputDesiredMatrix, pars);
 
 	copyToOut(inputMatrix.data(), output, ptr->getNOUT());
 	return error;
 }
-__declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const outputDesired, fREAL* const eta, 
+__declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const output, fREAL* const eta, 
 	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update, uint32_t* const weight_norm, uint32_t* const initPass) {
 	
 	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *initPass };
 
 	MAT inputMatrix = MATMAP(input, ptr->getNIN(), 1); // (NIN, 1) Matrix
-	MAT outputDesiredMatrix = MATMAP(outputDesired, ptr->getNOUT(), 1);
+	MAT outputDesiredMatrix = MATMAP(output, ptr->getNOUT(), 1); // TODO CHANGED
 	fREAL error = ptr->backProp(inputMatrix, outputDesiredMatrix, pars);
-	copyToOut(outputDesiredMatrix.data(), outputDesired, ptr->getNOUT());
+	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
 	return error;
 }
 __declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t K, size_t NOUT) {

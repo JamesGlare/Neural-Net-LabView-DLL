@@ -25,7 +25,7 @@ class CNet {
 		void addMixtureDensity(size_t K, size_t L);
 
 		// forProp
-		fREAL forProp(MAT& in, const learnPars& pars, const MAT& outDesired);
+		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
 		// backprop
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars);
 		// save to file

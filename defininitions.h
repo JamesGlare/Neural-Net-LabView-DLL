@@ -22,7 +22,7 @@ typedef Matrix<fREAL, Dynamic, Dynamic> MAT;
 typedef Matrix<fREAL, Dynamic, Dynamic, Dynamic> MAT3;
 typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
 typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX; // needed in MaxPool, Dropout
-typedef Eigen::Block<MAT, -1 - 1, false> MATBLOCK;
+typedef const Eigen::Block<const MAT> MATBLOCK;
 #define _FEAT(i) block(0, kernelX*i, kernelY, kernelX) // break of style *** TODO REPLACE WITH FUNCTION ***
 
 struct MATIND {
@@ -113,15 +113,18 @@ inline fREAL DSig(fREAL f) {
 	return Sig(f)*(1.0f - Sig(f));
 }
 inline fREAL ReLu(fREAL f) {
-	return f > 0.0f ? f : 0.0f;
-	//return std::log(1.0f + std::exp(f));
+	//return f > 0.0f ? f : 0.0f;
+	return std::log(1.0f + std::exp(f));
 }
 inline fREAL DReLu(fREAL f) {
-	return f > 0.0f ? 1.0f : 0.0f;
-	//return Sig(f);
+	//return f > 0.0f ? 1.0f : 0.0f;
+	return Sig(f);
 }
 inline fREAL norm(fREAL f) {
 	return f*f;
+}
+inline fREAL cube(fREAL f) {
+	return f*f*f;
 }
 inline fREAL sqroot(fREAL f) {
 	return sqrt(f); // to avoid overloading problems

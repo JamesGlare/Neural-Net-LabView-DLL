@@ -55,12 +55,7 @@ void AntiConvolutionalLayer::assertGeometry() {
 }
 void AntiConvolutionalLayer::init() {
 
-	MAT gauss_init = MAT::Constant(kernelY, kernelX, 1.0f);
-	gauss(gauss_init); // make a gaussian
-	for (size_t f = 0; f < features; ++f) {
-		layer._FEAT(f) = gauss_init + 1.0f/(kernelY*kernelX)*MAT::Random(kernelY, kernelX);
-	}
-		
+	layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
 }
 // weight normalization reparametrize
 // weight normalization reparametrize
@@ -171,16 +166,10 @@ MAT AntiConvolutionalLayer::grad(MAT& input) {
 }
 
 void AntiConvolutionalLayer::saveToFile(ostream& os) const {
-	os << NOUTY << "\t" << NOUTX << "\t" << NINY << "\t" << NINX << "\t" << kernelY << "\t" << kernelX << "\t" << strideY << "\t" << strideX << "\t"<<features<< "\t" <<inFeatures << endl;
-
-	for (size_t f = 0; f < features; ++f) {
-		for (size_t i = 0; i < kernelY; ++i) {
-			for (size_t j = 0; j < kernelX; ++j) {
-				os << layer(i, j + f*kernelX);
-			}
-		}
-	}
-	os << endl;
+	os << NOUTY << " " << NOUTX << " " << NINY << " " << NINX << " " << kernelY << " " << kernelX << " " << strideY << " " << strideX << " " << features << " " << inFeatures << endl;
+	MAT temp = layer;
+	temp.resize(layer.size(), 1);
+	os << temp << endl;
 }
 // first line has been read already
 void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
@@ -194,19 +183,15 @@ void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> strideX;
 	in >> features;
 	in >> inFeatures;
-	layer = MAT(kernelY, features*kernelX);
+	layer = MAT(kernelY*features*kernelX, 1); // initialize as a column vector
 	V= MAT(kernelY, features*kernelX);
 	G = MAT(1, features);
 	V.setZero();
 	G.setZero();
 	stepper.reset();
 
-
-	for (size_t f = 0; f < features; ++f) {
-		for (size_t i = 0; i < kernelY; ++i) {
-			for (size_t j = 0; j < kernelX; ++j) {
-				in >> layer(i, j + f*kernelX);
-			}
-		}
+	for (size_t i = 0; i < layer.size(); ++i) {
+		in >> layer(i);
 	}
+	layer.resize(kernelY, features*kernelX);
 }

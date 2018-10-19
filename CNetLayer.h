@@ -15,7 +15,10 @@ class CNetLayer {
 		CNetLayer(size_t _NOUT, size_t _NIN);
 		CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type);
 		CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower);
+		// Delete Copy- and Move CTORs
 		CNetLayer(const CNetLayer& other) = delete;
+		CNetLayer(CNetLayer&& other) = delete;
+		
 		virtual ~CNetLayer() {}; // purely abstract
 
 		// type
@@ -26,7 +29,7 @@ class CNetLayer {
 		virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
 		virtual void applyUpdate(const learnPars& pars, MAT& input, bool recursive) =0 ; // recursive
 
-		// getters
+		// Getter Functions
 		inline size_t getNIN() const { return NIN; };
 		inline size_t getNOUT() const { return NOUT; };
 		inline hierarchy_t getHierachy() const { return hierarchy; };

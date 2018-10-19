@@ -82,7 +82,7 @@ ostream& operator<<(ostream& os, const CNetLayer& toSave) {
 }
 
 void CNetLayer::saveMother(ostream& os) const {
-	os << static_cast<int32_t>(activationType) << "\t" << NOUT << "\t" << NIN << "\t"<< static_cast<int32_t>(hierarchy)<<endl;
+	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy)<<endl;
 }
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 	int32_t type;
@@ -96,14 +96,14 @@ ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 
 void CNetLayer::reconstructMother(ifstream& in) {
 	
-	int32_t actType;
-	in >> actType;
-	activationType = static_cast<actfunc_t>(actType);
+	int32_t temp;
+	in >> temp;
+	activationType = static_cast<actfunc_t>(temp);
 	assignActFunc(activationType);
 	in >> NOUT;
 	in >> NIN;
-	in >> actType;
-	hierarchy = static_cast<hierarchy_t>(actType);
+	in >> temp;
+	hierarchy = static_cast<hierarchy_t>(temp);
 	actSave = MAT(NOUT, 1);
 	deltaSave = MAT(NOUT, 1);
 	actSave.setZero();
