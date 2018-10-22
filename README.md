@@ -31,15 +31,22 @@ The following pictures should give you an impression of the transformation. You 
 ![Example Hologram -> Intensity 3](./pictures/out3.png)
 
 
-My results so far are encouraging. A convolutional network trained on the forward problem (Hologram -> Intensity), indeed predicts the laser light field correctly most of the time.
+My results so far are encouraging. A convolutional network trained on the forward problem (Hologram -> Intensity), indeed predicts the laser light field correctly most of the time. Interestingly, the filters in the first convolutional layer actually converge to some sort of spatial frequency filter, as I had hoped.
+
+![Example of convolutional filter.](./pictures/conv2.png)
+
+![Another example of convolutional filter.](./pictures/conv3.png)
+
 
 When you follow the link below, you will see a video with a non-cherry picked selection of predictions (left) from the input hologram (bottom) and the actual intensity field, that I recorded (right).
 
 [![Video of HoloNet training](./pictures/videocover_1.png)](https://youtu.be/_551pK6AVos "HoloNet prediction examples.")
 
-The next challenge is to inverse "predict" the hologram from its intensity field. This is an [inverse problem](https://en.wikipedia.org/wiki/Inverse_problem) and, unfortunately, it is "ill-posed", since there are many holograms that should give to the same or very similar intensity fields (aberrations that destroy this theoretical invariance might help us).
+<h2> Inverse Holography (Phase Retrieval) using Mixture-Density Convolutional Networks </h2>
 
-I am trying currently to tackle this problem using Mixture-Density networks (see [C Bishop 1994](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/bishop-ncrg-94-004.pdf)).
+The next challenge is to inversely "predict" the hologram from its own intensity field. This is an [inverse problem](https://en.wikipedia.org/wiki/Inverse_problem) and, unfortunately, it is "ill-posed", since there are many holograms that should give rise to the same or a very similar intensity fields (optical aberrations that destroy this theoretical invariance might save us, but that is not yet clear).
+
+I am currently trying to tackle this problem using Mixture-Density networks (see [C Bishop 1994](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/bishop-ncrg-94-004.pdf)).
 
 Once I have more results, I will post them here.
 
