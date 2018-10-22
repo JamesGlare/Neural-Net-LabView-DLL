@@ -36,5 +36,5 @@ My results so far are encouraging. A convolutional network trained on the forwar
 When you follow the link below, you will see a video with a non-cherry picked selection of predictions (left) from the input hologram (bottom) and the actual intensity field, that I recorded (right).
 
 
-![Video of HoloNet training](https://youtu.be/_551pK6AVos)
+![![Video of HoloNet training](./pictures/videocover_1.png)](https://youtu.be/_551pK6AVos)
 
