@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 <h1> Deep Learning Library for Labview/C++</h1>
 
 Deep Learning library in Labview. C++-based implementation of a feed-forward neural network.  
@@ -21,10 +19,18 @@ I thought that deep learning might be one way to solve this problem. We should b
 Mathematically speaking, the transformation we wish to train our network on is a matrix-to-matrix problem. Our images are intensity only, so no additional colour channels.
 The transformation that the SLM imparts on the beam cannot be written down in any analytical form and even if it did, it would require precise knowledge of the geometry of the setup. 
 
+The following pictures should give you an impression of the transformation. You see pictures of the hologram with lots of striped patterns and pictures of the corresponding laser light intensity fields, which can be pretty nice to look at.
+
+![Example Hologram -> Intensity 1](./pictures/holo1.png)
+![Example Hologram -> Intensity 1](./pictures/out1.png)
+
+![Example Hologram -> Intensity 2](./pictures/holo2.png)
+![Example Hologram -> Intensity 2](./pictures/out2.png)
+
+![Example Hologram -> Intensity 3](./pictures/holo3.png)
+![Example Hologram -> Intensity 3](./pictures/out3.png)
+
+
 My results so far are encouraging. A convolutional network trained on the forward problem, indeed predicts the laser light field correctly most of the time.
-I haven't gotten around to quantify this, but the video below should speak for itself.
+I haven't gotten around to quantify this, but the pictures below should speak for itself.
 
-
-
-=======
-<h2> Teaching Neural Networks how to Holography </h2>
