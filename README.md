@@ -6,7 +6,7 @@ Additional Mixture Density Capability to deal with ill-posed inverse problems.
 Currently applied to inverse-holography (infer back on the hologram from the light field it creates).
 More about that below..
 
-<h2> Teaching Neural Networks how to do Holography</h2>
+<h2> HoloNet - Teaching Neural Networks how to do Holography</h2>
 
 For my research, I need to be able to create complicated light patterns in my holographic optical tweezer setup (see e.g. Dynamic holographic optical tweezers, Curtis et al, 2002).
 My setup features a so-called spatial light modulator (SLM), essentially a liquid crystal screen with 800x600 pixels. Each pixel can advance or delay the phase of the incoming laser beam.
