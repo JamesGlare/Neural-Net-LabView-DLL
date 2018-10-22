@@ -16,7 +16,7 @@ That is not a simple problem. In fact, its non-trivial enough, that there are mo
  
 I thought that deep learning might be one way to solve this problem. We should be able to train a neural network on the forward problem (Hologram to Intensity).
 
-Mathematically speaking, the transformation we wish to train our network on is a matrix-to-matrix problem. Our images are intensity only, so no additional colour channels.
+Mathematically speaking, the transformation we wish to train our network on is a non-linear matrix-to-matrix problem. Our images are intensity only, so no additional colour channels.
 The transformation that the SLM imparts on the beam cannot be written down in any analytical form and even if this was possible, it would require precise knowledge of the geometry of the setup. 
 
 The following pictures should give you an impression of the transformation. You see pictures of the hologram with lots of striped patterns (left) and pictures of the corresponding laser light intensity fields (right), which can be pretty nice to look at.
