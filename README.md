@@ -4,21 +4,23 @@ Deep Learning library in Labview. C++-based implementation of a feed-forward neu
 Compilation requires version 3.3.5. of the Eigen library. 
 
 The library currently supports 
-
+<pre>
 [1] Multi-feature Convolutional Layers
 [2] Multi-feature Deconvolutional Layers 
 [3] Dense Layers
 [4] Dropout Layers
 [5] Max-Pooling Layers
 [6] Pass-On Layers (apply some elementwise function)
-
+</pre>
 with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
 
 Gradient descent is performed in minibatches and several methods are available
 
+<pre>
 [1] Momentum-based descent (Nesterov's accelerated gradient currently commented out for technical reasons).
 [2] Conjugate Gradient 
 [3] ADAM 
+</pre>
 
 Furhthermore, the library offers weight normalisation (irrespective of gradient-descent method).
 
