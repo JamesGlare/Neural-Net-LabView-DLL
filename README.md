@@ -1,9 +1,32 @@
 <h1> Deep Learning Library for Labview/C++</h1>
 
 Deep Learning library in Labview. C++-based implementation of a feed-forward neural network.  
-Compilation requires version 3.3.5. of the Eigen library.  
-Additional Mixture Density Capability to deal with ill-posed inverse problems. 
-Currently applied to inverse-holography (infer back on the hologram from the light field it creates).
+Compilation requires version 3.3.5. of the Eigen library. 
+
+The library currently supports 
+
+[1] Multi-feature Convolutional Layers
+[2] Multi-feature Deconvolutional Layers 
+[3] Dense Layers
+[4] Dropout Layers
+[5] Max-Pooling Layers
+[6] Pass-On Layers (apply some elementwise function)
+
+with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
+
+Gradient descent is performed in minibatches and several methods are available
+
+[1] Momentum-based descent (Nesterov's accelerated gradient currently commented out for technical reasons).
+[2] Conjugate Gradient 
+[3] ADAM 
+
+Furhthermore, the library offers weight normalisation (irrespective of gradient-descent method).
+
+All methods can be turned on and off dynamically during the training. All hyperparameters can always be changed during the training.
+ 
+And finally, I added Mixture Density Capability to deal with one-to-many-style inverse problems. 
+
+Currently I apply this to "inverse-holography".
 More about that below..
 
 <h2> HoloNet - Teaching Neural Networks how to do Holography</h2>
