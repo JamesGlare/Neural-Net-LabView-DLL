@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 <h1> Deep Learning Library for Labview/C++</h1>
 
@@ -25,3 +26,5 @@ I haven't gotten around to quantify this, but the video below should speak for i
 
 
 
+=======
+<h2> Teaching Neural Networks how to Holography </h2>
