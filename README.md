@@ -5,9 +5,9 @@ Compilation requires version 3.3.5. of the Eigen library.
 
 The library currently supports 
 <pre>
-[1] Multi-feature Convolutional Layers
-[2] Multi-feature Deconvolutional Layers 
-[3] Dense Layers
+[1] Multi-feature Convolutional Layers with sidechannels (unstructured inputs that are simply passed on)
+[2] Multi-feature Deconvolutional Layers (unstructured inputs that are simply passed on)
+[3] Dense Layers 
 [4] Dropout Layers
 [5] Max-Pooling Layers
 [6] Pass-On Layers (apply some elementwise function)
@@ -26,7 +26,7 @@ Furhthermore, the library offers weight normalisation (irrespective of gradient-
 
 All methods can be turned on and off dynamically during the training. All hyperparameters can always be changed during the training.
  
-And finally, I added Mixture Density Capability to deal with one-to-many-style inverse problems. 
+And finally, I added <b>Mixture Density</b> Capability to deal with one-to-many-style inverse problems. 
 
 Currently I apply this to "inverse-holography".
 More about that below..
