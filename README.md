@@ -6,7 +6,7 @@ Compilation requires version 3.3.5. of the Eigen library.
 The library currently supports 
 <pre>
 [1] Multi-feature Convolutional Layers with sidechannels (unstructured inputs that are simply passed on)
-[2] Multi-feature Deconvolutional Layers (unstructured inputs that are simply passed on)
+[2] Multi-feature Deconvolutional Layers with sidechannels 
 [3] Dense Layers 
 [4] Dropout Layers
 [5] Max-Pooling Layers
