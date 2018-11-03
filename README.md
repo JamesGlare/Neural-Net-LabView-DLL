@@ -5,9 +5,9 @@ Compilation requires version 3.3.5. of the Eigen library.
 
 The library currently supports 
 <pre>
-[1] Multi-feature Convolutional Layers
-[2] Multi-feature Deconvolutional Layers 
-[3] Dense Layers
+[1] Multi-feature Convolutional Layers with sidechannels (unstructured inputs that are simply passed on)
+[2] Multi-feature Deconvolutional Layers with sidechannels 
+[3] Dense Layers 
 [4] Dropout Layers
 [5] Max-Pooling Layers
 [6] Pass-On Layers (apply some elementwise function)
@@ -26,7 +26,7 @@ Furhthermore, the library offers weight normalisation (irrespective of gradient-
 
 All methods can be turned on and off dynamically during the training. All hyperparameters can always be changed during the training.
  
-And finally, I added Mixture Density Capability to deal with one-to-many-style inverse problems. 
+And finally, I added <b>Mixture Density</b> Capability to deal with one-to-many-style inverse problems. 
 
 Currently I apply this to "inverse-holography".
 More about that below..
@@ -73,5 +73,8 @@ The next challenge is to inversely "predict" the hologram from its own intensity
 
 I am currently trying to tackle this problem using Mixture-Density networks (see [C Bishop 1994](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/bishop-ncrg-94-004.pdf)).
 
-Once I have more results, I will post them here.
+UPDATE:
+It it is probably hopeless to learn the holograms directly. Instead, I chose a different approach. The network is trained in fourier space, which is much lower in dimensionality and captures the essential information of the holograms.
+This also solves on my biggest headaches, which was the so-called 'phase problem': Two holograms that only differ in a global phase will produce the same intensity distribution. The mapping of holograms -> Intensity is not injective.
 
+[![Video of Inverse HoloNet training](./pictures/inversVideo1.png)](https://youtu.be/LHtNtG6rQkg "Inverse HoloNet prediction examples.")
