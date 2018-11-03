@@ -18,11 +18,11 @@ __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 __declspec(dllexport) uint32_t __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT) {
 	return ptr->addFullyConnectedLayer(NOUT, actfunc_t::RELU);
 }
-__declspec(dllexport) uint32_t __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features) {
-	return ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, actfunc_t::RELU);
+__declspec(dllexport) uint32_t __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels) {
+	return ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
 }
-__declspec(dllexport) uint32_t __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features) {
-	return ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, actfunc_t::RELU);
+__declspec(dllexport) uint32_t __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t sideChannels) {
+	return ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
 }
 __declspec(dllexport) uint32_t __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	return ptr->addPoolingLayer(maxOverXY, pooling_t::max);
@@ -55,8 +55,8 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
 	return error;
 }
-__declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t K, size_t NOUT) {
-	ptr->addMixtureDensity(K, NOUT);
+__declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t K, size_t NOUT, size_t Blocks) {
+	ptr->addMixtureDensity(K, NOUT, Blocks);
 }
 __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);

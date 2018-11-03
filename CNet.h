@@ -16,13 +16,13 @@ class CNet {
 		~CNet();
 		// add network layers
 		size_t addFullyConnectedLayer(size_t NOUT, actfunc_t type);
-		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
-		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
+		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
+		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
 		size_t addPoolingLayer(size_t maxOverXY, pooling_t type);
 		size_t addDropoutLayer(fREAL ratio);
 		size_t addPassOnLayer(actfunc_t type);
 		// Mixture Density Output interpretation
-		void addMixtureDensity(size_t K, size_t L);
+		void addMixtureDensity(size_t K, size_t L, size_t Blocks);
 
 		// forProp
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);

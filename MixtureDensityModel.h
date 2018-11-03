@@ -6,33 +6,45 @@
 #define CNET_MIXTUREDENSITY
 /**
 	MixtureDensityModel (Bishop 1994)
+	---------------------------------
 	The network is used to predict means and variances for a series of normal distributions
 	which predict the probability of a target variable having a certain value.
+
+	We change the model slightly and perform the mixture density operation only over
+	a square block of the output. This way, we have completely independent predictions
+	for all the different blocks. 
 
 	Like in other parts of this library, we want to transport these parameters
 	in a single matrix. Therefore, we have to agree where in the matrix we store what.
 	There are
-		(1) K mixture coefficients
-		(2) L x K components of all the mean-vectors (mus)
-		(3) K components of the variance matrix (assume spherical Gaussian -> single variance)
+		(1) K mixture coefficients - there are K* (L/LBlock)-many
+		(2) LBlock x K components of all the mean-vectors (mus)
+		(3) K components of the variance matrix (actually we store the standard deviations) 
+			(assume spherical Gaussian -> single variance)
+
+	
+	For each block, we have the following structure. 
 
 	All these components are transmitted in a single matrix of size 
-	K x (L+2 ) according to the following format:
-	Columns 
-	0			1				2			...		L + 1
-	Pi_0		var_0			Mu_{0,0}			Mu_{0,L-1}
-	Pi_1		var_1			Mu_{1,0}			Mu_{1,L-1}
-	.			.				.					.
-	.			.				.					.
-	.			.				.					.
-	Pi_(K-1)	var_(K-1)		Mu_{K-1,0} ...		Mu_{K-1, L-1}
+	K x (LBlock +2 ) according to the following format:																	SIGMA											PI
+	Block 0								Block 1							... Block Blocks-1		...						Block 0		...		Block Blocks-1 				Block 0				...			Block-1
+	0			...		LBlock-1		LBlock				2*LBlock-1		(Blocks-1)*LBLock	...	BLocks*LBlock-1		Blocks*LBLock		Blocks*LBlock+Blocks-1		Blocks*LBlock+Blocks			BLocks*(LBlock+2)-1
+	Mu_{0,0}	...		Mu_{0,LB-1}		Mu_{0,0}	...		Mu_{0,LB-1}		Mu_{0,0}				Mu_{0,LB-1}			Sigma_0		...		Sigma_0						Pi_0							Pi_0
+	Mu_{1,0}	...		Mu_{1,LB-1}		Mu_{1,0}				.			.											Sigma_1		...		Sigma_1						Pi_1							Pi_1
+	.					.				.						.			.											.					.							.								.
+	.					.				.						.			.											.					.							.								.
+	.					.				.						.														.					.							.								.
+	Mu_{K-1,0}	...		Mu_{K-1, LB-1}	Mu_{K-1,0}	...		Mu_{K-1, LB-1}	Mu_{K-1,0}			...	Mu_{K-1, LB-1}		Sigma_(K-1) ...		Sigma_(K-1)					Pi_(K-1)						Pi_(K-1)
 
-	The parameters are stored in the param matrix.
+	The parameters are stored in the param matrix in the x-direction.
+
+	Each block has K*(LBlock+2) elements. The tot
 **/
+
 
 class MixtureDensityModel {
 public:
-	MixtureDensityModel(size_t _K, size_t L);
+	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, size_t NIN);
 	MixtureDensityModel(const MixtureDensityModel* other) = delete;
 	~MixtureDensityModel();
 	void conditionalMean(MAT& networkOut); // output function
@@ -47,19 +59,12 @@ private:
 
 	size_t K; // number of mixture coefficients
 	size_t L; // just for convenience - dimension of network output
-	
+	size_t LBlock;
+	size_t Blocks; // 
 	
 	MAT param; // Matrix(K,L) of kernel centres mu_j. For each mixture kernel, a scalar variance. We assume the gaussian to be spherical.
 				// Mixture coefficients - sum to one.
-
 	void init();
-	// Private getter functions for insertion into other functions
-	// return rvalue references
-	MATBLOCK getMixtureCoefficients() const ;
-	MATBLOCK getMus() const;
-	MATBLOCK getSpecificMu( size_t k) const;
-	MATBLOCK getVariances() const;
-	fREAL getSpecificVariance( size_t k) const;
 
 };
 

@@ -28,7 +28,7 @@ void FullyConnectedLayer::init() {
 	//fREAL max = 1.0f / getNIN();
 	//fREAL min = -1.0f / getNIN();
 	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
-	layer /= sqrt(getNIN()); // ... but small.
+	layer /= sqrt(sqrt(getNOUT()*getNIN())); // ... but small.
 
 	assert(actSave.rows() == getNOUT());
 	assert(deltaSave.rows() == getNOUT());
@@ -54,7 +54,7 @@ void FullyConnectedLayer::initV() {
 	//normalizeV();
 }
 void FullyConnectedLayer::normalizeV() {
-	for (size_t i = 0; i < getNOUT(); i++) {
+	for (size_t i = 0; i < getNOUT(); ++i) {
 		V.leftCols(getNIN()).row(i) /= normSum(V.leftCols(getNIN()).row(i));
 	}
 }
@@ -64,12 +64,12 @@ void FullyConnectedLayer::inversVNorm() {
 	//MAT out(NOUT, NIN+1);
 	VInversNorm.setOnes();
 	//MAT oneRow = MAT::Constant(1, NIN,1.0f);
-	for (size_t i = 0; i < getNOUT(); i++) {
+	for (size_t i = 0; i < getNOUT(); ++i) {
 		VInversNorm.leftCols(getNIN()).row(i) /=  normSum(V.leftCols(getNIN()).row(i)); //
 	}
 }
 void FullyConnectedLayer::initG() {
-	for (size_t i = 0; i < getNOUT(); i++) {
+	for (size_t i = 0; i < getNOUT(); ++i) {
 		G(i,0) = normSum(layer.leftCols(getNIN()).row(i));
 	}
 	//G.setOnes();

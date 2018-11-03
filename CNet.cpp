@@ -32,25 +32,25 @@ size_t CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	}
 	return getLayerNumber();
 }
-size_t CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type) {
+size_t CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type) {
 	// At the moment, I only allow for square-shaped input.
 	// this may need to change in the future.
 	if (getLayerNumber() > 0) {
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, type, *(layers.back()));
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(layers.back()));
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, features, type);
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, features, sideChannels, type);
 		layers.push_back(cl);
 	}
 	return getLayerNumber();
 }
-size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type) {
+size_t CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, type, *(layers.back()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(layers.back()));
 		layers.push_back(acl);
 	} else {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, type);
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, sideChannels, type);
 		layers.push_back(acl);
 	}
 	return getLayerNumber();
@@ -140,8 +140,8 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 	else {
 		mixtureDensity->updateParameters(in); // resizes output
 		//mixtureDensity->getParameters(in);
-		mixtureDensity->maxMixtureCoefficient(in); // turns a K*(L+2) matrix into a (L,1)
-		//mixtureDensity->conditionalMean(in);
+		//mixtureDensity->maxMixtureCoefficient(in); // turns a K*(L+2) matrix into a (L,1)
+		mixtureDensity->conditionalMean(in);
 		return mixtureDensity->negativeLogLikelihood(outDesired);
 	}
 		
@@ -149,10 +149,14 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 
 // Backpropagation 
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
-	// (0) 
+	// (0) Check in- & output
+	if (!input.allFinite()
+		|| !outDesired.allFinite()) {
+		return 1; // just skip this sample 
+	}
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;
-	// (1) for prop with saveActivations == true
+	// (1) Propagate in forward direction (with saveActivations == true)
 	MAT outPredicted(input);
 	layers.front()->forProp(outPredicted, true, true);
 	// (2) calculate error matrix and error
@@ -161,7 +165,8 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 		//mixtureDensity->getParameters(outPredicted);
 		mixtureDensity->maxMixtureCoefficient(outPredicted);
 		//mixtureDensity->conditionalMean(outPredicted); // this reduces the (K,L+2)-matrix to a (L,1)-sized matrix !
-		errorOut = mixtureDensity->negativeLogLikelihood(outDesired);
+		//errorOut = mixtureDensity->negativeLogLikelihood(outDesired);
+		errorOut = l2_error(errorMatrix(outPredicted, outDesired));
 		diffMatrix = move(mixtureDensity->computeErrorGradient(outDesired));
 	} else {
 		diffMatrix = move(errorMatrix(outPredicted, outDesired));
@@ -169,19 +174,19 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	}
 
 	// (3) back propagate the deltas
-	layers.back()->backPropDelta(diffMatrix, true);
+	getLast()->backPropDelta(diffMatrix, true);
 	// (4) Apply update
-	layers.front()->applyUpdate(pars, input, true);
+	getFirst()->applyUpdate(pars, input, true);
 	// (5) Write predicted output to output matrix
 	
 	// ... DONE
 	outDesired = outPredicted;
 	return errorOut;
 }
-void CNet::addMixtureDensity(size_t K, size_t L) {
+void CNet::addMixtureDensity(size_t K, size_t L, size_t Blocks) {
 	assert(getNOUT() == (L + 2)*K);
 	if(!mixtureDensity)
-		this->mixtureDensity = new MixtureDensityModel(K, L);
+		this->mixtureDensity = new MixtureDensityModel(K, L, Blocks, getLast()->getNOUT());
 }
 void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 	if (layer < getLayerNumber()) {

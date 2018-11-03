@@ -6,10 +6,10 @@
 
 class AntiConvolutionalLayer : public PhysicalLayer {
 public:
-	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type);
-	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, actfunc_t type, CNetLayer& lower);
-	AntiConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type);
-	AntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features, actfunc_t type, CNetLayer& lower);
+	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, uint32_t sideChannels, actfunc_t type);
+	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, uint32_t sideChannels, actfunc_t type, CNetLayer& lower);
+	AntiConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels, actfunc_t type);
+	AntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels, actfunc_t type, CNetLayer& lower);
 	~AntiConvolutionalLayer();
 
 	layer_t whoAmI() const;
@@ -47,7 +47,9 @@ private:
 	size_t strideX;
 	size_t inFeatures;
 	uint32_t features;
+	uint32_t sideChannels;
 	void assertGeometry();
+	MAT sideChannelBuffer; // buffer for sidechannel inputs
 
 	// File function
 	void saveToFile(ostream& os) const;

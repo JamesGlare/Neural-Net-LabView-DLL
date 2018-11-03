@@ -9,7 +9,8 @@ MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
 	init();
 	assertGeometry();
 }
-
+// This constructor assumes a square input NINX x NINY.
+// However, we 
 MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, CNetLayer& lower) 
 	: NINX((int)sqrt(lower.getNOUT())), NINY((int)sqrt(lower.getNOUT())), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT())) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT())) / _maxOverXY), 
 	DiscarnateLayer(((int)sqrt(lower.getNOUT()) / _maxOverXY)*((int)sqrt(lower.getNOUT()) / _maxOverXY), actfunc_t::NONE, lower) {
