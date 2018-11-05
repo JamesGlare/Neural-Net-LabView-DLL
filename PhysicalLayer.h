@@ -36,7 +36,7 @@ public:
 	// Read-only access to weight parameters.
 	void copyLayer(fREAL* const toCopyTo);
 	// Set the layer weights (e.g. for initialization)
-	void setLayer(fREAL* const copyFrom);
+	void setLayer(const MAT& newLayer);
 	MATIND layerDimensions() const;
 
 protected:

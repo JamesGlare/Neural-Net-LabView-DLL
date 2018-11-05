@@ -144,7 +144,7 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	inBelow.resize(NINY, inFeatures*NINX);
 	
 	//inBelow = conv(inBelow, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features); // square convolution
-	inBelow = conv_(inBelow, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
+	inBelow = conv_(inBelow, layer, NOUTY, NOUTX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 	inBelow.resize(inFeatures*features*NOUTX*NOUTY, 1);
 	if (training) {
 		actSave = inBelow;
@@ -224,6 +224,7 @@ MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) size
 		input.resize(NINY, inFeatures*NINX);
 
 		MAT convoluted = convGrad_(input, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
+		//MAT convoluted = convGrad(input, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 
 		deltaSave.resize(getNOUT()-sideChannels, 1); // make sure to resize to NOUT-sideChannels
 
@@ -244,6 +245,7 @@ MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) size
 		fromBelow.resize(NINY, inFeatures*NINX);
 		
 		MAT convoluted = convGrad_(fromBelow, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
+		//MAT convoluted = convGrad(fromBelow, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 		
 		deltaSave.resize(getNOUT()-sideChannels, 1);  // make sure to resize to NOUT-sideChannels
 		return convoluted;

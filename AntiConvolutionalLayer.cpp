@@ -170,7 +170,7 @@ void AntiConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 
 	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 		deltaSave.resize(NOUTY, NOUTX); // keep track of this!!!
-		deltaAbove = conv_(deltaSave, layer, strideY, strideX, antiConvPad(NINY, strideY, kernelY, NOUTY), antiConvPad(NINX, strideX, kernelX, NOUTX), features,1);
+		deltaAbove = conv_(deltaSave, layer,NINY, NINX, strideY, strideX, antiConvPad(NINY, strideY, kernelY, NOUTY), antiConvPad(NINX, strideX, kernelX, NOUTX), features,1);
 		deltaAbove.resize(getNIN()-sideChannels, 1);
 		if (sideChannels > 0) {
 			deltaAbove.conservativeResize(getNOUT(), 1);

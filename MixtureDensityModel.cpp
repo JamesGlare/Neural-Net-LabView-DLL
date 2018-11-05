@@ -28,10 +28,17 @@
 #define __PIS			block(0, Blocks*(LBlock + 1), K, Blocks)
 
 
-MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, size_t NIN) : K(_K), L(_L), Blocks(_Blocks), LBlock(_L/ _Blocks  ) {
+MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, CNetLayer& lower) : 
+	K(_K), L(_L), Blocks(_Blocks), LBlock(_L/ _Blocks  ),  DiscarnateLayer(_L, actfunc_t::NONE, lower ) {
 	init();
-	assert(NIN == Blocks*K*(LBlock + 2));
+	assert(getNIN() == Blocks*K*(LBlock + 2));
 }
+MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, size_t NIN) :
+	K(_K), L(_L), Blocks(_Blocks), LBlock(_L / _Blocks), DiscarnateLayer(_L, NIN, actfunc_t::NONE) {
+	init();
+	assert(getNIN() == Blocks*K*(LBlock + 2));
+}
+
 // Initialization routine.
 void MixtureDensityModel::init() {
 
@@ -40,8 +47,41 @@ void MixtureDensityModel::init() {
 	param.setZero();
 	// they will be overwritten by the network outputs immediately...
 }
+void MixtureDensityModel::saveToFile(ostream & os) const
+{
+}
+void MixtureDensityModel::loadFromFile(ifstream & in)
+{
+}
 MixtureDensityModel::~MixtureDensityModel()
 {
+}
+
+void MixtureDensityModel::forProp(MAT & in, bool saveActivation, bool recursive)
+{
+	updateParameters(in);
+	// Choose what to ouput - 2 choices: Conditional mean of all modes
+	// or the mode with the highest likelihood.
+	maxMixtureCoefficient(in); // Size: (L,1)
+
+	// Save the output - we need it if we backprop later...
+	if (saveActivation)
+		actSave = in;
+
+	// Propagate the max mixture coefficient OR conditional mean to the next layer
+	if (getHierachy() != hierarchy_t::output && recursive) {
+		above->forProp(in, saveActivation, true);
+	}
+}
+
+void MixtureDensityModel::backPropDelta(MAT & delta, bool recursive)
+{
+	if (getHierachy() != hierarchy_t::input) { // ... should be true
+		MAT t = reconstructTarget(delta);
+		delta = computeErrorGradient(t);
+		if (recursive)
+			below->backPropDelta(delta, true);
+	} 
 }
 
 /*	Forward function 
@@ -233,6 +273,12 @@ MAT MixtureDensityModel::computeErrorGradient(const MAT& t) {
 
 	errorGrad.resize(K*(L + 2), 1);
 	return errorGrad; */
+}
+
+MAT MixtureDensityModel::reconstructTarget(const MAT & diffMatrix)
+{
+	assert(diffMatrix.size() == getNOUT());
+	return actSave - diffMatrix; // target = estimate - delta
 }
 
 fREAL MixtureDensityModel::negativeLogLikelihood(const MAT& t) const

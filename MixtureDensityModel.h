@@ -1,7 +1,7 @@
 #pragma once
 
 #include "defininitions.h"
-
+#include "DiscarnateLayer.h"
 #ifndef CNET_MIXTUREDENSITY
 #define CNET_MIXTUREDENSITY
 /**
@@ -42,20 +42,27 @@
 **/
 
 
-class MixtureDensityModel {
+class MixtureDensityModel : public DiscarnateLayer{
 public:
+	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, CNetLayer& lower);
 	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, size_t NIN);
 	MixtureDensityModel(const MixtureDensityModel* other) = delete;
 	~MixtureDensityModel();
+
+	// Overwrite virtual functions from Discarnatelayer
+	void forProp(MAT& in, bool saveActivation, bool recursive);
+	void backPropDelta(MAT& delta, bool recursive);
+
+	fREAL negativeLogLikelihood(const MAT& t) const;
+	inline size_t getNOUT() const { return L; };
+
+private:
 	void conditionalMean(MAT& networkOut); // output function
 	void maxMixtureCoefficient(MAT& networkOut); // output function
 	void updateParameters(MAT& networkOut);
 	void getParameters(MAT& toCopyTo); // output function
 	MAT computeErrorGradient(const MAT& t);
-	fREAL negativeLogLikelihood(const MAT& t) const;
-	inline size_t getNOUT() const { return L; };
-
-private:
+	MAT reconstructTarget(const MAT& diffMatrix);
 
 	size_t K; // number of mixture coefficients
 	size_t L; // just for convenience - dimension of network output
@@ -65,7 +72,8 @@ private:
 	MAT param; // Matrix(K,L) of kernel centres mu_j. For each mixture kernel, a scalar variance. We assume the gaussian to be spherical.
 				// Mixture coefficients - sum to one.
 	void init();
-
+	void saveToFile(ostream& os) const;
+	void loadFromFile(ifstream& in);
 };
 
 #endif

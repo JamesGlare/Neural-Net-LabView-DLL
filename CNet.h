@@ -14,21 +14,23 @@ class CNet {
 	public:
 		CNet(size_t NIN);
 		~CNet();
-		// add network layers
-		size_t addFullyConnectedLayer(size_t NOUT, actfunc_t type);
-		size_t addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
-		size_t addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
-		size_t addPoolingLayer(size_t maxOverXY, pooling_t type);
-		size_t addDropoutLayer(fREAL ratio);
-		size_t addPassOnLayer(actfunc_t type);
-		// Mixture Density Output interpretation
+		// Physical Layers (i.e. layers with weight parameters)
+		void addFullyConnectedLayer(size_t NOUT, actfunc_t type);
+		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
+		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
+
+		// Discarnate Layers (i.e. layers without weight parameters)
+		void addPoolingLayer(size_t maxOverXY, pooling_t type);
+		void addDropoutLayer(fREAL ratio);
+		void addPassOnLayer(actfunc_t type);
 		void addMixtureDensity(size_t K, size_t L, size_t Blocks);
 
-		// forProp
+		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
-		// backprop
+		// Backpropagate through network. 
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars);
-		// save to file
+		
+		// Save-to-file functionality.
 		void saveToFile(string filePath) const;
 		void loadFromFile(string filePath);
 
@@ -37,13 +39,16 @@ class CNet {
 		inline size_t getLayerNumber() const { return layers.size(); };
 		inline size_t getNIN() const { return NIN; };
 		void copyNthLayer(size_t layer, fREAL* const toCopyTo) const;
-		void setNthLayer(size_t layer, fREAL* const copyFrom);
+		void setNthLayer(size_t layer, const MAT& newLayer);
 		size_t getNOUT() const;
-		inline CNetLayer* getLast() const { return layers.back(); };
-		inline CNetLayer* getFirst() const { return layers.front(); };
+
 		void inquireDimensions (size_t layer, size_t& rows, size_t& cols) const;
 
 	private:
+
+		inline CNetLayer* getLast() const { return layers.back(); };
+		inline CNetLayer* getFirst() const { return layers.front(); };
+
 		// error related functions
 		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
 		fREAL l2_error(const MAT& diff);
@@ -54,7 +59,6 @@ class CNet {
 		}
 		size_t NIN;
 		vector<CNetLayer*> layers;
-		MixtureDensityModel* mixtureDensity;
 };
 
 #endif 

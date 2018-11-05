@@ -77,15 +77,15 @@ MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kern
 }
 /* Parallelized convolution routine with in/out features.
 */
-MAT conv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures) {
+MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures) {
 	
 	// (1) Geometry of the situation
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / inFeatures;
 	size_t kernelY = kernel.rows();
 	size_t kernelX = kernel.cols()/outFeatures;
-	size_t NOUTY = convoSize(NINY,kernelY,paddingY, strideY);
-	size_t NOUTX = convoSize(NINX, kernelX, paddingX, strideX);
+	//size_t NOUTY = convoSize(NINY,kernelY,paddingY, strideY);
+	//size_t NOUTX = convoSize(NINX, kernelX, paddingX, strideX);
 	
 	/*MAT paddedIn(NINY + 2 * paddingY, NINX + 2 * paddingX);
 	// Set padding and out matrix zero, then fill inner part.
@@ -213,6 +213,7 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t strideY, uint32_t stride
 								yInd >= 0 &&
 								xInd < NINX &&
 								xInd >= 0) { // Check we're not in the padding.
+
 								temp = delta(m, f*deltaX + n) * in(yInd, xInd + inF*NINX);
 								//#pragma omp critical
 								kernelGrad(j, i + outF*kernelX) += temp;

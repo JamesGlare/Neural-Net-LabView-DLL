@@ -19,6 +19,7 @@ using namespace std;
 typedef float fREAL;
 typedef Matrix<fREAL, Dynamic,1> VEC;
 typedef Matrix<fREAL, Dynamic, Dynamic> MAT;
+typedef Matrix<fREAL, Dynamic, Dynamic, RowMajor> MAT_ROWMAJOR;
 typedef Matrix<fREAL, Dynamic, Dynamic, Dynamic> MAT3;
 typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
 typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX; // needed in MaxPool, Dropout
@@ -30,6 +31,7 @@ struct MATIND {
 	size_t cols;
 };
 typedef Map<MAT> MATMAP;
+typedef Map<MAT_ROWMAJOR> MATMAP_ROWMAJOR;
 typedef vector<MAT> MATVEC;
 typedef Map<MATU8> MATU8MAP;
 typedef fREAL(*ACTFUNC)(fREAL);
@@ -54,7 +56,7 @@ struct learnPars {
 // library functions
 
 MAT conv(const MAT& in, const MAT& _kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
-MAT conv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures);
+MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures);
 MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t antiPaddingY, uint32_t antiPaddingX, uint32_t features);
 MAT antiConv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures);
 MAT backPropConv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t inFeatures);
@@ -113,12 +115,12 @@ inline fREAL DSig(fREAL f) {
 	return Sig(f)*(1.0f - Sig(f));
 }
 inline fREAL ReLu(fREAL f) {
-	//return f > 0.0f ? f : 0.0f;
-	return std::log(1.0f + std::exp(f));
+	return f > 0.0f ? f : 0.0f;
+	//return std::log(1.0f + std::exp(f));
 }
 inline fREAL DReLu(fREAL f) {
-	//return f > 0.0f ? 1.0f : 0.0f;
-	return Sig(f);
+	return f > 0.0f ? 1.0f : 0.0f;
+	//return Sig(f);
 }
 inline fREAL norm(fREAL f) {
 	return f*f;

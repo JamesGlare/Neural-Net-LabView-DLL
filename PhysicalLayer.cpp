@@ -25,10 +25,18 @@ void PhysicalLayer::init() {
 	weightNormMode = false;
 }
 void PhysicalLayer::copyLayer(fREAL* const toCopyTo) {
+	layer.transposeInPlace();
+	size_t rows = layer.rows();
+	size_t cols = layer.cols();
+	layer.resize(layer.size(), 1);
 	copyToOut(layer.data(), toCopyTo, layer.size());
+	layer.resize(rows, cols);
+	layer.transposeInPlace();
 }
-void PhysicalLayer::setLayer(fREAL* const copyFrom) {
-	layer = MATMAP(copyFrom, layer.rows(), layer.cols());
+void PhysicalLayer::setLayer(const MAT& newLayer) {
+	assert(layer.rows() == newLayer.rows());
+	assert(layer.cols() == newLayer.cols());
+	layer = newLayer;
 }
 // CHECK SIGNS!!
 void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursive) {
