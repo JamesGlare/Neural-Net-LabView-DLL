@@ -11,6 +11,7 @@ The library currently supports
 [4] Dropout Layers
 [5] Max-Pooling Layers
 [6] Pass-On Layers (apply some elementwise function)
+[7] Mixture Density Layer (Probability distribution of likely output values - can be placed anywhere within the network!)
 </pre>
 with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
 
@@ -26,8 +27,6 @@ Furhthermore, the library offers weight normalisation (irrespective of gradient-
 
 All methods can be turned on and off dynamically during the training. All hyperparameters can always be changed during the training.
  
-And finally, I added <b>Mixture Density</b> Capability to deal with one-to-many-style inverse problems. 
-
 Currently I apply this to "inverse-holography".
 More about that below..
 
