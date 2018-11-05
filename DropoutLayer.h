@@ -4,7 +4,10 @@
 
 #ifndef CNET_DROPOU
 #define CNET_DROPOUT
-
+/*	Implements a dropout operation.
+*	Sets a certain proportion of inputs to zero,
+*	but maintains the geometry (i.e. number of outputs).
+*/
 class DropoutLayer : public DiscarnateLayer {
 public:
 	DropoutLayer(fREAL ratio, size_t NIN);

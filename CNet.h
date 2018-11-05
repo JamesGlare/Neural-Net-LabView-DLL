@@ -9,7 +9,10 @@ typedef std::unique_ptr<CNetLayer> layerPtr;
 
 #ifndef CNET_CNET
 #define CNET_CNET
-
+/*	Master Class which directs the learning process and manages the layers.
+*	The layers are implemented as a linked list, but each pointer is also stored in a vector in this class.
+*	Forward- and back-propagation simply tranverse the list in the respective direction.
+*/
 class CNet {
 	public:
 		CNet(size_t NIN);
@@ -53,9 +56,11 @@ class CNet {
 		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
 		fREAL l2_error(const MAT& diff);
 		inline bool isPhysical(size_t layer) const {
-			return (layers[layer]->whoAmI() != layer_t::maxPooling
-				&& layers[layer]->whoAmI() != layer_t::passOn
-				&& layers[layer]->whoAmI() != layer_t::dropout);
+			return (layers[layer]->whoAmI()	!= layer_t::maxPooling
+				&& layers[layer]->whoAmI()	!= layer_t::passOn
+				&& layers[layer]->whoAmI()	!= layer_t::dropout
+				&& layers[layer]->whoAmI()	!= layer_t::mixtureDensity
+				);
 		}
 		size_t NIN;
 		vector<CNetLayer*> layers;

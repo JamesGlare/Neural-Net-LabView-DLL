@@ -3,7 +3,8 @@
 
 #ifndef CNET_PASSON
 #define CNET_PASSON
-
+/* Applies an element-wise function of choice.
+*/
 class PassOnLayer : public DiscarnateLayer{
 
 public:

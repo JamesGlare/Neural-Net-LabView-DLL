@@ -59,6 +59,9 @@ MixtureDensityModel::~MixtureDensityModel()
 {
 }
 
+layer_t MixtureDensityModel::whoAmI() const {
+	return layer_t::mixtureDensity;
+}
 void MixtureDensityModel::forProp(MAT & in, bool saveActivation, bool recursive)
 {
 	updateParameters(in);

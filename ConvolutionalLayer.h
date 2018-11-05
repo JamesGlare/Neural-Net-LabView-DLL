@@ -4,6 +4,9 @@
 
 #ifndef CNET_CONVOLAYER
 #define CNET_CONVOLAYER
+/* Convolutional layer
+*	Supports multiple features and sidechannels (inputs thar are simply passed on).
+*/
 
 class ConvolutionalLayer : public PhysicalLayer{
 	public:

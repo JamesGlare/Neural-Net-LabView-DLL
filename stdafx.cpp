@@ -8,8 +8,10 @@
 #include "FullyConnectedLayer.h"
 #include "MaxPoolLayer.h"
 #include "PassOnLayer.h"
-// TODO: reference any additional headers you need in STDAFX.H
-// and not in this file
+
+/* CNet LIBRARY FUNCTIONS 
+*/
+
 typedef std::shared_ptr<CNet> CNETPTR;
 __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 	*ptr = new CNet(NIN);
@@ -50,6 +52,8 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	copyToOut(inputMatrix.data(), output, ptr->getNOUT());
 	return error;
 }
+/* BACK
+*/
 __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const output, fREAL* const eta, 
 	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update, 
 	uint32_t* const weight_norm, uint32_t* const initPass, int32_t* const inFormat, int32_t* const outFormat) {
@@ -65,11 +69,10 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
 
 	fREAL error = ptr->backProp(inputMatrix, outputDesiredMatrix, pars);
-	
-	//MAT_ROWMAJOR rowMajOut = outputDesiredMatrix; // Go back to row-major format
-	//rowMajOut.resize(ptr->getNOUT(), 1);
+
+	// Resize the output matrix & copy into outgoing array.
 	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
-	outputDesiredMatrix.transposeInPlace();
+	outputDesiredMatrix.transposeInPlace(); // Go back to Row-major format
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
 	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
 	

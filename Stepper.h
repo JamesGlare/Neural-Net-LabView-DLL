@@ -3,7 +3,12 @@
 
 #ifndef CNET_STEPPER
 #define CNET_STEPPER
-
+/*	Implements the stochastic gradient descent.
+*	The Stepper class currently supports
+*		(1) Momentum-based gradient descent
+*		(2) ADAM
+*		(3) Conjugate gradient.
+*/
 class Stepper {
 public:
 	Stepper(MATIND _layerIndex); // give all matrices, so that stepper can see dimensions

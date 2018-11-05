@@ -46,8 +46,8 @@ class MixtureDensityModel : public DiscarnateLayer{
 public:
 	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, CNetLayer& lower);
 	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, size_t NIN);
-	MixtureDensityModel(const MixtureDensityModel* other) = delete;
 	~MixtureDensityModel();
+	layer_t whoAmI() const;
 
 	// Overwrite virtual functions from Discarnatelayer
 	void forProp(MAT& in, bool saveActivation, bool recursive);

@@ -3,7 +3,10 @@
 #include "PhysicalLayer.h"
 #ifndef CNET_ANTICONVOLAYER
 #define CNET_ANTICONVOLAYER
-
+/* Deconvolution Layer
+*	Supports multiple features (which are currently collapsed onto the single feature).
+*	In addition, it supports side-channels.
+*/
 class AntiConvolutionalLayer : public PhysicalLayer {
 public:
 	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features, uint32_t sideChannels, actfunc_t type);

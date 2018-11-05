@@ -3,7 +3,9 @@
 #ifndef CNET_CMAXPOOL
 #define CNET_CMAXPOOL
 
-
+/* Implements a max-pool operation.
+* 
+*/
 class MaxPoolLayer : public DiscarnateLayer{
 
 public:
