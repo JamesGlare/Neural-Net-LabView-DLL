@@ -44,6 +44,7 @@ class CNetLayer {
 		friend ostream& operator<<(ostream& os, const CNetLayer& toSave); // almost virtual member
 		friend ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct);
 		
+
 	protected:
 		MAT actSave; // keep activation before propagation
 		MAT deltaSave; // store deltas for backprop
@@ -52,17 +53,19 @@ class CNetLayer {
 		void reconstructMother(ifstream& in) ;
 		virtual void saveToFile(ostream& os) const = 0;
 		virtual void loadFromFile(ifstream& in) = 0;
-		ACTFUNC act; // pointer to the activation function
-		ACTFUNC dact; // pointer to the activation function derivative
 		CNetLayer* below; // store pointer to layer below ... 
 		CNetLayer* above; // and above. 
-		void assignActFunc(actfunc_t type);
+		ACTFUNC act; // pointer to the activation function
+		ACTFUNC dact; // pointer to the activation function derivative
+		void changeActFunc(CNetLayer& changeMyActivation, actfunc_t type); // ask another instance of CNetLayer to change its non-linearity
 
 	private:		
 		actfunc_t activationType; // store the type of activation function
 		hierarchy_t hierarchy;
 		size_t NOUT; // number of outputs. For convolutional layers NOUT = NOUTX*NOUTY*Features
 		size_t NIN; // number of inputs. Does not contain the bias node. 
+		void assignActFunc(actfunc_t type);
+
 
 };
 

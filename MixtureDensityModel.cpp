@@ -31,6 +31,8 @@
 MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, CNetLayer& lower) : 
 	K(_K), L(_L), Blocks(_Blocks), LBlock(_L/ _Blocks  ),  DiscarnateLayer(_L, actfunc_t::NONE, lower ) {
 	init();
+	// HACK - in C++ access control works on a per-class basis rather than on per-object basis.
+	changeActFunc(lower, actfunc_t::NONE);
 	assert(getNIN() == Blocks*K*(LBlock + 2));
 }
 MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, size_t NIN) :

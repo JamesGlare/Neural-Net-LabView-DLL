@@ -18,10 +18,6 @@ layer_t PassOnLayer::whoAmI() const {
 PassOnLayer::~PassOnLayer() {}
 void PassOnLayer::init() {
 
-	actSave = MAT(getNOUT(), 1);
-	actSave.setConstant(0);
-	deltaSave = MAT(1, 1);
-	deltaSave.setConstant(0);
 }
 void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	if (training) {

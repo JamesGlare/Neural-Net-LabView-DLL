@@ -107,7 +107,7 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		// Eigen assumes aliasing by default for matrix products A*B type situations
 		actSave.noalias() = layer*appendOneInline(inBelow); // save the activations before non-linearity
 		if (getHierachy() != hierarchy_t::output) {
-			inBelow = actSave.unaryExpr(act); 
+			inBelow = getACT(); 
 			if(recursive)
 				above->forProp(inBelow, true, true);
 		} else {

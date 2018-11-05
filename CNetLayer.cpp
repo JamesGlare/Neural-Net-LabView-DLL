@@ -38,11 +38,11 @@ uint32_t CNetLayer::getFeatures() const {
 }
 
 MAT CNetLayer::getDACT() const {
-	return {std::move(actSave.unaryExpr(dact))};
+	return actSave.unaryExpr(dact);
 }
 
 MAT CNetLayer::getACT() const {
-	return {std::move(actSave.unaryExpr(act))};
+	return actSave.unaryExpr(act);
 }
 
 void CNetLayer::connectAbove(CNetLayer* ptr) {
@@ -50,6 +50,7 @@ void CNetLayer::connectAbove(CNetLayer* ptr) {
 	if (hierarchy != hierarchy_t::input)
 		hierarchy = hierarchy_t::hidden; // change from output to hidden
 }
+
 
 // assign the activation function
 void CNetLayer::assignActFunc(actfunc_t type) {
@@ -108,4 +109,9 @@ void CNetLayer::reconstructMother(ifstream& in) {
 	deltaSave = MAT(NOUT, 1);
 	actSave.setZero();
 	deltaSave.setZero();
+}
+
+void CNetLayer::changeActFunc( CNetLayer& changeMyActivation, actfunc_t type)
+{
+	changeMyActivation.assignActFunc(type);
 }

@@ -115,12 +115,12 @@ inline fREAL DSig(fREAL f) {
 	return Sig(f)*(1.0f - Sig(f));
 }
 inline fREAL ReLu(fREAL f) {
-	return f > 0.0f ? f : 0.0f;
-	//return std::log(1.0f + std::exp(f));
+	//return f > 0.0f ? f : 0.0f;
+	return std::log(1.0f + std::exp(f)); // smooth relu
 }
 inline fREAL DReLu(fREAL f) {
-	return f > 0.0f ? 1.0f : 0.0f;
-	//return Sig(f);
+	//return f > 0.0f ? 1.0f : 0.0f;
+	return Sig(f); // smooth relu
 }
 inline fREAL norm(fREAL f) {
 	return f*f;

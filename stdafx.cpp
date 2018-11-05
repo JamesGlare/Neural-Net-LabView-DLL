@@ -44,6 +44,7 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	inputMatrix.resize(ptr->getNIN(), 1); // (NIN, 1) Matrix
 
 	fREAL error = ptr->forProp(inputMatrix, outputDesiredMatrix, pars);
+	inputMatrix.resize(outFormat[0], outFormat[1]);
 	inputMatrix.transposeInPlace(); // Go back to Row-major format
 	inputMatrix.resize(ptr->getNOUT(), 1);
 	copyToOut(inputMatrix.data(), output, ptr->getNOUT());
@@ -67,6 +68,7 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	
 	//MAT_ROWMAJOR rowMajOut = outputDesiredMatrix; // Go back to row-major format
 	//rowMajOut.resize(ptr->getNOUT(), 1);
+	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
 	outputDesiredMatrix.transposeInPlace();
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
 	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());

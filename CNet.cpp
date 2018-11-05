@@ -21,7 +21,7 @@ void CNet::debugMsg(fREAL* msg) {
 void CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	// now we need to check if there is a layer already
 	if (getLayerNumber() > 0) { // .. so there is one
-		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT,  type,  *(layers.back())); // don't want to forward declare this..
+		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT,  type, *(getLast())); // don't want to forward declare this..
 		layers.push_back(fcl);
 	}
 	else {
@@ -33,7 +33,7 @@ void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, 
 	// At the moment, I only allow for square-shaped input.
 	// this may need to change in the future.
 	if (getLayerNumber() > 0) {
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(layers.back()));
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(getLast()));
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
@@ -43,7 +43,7 @@ void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, 
 }
 void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(layers.back()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(getLast()));
 		layers.push_back(acl);
 	} else {
 		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, sideChannels, type);
@@ -53,7 +53,7 @@ void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stri
 
 void CNet::addPassOnLayer( actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		PassOnLayer* pol = new PassOnLayer(type, *(layers.back()));
+		PassOnLayer* pol = new PassOnLayer(type, *(getLast()));
 		layers.push_back(pol);
 	} else {
 		PassOnLayer* pol = new PassOnLayer(NIN, NIN, type);
@@ -62,7 +62,7 @@ void CNet::addPassOnLayer( actfunc_t type) {
 }
 void CNet::addDropoutLayer(fREAL ratio) {
 	if (getLayerNumber() > 0) {
-		DropoutLayer* dl = new DropoutLayer(ratio, *(layers.back()) );
+		DropoutLayer* dl = new DropoutLayer(ratio, *(getLast()));
 		layers.push_back(dl);
 	} else {
 		DropoutLayer* dl = new DropoutLayer(ratio, NIN);
@@ -73,7 +73,7 @@ void CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
 	switch (type) {
 		case pooling_t::max:
 			if (getLayerNumber() > 0) {
-				MaxPoolLayer* mpl = new MaxPoolLayer(maxOverXY, *(layers.back()));
+				MaxPoolLayer* mpl = new MaxPoolLayer(maxOverXY, *(getLast()));
 				layers.push_back(mpl);
 			} else {
 				MaxPoolLayer* mpl = new MaxPoolLayer(sqrt(NIN), maxOverXY);
@@ -87,7 +87,7 @@ void CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
 void CNet::addMixtureDensity(size_t K, size_t L, size_t Blocks) {
 	
 	if (getLayerNumber() > 0 ) {
-		MixtureDensityModel* mdm = new MixtureDensityModel(K, L, Blocks, getLast()->getNOUT());
+		MixtureDensityModel* mdm = new MixtureDensityModel(K, L, Blocks, *(getLast()));
 		layers.push_back(mdm);
 	} else {
 		// this is not really defined so don't do anything
