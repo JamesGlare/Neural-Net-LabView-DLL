@@ -36,8 +36,9 @@ private:
 	size_t NOUTY;
 	MATINDEX indexX;
 	MATINDEX indexY;
+	size_t inFeatures;
 
-	MAT maxPool(const MAT& in, bool saveIndices);
+	MAT maxPool(const MAT& in,  bool saveIndices);
 	void assertGeometry();
 	void saveToFile(ostream& os) const;
 	void loadFromFile(ifstream& in);

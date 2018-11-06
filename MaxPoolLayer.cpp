@@ -4,7 +4,7 @@
 
 // Constructors
 MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
-	: NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), 
+	: inFeatures(1), NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), 
 	DiscarnateLayer(((int)(NINXY / _maxOverXY))*((int)(NINXY / _maxOverXY)),NINXY*NINXY, actfunc_t::NONE){
 	init();
 	assertGeometry();
@@ -12,8 +12,9 @@ MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
 // This constructor assumes a square input NINX x NINY.
 // However, we 
 MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, CNetLayer& lower) 
-	: NINX((int)sqrt(lower.getNOUT())), NINY((int)sqrt(lower.getNOUT())), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT())) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT())) / _maxOverXY), 
-	DiscarnateLayer(((int)sqrt(lower.getNOUT()) / _maxOverXY)*((int)sqrt(lower.getNOUT()) / _maxOverXY), actfunc_t::NONE, lower) {
+	: inFeatures(lower.getFeatures()), NINX((int)sqrt(lower.getNOUT()/lower.getFeatures())), NINY((int)sqrt(lower.getNOUT() / lower.getFeatures())),
+	maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT() / lower.getFeatures())) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT() / lower.getFeatures())) / _maxOverXY),
+	DiscarnateLayer( lower.getFeatures()*((int)sqrt(lower.getNOUT() / lower.getFeatures()) / _maxOverXY)*((int)sqrt(lower.getNOUT() / lower.getFeatures()) / _maxOverXY), actfunc_t::NONE, lower) {
 	init();
 	assertGeometry();
 }
@@ -22,14 +23,14 @@ MaxPoolLayer::MaxPoolLayer(CNetLayer& lower) : MaxPoolLayer::MaxPoolLayer(2, low
 MaxPoolLayer::~MaxPoolLayer(){}
 
 void MaxPoolLayer::assertGeometry() {
-	assert(NOUTY*NOUTX == getNOUT());
-	assert(NINX*NINY == getNIN());
+	assert(NOUTY*NOUTX*inFeatures == getNOUT());
+	assert(inFeatures*NINX*NINY == getNIN());
 }
 
 void MaxPoolLayer::init() {
-	indexX = MATINDEX(NOUTY, NOUTX);
+	indexX = MATINDEX(NOUTY, inFeatures*NOUTX);
 	indexX.setConstant(0);
-	indexY = MATINDEX(NOUTY, NOUTX);
+	indexY = MATINDEX(NOUTY, inFeatures*NOUTX);
 	indexY.setConstant(0);
 	actSave = MAT(getNOUT(), 1); 
 	actSave.setConstant(0);
@@ -42,7 +43,7 @@ layer_t MaxPoolLayer::whoAmI() const {
 
 
 void MaxPoolLayer::saveToFile(ostream& os) const {
-	os << maxOverX << "\t" << maxOverY << "\t" << NINX << "\t" << NINY << "\t" << NOUTX << "\t"<< NOUTY << endl;
+	os << maxOverX << " " << maxOverY << " " << NINX << " " << NINY << " " << NOUTX << " "<< NOUTY << " "<< inFeatures<<endl;
 }
 void MaxPoolLayer::loadFromFile(ifstream& in) {
 	in >> maxOverX;
@@ -51,12 +52,14 @@ void MaxPoolLayer::loadFromFile(ifstream& in) {
 	in >> NINY; 
 	in >> NOUTX;
 	in >> NOUTY;
+	in >> inFeatures;
 }
 
 void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
-	inBelow.resize(NINY, NINX);
+	inBelow.resize(NINY, inFeatures* NINX);
 	inBelow = maxPool(inBelow, training);
 	inBelow.resize(getNOUT(), 1);
+	
 	if (training)
 		actSave = inBelow;
 	if (getHierachy() != hierarchy_t::output) {
@@ -68,51 +71,62 @@ void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
 void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 
 	if (getHierachy() != hierarchy_t::input || !recursive) { // ... this is not an input layer.
-		deltaAbove.resize(NOUTY, NOUTX);
+		deltaAbove.resize(NOUTY, inFeatures*NOUTX);
 
-		MAT newDelta(NINY, NINX);
+		MAT newDelta(NINY, inFeatures*NINX);
 		newDelta.setConstant(0);
-		for (size_t m = 0; m < NOUTY; m++) {
-			for (size_t n = 0; n < NOUTX; n++) {
-				if(indexY(m, n) >=0 && indexY(m, n) < NINY 
-					&& indexX(m, n) >= 0 && indexX(m, n) < NINX)
-					newDelta(indexY(m, n), indexX(m, n)) = deltaAbove(m, n);
+		for (size_t f = 0; f < inFeatures; ++f) {
+			for (size_t m = 0; m < NOUTY; ++m) {
+				for (size_t n = 0; n < NOUTX; ++n) {
+					if (indexY(m, n+f*NOUTX) >= 0 && indexY(m, n + f*NOUTX) < NINY
+						&& indexX(m, n + f*NOUTX) >= 0 && indexX(m, n + f*NOUTX) < NINX)
+						newDelta(indexY(m, n + f*NOUTX), indexX(m, n + f*NOUTX)) = deltaAbove(m, n + f*NOUTX);
+				}
 			}
 		}
 		newDelta.resize(getNIN(), 1);
-		deltaAbove = newDelta; // convention - the "deltaAbove" instance should carry the deltas.
-		if(recursive)
+		deltaAbove = std::move(newDelta); 
+			
+		if (recursive)
 			below->backPropDelta(deltaAbove, true);
+		
 	}
 }
 
 MAT MaxPoolLayer::maxPool(const MAT& in, bool saveIndices){
-	MAT out( NOUTY, NOUTX );
-	fREAL curMax = 0;
+	MAT out( NOUTY, inFeatures*NOUTX );
+	static const fREAL initNegative = -1000;
+	
+	fREAL curMax = initNegative;
+	
 	size_t ii = -1;
 	size_t jj = -1;
 
-	for (size_t j = 0; j < NOUTY; j++) {
-		for (size_t i = 0; i < NOUTX; i++) {
-			for (size_t k = 0; k < maxOverY; k++) {
-				for (size_t l = 0; l < maxOverX; l++) {
-					if (maxOverY*j + k < NINY && maxOverX*i + l < NINX && in(maxOverY*j + k, maxOverX*i + l) >= curMax) {
-							curMax = in(maxOverY*j + k, maxOverX*i + l); // max(maxOverY*j+k) = maxOverY*((inY/maxOverY)-1) + maxOverY-1 ~ inY-maxOverY + maxOverY-1 = inY - 1 -> Correct, same for x 
+	for (size_t f = 0; f < inFeatures; ++f) {
+		for (size_t j = 0; j < NOUTY; ++j) {
+			for (size_t i = 0; i < NOUTX; ++i) {
+				for (size_t k = 0; k < maxOverY; ++k) {
+					for (size_t l = 0; l < maxOverX; ++l) {
+						if (maxOverY*j + k < NINY && maxOverX*i + l < NINX 
+							&& in(maxOverY*j + k, maxOverX*i + l + f*NINX) >= curMax) {
+							
+							curMax = in(maxOverY*j + k, maxOverX*i + l + f*NINX); // max(maxOverY*j+k) = maxOverY*((inY/maxOverY)-1) + maxOverY-1 ~ inY-maxOverY + maxOverY-1 = inY - 1 -> Correct, same for x 
 							if (saveIndices) {
-								ii = maxOverX*i + l;
+								ii = maxOverX*i + l; // indices should remain within (NOUTY, NOUTX) - the features are taken care of manually
 								jj = maxOverY*j + k;
 							}
 						}
+					}
 				}
+				out(j, i + f*NOUTX) = curMax;
+				if (saveIndices) {
+					indexX(j, i + f*NOUTX) = ii;
+					indexY(j, i + f*NOUTX) = jj;
+					ii = -1;
+					jj = -1;
+				}
+				curMax = initNegative;
 			}
-			out(j, i) = curMax;
-			if (saveIndices) {
-				indexX(j, i) = ii;
-				indexY(j, i) = jj;
-				ii = -1;
-				jj = -1;
-			}
-			curMax = 0;
 		}
 	}
 	return out;
