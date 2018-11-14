@@ -20,7 +20,7 @@ class CNet {
 		// Physical Layers (i.e. layers with weight parameters)
 		void addFullyConnectedLayer(size_t NOUT, actfunc_t type);
 		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
-		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
+		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, size_t sideChannels, actfunc_t type);
 
 		// Discarnate Layers (i.e. layers without weight parameters)
 		void addPoolingLayer(size_t maxOverXY, pooling_t type);

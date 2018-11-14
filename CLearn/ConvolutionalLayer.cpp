@@ -198,8 +198,8 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 
 	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 		deltaSave.resize(NOUTY, inFeatures*features*NOUTX); // keep track of this!!!
-		deltaAbove = backPropConv_(deltaSave, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
-		//deltaAbove = antiConv(deltaSave, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
+		//deltaAbove = backPropConv_(deltaSave, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
+		deltaAbove = antiConv_(deltaSave, layer, NINY, NINX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		deltaAbove.resize(getNIN()-sideChannels, 1);
 		
 		if (sideChannels > 0) {
@@ -223,7 +223,7 @@ MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) size
 		}
 		input.resize(NINY, inFeatures*NINX);
 
-		MAT convoluted = convGrad_(input, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
+		MAT convoluted = convGrad_(input, deltaSave, kernelY, kernelX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		//MAT convoluted = convGrad(input, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 
 		deltaSave.resize(getNOUT()-sideChannels, 1); // make sure to resize to NOUT-sideChannels
@@ -244,7 +244,7 @@ MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) size
 		}
 		fromBelow.resize(NINY, inFeatures*NINX);
 		
-		MAT convoluted = convGrad_(fromBelow, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
+		MAT convoluted = convGrad_(fromBelow, deltaSave, kernelY, kernelX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		//MAT convoluted = convGrad(fromBelow, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 		
 		deltaSave.resize(getNOUT()-sideChannels, 1);  // make sure to resize to NOUT-sideChannels

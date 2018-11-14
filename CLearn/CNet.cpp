@@ -41,12 +41,12 @@ void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, 
 		layers.push_back(cl);
 	}
 }
-void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type) {
+void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, size_t sideChannels, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(getLast()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, sideChannels, type, *(getLast()));
 		layers.push_back(acl);
 	} else {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, sideChannels, type);
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, outBoxes, sideChannels, type);
 		layers.push_back(acl);
 	}
 }
@@ -141,10 +141,10 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	
 	// (0) Check in- & output
-	if (!input.allFinite()
-		|| !outDesired.allFinite()) {
-		return 1; // just skip this sample 
-	}
+	//if (!input.allFinite()
+	//	|| !outDesired.allFinite()) {
+	//	return 1; // just skip this sample 
+	//}
 	// (0.5) Initialize error and difference matrix
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;

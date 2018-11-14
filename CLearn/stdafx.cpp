@@ -23,8 +23,8 @@ __declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t 
 __declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels) {
 	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
 }
-__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t sideChannels) {
-	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t outBoxes, uint32_t sideChannels) {
+	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, sideChannels, actfunc_t::RELU);
 }
 __declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	ptr->addPoolingLayer(maxOverXY, pooling_t::max);

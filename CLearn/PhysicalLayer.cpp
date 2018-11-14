@@ -43,6 +43,7 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 
 	/* new version of this function
 	*/
+	// Get gradient
 	batch.swallowGradient(grad(input));
 	if (0 == pars.batch_update) {
 		// gradient reference can be accessed in batch.avgGradient() 
