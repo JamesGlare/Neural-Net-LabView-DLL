@@ -77,6 +77,10 @@ void ConvolutionalLayer::init() {
 
 	sideChannelBuffer = MAT(sideChannels, 1);
 	sideChannelBuffer.setZero();
+	deltaSave = MAT(getNOUT() - sideChannels, 1);
+	deltaSave.setZero();
+	actSave = MAT(getNOUT() - sideChannels, 1);
+	actSave.setZero();
 	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
 	layer *= ((fREAL) features) / layer.size();
 }
@@ -137,7 +141,7 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	// (1) Take care of the sidechannel inputs
 	if (sideChannels > 0) {
 		sideChannelBuffer = inBelow.bottomRows(sideChannels);
-		inBelow.conservativeResize(NINX*NINY*inFeatures,1); // drop bottom rows
+		inBelow.conservativeResize(getNIN()-sideChannels,1); // drop bottom rows
 	}
 	// (2) Reshape the remaining input
 	
@@ -145,7 +149,8 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	
 	//inBelow = conv(inBelow, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features); // square convolution
 	inBelow = conv_(inBelow, layer, NOUTY, NOUTX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
-	inBelow.resize(inFeatures*features*NOUTX*NOUTY, 1);
+	inBelow.resize(getNOUT()-sideChannels, 1);
+
 	if (training) {
 		actSave = inBelow;
 		if (getHierachy() != hierarchy_t::output) {
@@ -203,11 +208,11 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 		deltaAbove.resize(getNIN()-sideChannels, 1);
 		
 		if (sideChannels > 0) {
-			deltaAbove.conservativeResize(getNOUT(), 1);
+			deltaAbove.conservativeResize(getNIN(), 1);
 			deltaAbove.bottomRows(sideChannels) = sideChannelBuffer;
 		}
 		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj), we dont need eval.
-		deltaSave.resize(getNOUT(), 1); // resize back
+		deltaSave.resize(getNOUT() - sideChannels, 1); // resize back
 		if (recursive) {
 			below->backPropDelta(deltaAbove, true); // cascade...
 		}
@@ -219,7 +224,7 @@ MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) size
 	if (getHierachy() == hierarchy_t::input) {
 		if (sideChannels > 0) {
 			sideChannelBuffer = input.bottomRows(sideChannels);
-			input.conservativeResize(NINY*inFeatures*NINX, 1); // drop sidechannel inputs - not relevant for gradient
+			input.conservativeResize(getNIN()-sideChannels, 1); // drop sidechannel inputs - not relevant for gradient
 		}
 		input.resize(NINY, inFeatures*NINX);
 
@@ -248,6 +253,10 @@ MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) size
 		//MAT convoluted = convGrad(fromBelow, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 		
 		deltaSave.resize(getNOUT()-sideChannels, 1);  // make sure to resize to NOUT-sideChannels
+		if (sideChannels > 0) {
+			fromBelow.conservativeResize(getNIN(), 1);
+			fromBelow.bottomRows(sideChannels) = sideChannelBuffer;
+		}
 		return convoluted;
 	}
 }

@@ -36,7 +36,7 @@ __declspec(dllexport) void __stdcall addDropoutLayer(CNet* ptr, fREAL ratio) {
 	 ptr->addDropoutLayer(ratio);
 }
 __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input, fREAL* const output, int32_t* const inFormat, int32_t* const outFormat) {
-	learnPars pars{0,0,0,0,0,0,0,0,0};
+	learnPars pars{0,0,0,0,0,0,0,0,0,0};
 	assert(ptr->getNOUT() == outFormat[0]*outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0]*inFormat[1]);
 
@@ -56,9 +56,9 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 */
 __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const output, fREAL* const eta, 
 	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update, 
-	uint32_t* const weight_norm, uint32_t* const initPass, int32_t* const inFormat, int32_t* const outFormat) {
+	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain,int32_t* const inFormat, int32_t* const outFormat) {
 	
-	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *initPass };
+	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain};
 
 	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
@@ -78,8 +78,8 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	
 	return error;
 }
-__declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t K, size_t NOUT, size_t Blocks) {
-	ptr->addMixtureDensity(K, NOUT, Blocks);
+__declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t NOUT, size_t features, size_t BlockXY) {
+	ptr->addMixtureDensity( NOUT,  features,  BlockXY);
 }
 __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
@@ -93,6 +93,10 @@ __declspec(dllexport) void __stdcall saveCNet(CNet* ptr, char* filePath) {
 __declspec(dllexport) void __stdcall loadCNet(CNet* ptr, char* filePath) {
 	ptr->loadFromFile(string(filePath));
 }
+__declspec(dllexport) void __stdcall loadCNet_layer(CNet* ptr, uint32_t layer, char* filePath) {
+	ptr->loadFromFile_layer(string(filePath), layer);
+}
+
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 	ptr->~CNet();
 }
@@ -113,7 +117,7 @@ __declspec(dllexport) void __stdcall setLayer(CNet* ptr, uint32_t layer, fREAL* 
 __declspec(dllexport) uint32_t __stdcall test() {
 	return 0;
 }
-/* HOLONET Stuff **************************************************************************************************************
+/* DEPRECATED HOLONET Stuff **************************************************************************************************************
 
 
 __declspec(dllexport) int __stdcall initCHoloNet(CHoloNet** ptr, uint32_t NINXY, uint32_t NOUTXY, uint32_t NNODES) {

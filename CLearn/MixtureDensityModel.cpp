@@ -20,6 +20,14 @@
 
 #define __MU(b,k)		block(k,b*LBlock,1, LBlock) // Blocks are zero-based as everything else! b in (0, ..., Blocks-1)
 #define __MUS(b)		block(0, b*LBlock, K, LBlock)
+// after resizing the mu-part to (NOUTY, NOUTX*K)
+// Enumerate blocks along column (y) direction
+// B1 B3 
+// B2 B4
+
+#define __MUS2D(b,k)	block(_BLOCKY(b)*BlockY, _BLOCKX(b)*BlockX+k*NOUTX, BlockY, BlockX)
+#define __MU2D(k)		block(0, k*NOUTX, NOUTY, NOUTX)
+#define __ALLMUS		topRows(L*Blocks*K)
 #define __SIGMA(b,k)	operator()(k,Blocks*LBlock+b)
 #define __SIGMACOL(b)	block(0, Blocks*LBlock+b,K,1)
 #define __SIGMAS		block(0,Blocks*LBlock,K,Blocks)
@@ -28,26 +36,44 @@
 #define __PIS			block(0, Blocks*(LBlock + 1), K, Blocks)
 
 
-MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, CNetLayer& lower) : 
-	K(_K), L(_L), Blocks(_Blocks), LBlock(_L/ _Blocks  ),  DiscarnateLayer(_L, actfunc_t::NONE, lower ) {
+MixtureDensityModel::MixtureDensityModel(size_t _NOUTY, size_t _NOUTX, size_t _features, size_t _BlockY, size_t _BlockX, CNetLayer& lower) :
+	K(_features), L(_NOUTX*_NOUTY), NOUTX(_NOUTX), NOUTY(_NOUTY), Blocks((_NOUTX/_BlockX)*(_NOUTY/_BlockY)), LBlock(_BlockX*_BlockY), BlockX(_BlockX), BlockY(_BlockY), 
+	DiscarnateLayer(_NOUTX*_NOUTY, actfunc_t::NONE, lower ) {
 	init();
 	// HACK - in C++ access control works on a per-class basis rather than on per-object basis.
 	changeActFunc(lower, actfunc_t::NONE);
-	assert(getNIN() == Blocks*K*(LBlock + 2));
+	assert(getNIN() == Blocks*K*(LBlock + 2)); // OR K*(L+2*Blocks)
+	assert(LBlock*Blocks == L);
+	assert(BlockX*BLocks == NOUTX);
+	assert(BlockY*Blocks == NOUTY);
+	// Blocks*K*(LBlock+2) == K*Blocks* NOUTX*NOUTY/Blocks + 2 * Blocks*K == K*NOUTX*NOUTY+ 2*Blocks*K
 }
-MixtureDensityModel::MixtureDensityModel(size_t _K, size_t _L, size_t _Blocks, size_t NIN) :
-	K(_K), L(_L), Blocks(_Blocks), LBlock(_L / _Blocks), DiscarnateLayer(_L, NIN, actfunc_t::NONE) {
+MixtureDensityModel::MixtureDensityModel(size_t _NOUTX, size_t _NOUTY, size_t _features, size_t _BlockX, size_t _BlockY) :
+	K(_features), L(_NOUTX*_NOUTY), NOUTX(_NOUTX), NOUTY(_NOUTY), Blocks((_NOUTX / _BlockX)*(_NOUTY / _BlockY)), LBlock(_BlockX*_BlockY), BlockX(_BlockX), BlockY(_BlockY), DiscarnateLayer(_NOUTX*_NOUTY, Blocks*K*(LBlock + 2), actfunc_t::NONE) {
 	init();
-	assert(getNIN() == Blocks*K*(LBlock + 2));
 }
 
 // Initialization routine.
 void MixtureDensityModel::init() {
 
-	param = MAT(K, (LBlock + 2)*Blocks);
+
+	MU = MAT(L*K,1); // need to resize of course when we operate in 2D space
+	PI = MAT(Blocks*K,1);
+	SIG = MAT(Blocks*K,1 );
+
 	// Initialize Mixture coefficients to something.
-	param.setZero();
+	MU.setZero();
+	PI.setOnes();
+	SIG.setOnes();
 	// they will be overwritten by the network outputs immediately...
+
+	// L -> NOUT = NOUTX*NOUTY
+	// if several features are incoming, you have (NOUTY, features*NOUTX)
+	// block - should correspond to the number of separate incoming blocks
+	// e.g. deconvolution outputs.
+	// We need to reorder the mu-part of the input accordingly.
+	// K == Features
+
 }
 void MixtureDensityModel::saveToFile(ostream & os) const
 {
@@ -94,190 +120,162 @@ void MixtureDensityModel::backPropDelta(MAT & delta, bool recursive)
 *	E[ t | x]
 */
 void MixtureDensityModel::conditionalMean( MAT& networkOut) {
-	networkOut = MAT(L, 1); // L == Blocks*LBlock
+	networkOut.resize(NOUTY, NOUTX); // L == Blocks*LBlock
+	MU.resize(NOUTY, K*NOUTX);
+	PI.resize(Blocks, K);
+	static MAT block(BlockY, BlockX);
 
 	//Compute the sum of the weighted means
 	// [(K,1)^T x (K,LBLock)]^T = (LBlock,1)
 	for (size_t b = 0; b < Blocks; ++b) {
-		networkOut.block(b*LBlock, 0, LBlock, 1) = (param.__PICOL(b).transpose() * param.__MUS(b)).transpose();
+		block = PI(b, 0)*MU.__MUS2D(b, 0);
+		for (size_t k = 1; k < K; ++k) {
+			block += PI(b, k) * MU.__MUS2D(b, k);
+		}
+		networkOut.__MUS2D(b,0) = block;
 	}
+	// Resize everything back to how it was
+	MU.resize(L*K, 1);
+	PI.resize(Blocks*K, 1);
+	networkOut.resize(L, 1);
 }
 
 void MixtureDensityModel::maxMixtureCoefficient(MAT& networkOut) {
 
-	networkOut = MAT(L, 1); // L == Blocks*LBlock
+	networkOut.resize(NOUTY, NOUTX); 
+	MU.resize(NOUTY, K*NOUTX);
+	PI.resize(Blocks, K);
 
 	for (size_t b = 0; b < Blocks; ++b) {
 		// (1) find max mixture coefficient in O(n) time
-		fREAL max = 0;
+		fREAL max = 0.0f;
 		size_t maxK = -1; // start with valid index
 
-		fREAL temp = 0;
+		fREAL temp = 0.0f;
 		for (size_t k = 0; k < K; ++k) {
-			temp = param.__PI(b, k); //  / param.__SIGMA(b, k)
+			temp = PI(b, k); //  /SIG(b, k)
 			if (temp > max) {
 				max = temp;
 				maxK = k;
 			}
 		}
 
-		networkOut.block(b*LBlock, 0, LBlock, 1) = param.__MU(b,maxK).transpose();
+		networkOut.__MUS2D(b,0) = MU.__MUS2D(b,maxK);
 	}
-
+	MU.resize(L*K, 1);
+	PI.resize(Blocks*K, 1);
+	networkOut.resize(L, 1);
 }
 
 void MixtureDensityModel::getParameters(MAT& toCopyTo) {
-	toCopyTo.resize(K, (LBlock + 2)*Blocks);
-	toCopyTo = param;
-	toCopyTo.resize(K* (LBlock + 2)*Blocks, 1);
+	
+	// (1) resize & copy MU
+	//MU.resize(NOUTY*NOUTX*K, 1);
+	toCopyTo.topRows(K*L) = MU;
+	//MU.resize(NOUTY, NOUTX*K);
+	
+	// (2) Resize & copy sigmaS
+	//SIG.resize(Blocks*K, 1);
+	toCopyTo.block(L*K, 0, K*Blocks, 1) = SIG;
+	//SIG.resize(Blocks, K);
+
+	// (3) Resize & copy pis
+	//PI.resize(Blocks*K, 1);
+	toCopyTo.bottomRows(K*Blocks) = PI;
+	//PI.resize(Blocks, K);
 }
 void MixtureDensityModel::updateParameters(MAT& networkOut) {
-	assert(networkOut.size() == K * (LBlock + 2)*Blocks);
-	networkOut.resize(K, (LBlock + 2)*Blocks);
-	static MAT ones = MAT::Constant(K, 1, 1.0f);
 	
+	// (1) Resize & copy MU
+	MU = networkOut.topRows(L*K);
 	
+	// (2) Sigmas need to be expoenential of network output
+	SIG = networkOut.block(L*K, 0, K*Blocks, 1).unaryExpr(&exp_fREAL);
+
+	// (3) Slightly more complicated: Mixture cofficients
+	PI = networkOut.bottomRows(K*Blocks).unaryExpr(&exp_fREAL);
+	PI.resize(Blocks, K);
+	// (3.1) Normalize each block over all feature-mixture-coefficients
 	fREAL normCoeff = 0;
-	int32_t b = 0;
-	//#pragma omp parallel for private(b)
 	for (size_t b = 0; b < Blocks; ++b) {
-	
-		// (1) UPDATE MEAN VALUEs
 
-		param.__MUS(b) = networkOut.__MUS(b);
-	
-		// (2) UPDATE THE SIGMAS
-
-		param.__SIGMACOL(b) = networkOut.__SIGMACOL(b).unaryExpr(&exp_fREAL);
-
-		// (3) UPDATE THE PIS
-
-		normCoeff = 0;
-		param.__PICOL(b) = networkOut.__PICOL(b); //  - networkOut.__PICOL(b).maxCoeff()*ones
-		param.__PICOL(b) = param.__PICOL(b).unaryExpr(&exp_fREAL);
-		normCoeff = param.__PICOL(b).sum();
-		param.__PICOL(b) /= normCoeff;
+		normCoeff = PI.row(b).sum();
+		PI.row(b) /= normCoeff;
 	}
-	networkOut.resize(K*Blocks*(LBlock + 2), 1);
-	/* OLD - SINGLE BLOCK CODE
-	// (1.1) subtract the maximum output, which prevents the exponentials from easily blowing up
-	// found this online on @hardmarus blog.
-	param.rightCols(1) = networkOut.rightCols(1); //  -networkOut.rightCols(1).maxCoeff()*ones; 
-	// (1.2) Now, take the exponential.
-	param.rightCols(1) = param.rightCols(1).unaryExpr(&exp_fREAL); // had to explicitly define an exponential due to typing problems ;/
-	fREAL norm = param.rightCols(1).sum();
-	param.rightCols(1) /= norm; // normalize
-	// (2) Update the mean values.
-	param.leftCols(L) = networkOut.leftCols(L);
-	// (3) Update the stds
-	param.block(0, L, K, 1) = networkOut.block(0, L, K, 1).unaryExpr(&exp_fREAL);
-	// (4) leave the matrix as it was
-	networkOut.resize(K*(L + 2),1); */
+	// (3.2) resize back 
+	PI.resize(Blocks*K, 1);
 }
 
 /*	Compute derivative of error function
 	wRt cross-entropy error.
 */
-MAT MixtureDensityModel::computeErrorGradient(const MAT& t) {
+MAT MixtureDensityModel::computeErrorGradient(MAT& t) {
 
-	static const MAT epsilons = MAT::Constant(K, 1, 1E-8);
 	static const fREAL epsilon = 1E-14;
-	static const MAT Ls = MAT::Constant(K, 1, LBlock);
-	static MAT gamma(K, Blocks);
-	MAT errorGrad(K, Blocks*(LBlock + 2));
+	static MAT GAMMA(Blocks, K);
+	MAT errorGrad(K*Blocks*(LBlock + 2),1);
+	
+	static MAT errorGrad_MU(NOUTY, NOUTX*K);
+	static MAT errorGrad_SIG(Blocks, K);
+	static MAT errorGrad_PI(Blocks, K);
 
-	// The computation of the gradient can be split up 
-	// and parallelized over all blocks, since they should be
-	// completely independent.
+	// Resize matrices to make submatrix selection easier (or even possible)
+	t.resize(NOUTY, NOUTX); //  target 
+	MU.resize(NOUTY, NOUTX*K); // MUS
+	SIG.resize(Blocks, K); // Standard deviations
+	PI.resize(Blocks, K); // Mixture Coefficients
+	int32_t b = 0;
+	// FOR EACH BLOCK... 
+	//#pragma omp parallel for private(b) shared(t,MU,SIG,PI, errorGrad_MU, errorGrad_PI, errorGrad_SIG)
+	for (b = 0; b < Blocks; ++b) {
 
-	//#pragma omp parallel for shared( gamma) private(b)
-	for (size_t b = 0; b < Blocks; ++b) {
-		// split up the incoming target vector in blocks 
-		// note the column-major format.
-		// A 2x 2 matrix would split up in the following way
-		//  0	2
-		//	1	3
-
-		const MAT& tBlock = t.block(b*LBlock, 0, LBlock, 1);
-		fREAL normCoeff = 0;
-
-		// (1) COMPUTE GAMMA MATRIX
-
+		MAT tBlock = t.__MUS2D(b, 0); // output has only single feature
+		
+		// (1) Compute GAMMA Matrix
+		fREAL normCoeff = 0.0f;
 		for (size_t k = 0; k < K; ++k) {
-			gamma(k, b) = param.__PI(b, k) * normalDistribution(tBlock, param.__MU(b, k).transpose(), param.__SIGMA(b, k) * param.__SIGMA(b, k));
-			normCoeff += gamma(k, b);
+			GAMMA(b, k) = PI(b, k)*normalDistribution( tBlock, MU.__MUS2D(b, k), SIG(b,k)*SIG(b, k));
+			normCoeff += GAMMA(b, k);
 		}
-		gamma.block(0, b, K, 1) /= normCoeff;
+		// Normalize GAMMA
+		GAMMA.row(b) /= normCoeff;
 
-		// (2) COMPUTE PI GRADIENT
+		// (2) Compute PI Gradient
+		errorGrad_PI.row(b) = PI.row(b) - GAMMA.row(b);
 
-		errorGrad.__PICOL(b) = param.__PICOL(b) - gamma.block(0, b, K, 1);
-
-		// (3) COMPUTE MU GRADIENT
-		MAT t_mu_diff = param.__MUS(b) - tBlock.transpose().replicate(K, 1); // (K, LBlock) Matrix
-		MAT sigmaColSquare = (param.__SIGMACOL(b)).unaryExpr(&norm);
-
-		errorGrad.__MUS(b) = gamma.block(0, b, K, 1).cwiseQuotient(sigmaColSquare).replicate(1, LBlock);//(gamma.block(0, b, K, 1).cwiseQuotient(param.__SIGMACOL(b).unaryExpr(&norm))).replicate(1, LBlock); // make it a row vector
-		errorGrad.__MUS(b) = errorGrad.__MUS(b).cwiseProduct(t_mu_diff);
-
-		// (4) COMPUTE SIGMA GRADIENT
-
-		t_mu_diff = (t_mu_diff.unaryExpr(&norm)).rowwise().sum(); //|| mu_k - t|| ^2 -> (K,1) again
-
-		errorGrad.__SIGMACOL(b) = gamma.block(0, b, K, 1).cwiseProduct(Ls - t_mu_diff.cwiseQuotient(sigmaColSquare));
+		fREAL var = 1.0f;
+		for (size_t k = 0; k < K; ++k) {
+			var = SIG(b, k)*SIG(b, k);
+			// (3) Compute MU Gradient
+			errorGrad_MU.__MUS2D(b, k) = GAMMA(b, k) /var *(MU.__MUS2D(b,k) - tBlock);
+			// (4) Compute SIG Gradient
+			errorGrad_SIG(b, k) = -GAMMA(b, k) * ((MU.__MUS2D(b, k) - tBlock).squaredNorm() / var - L);
+		}
 	}
 
+	// (5) Combine into errorGrad Matrix 
+	// (5.1) PIS
+	errorGrad_PI.resize(Blocks*K, 1);
+	errorGrad.bottomRows(Blocks*K) = errorGrad_PI;
+	errorGrad_PI.resize(Blocks,K);
 
-	errorGrad.resize(Blocks*K*(LBlock + 2), 1);
+	// (5.2) MUS
+	errorGrad_MU.resize(L*K, 1);
+	errorGrad.topRows(L*K) = errorGrad_MU;
+	errorGrad_MU.resize(NOUTY, NOUTX*K);
+	
+	// (5.3) Sigma
+	errorGrad_SIG.resize(Blocks*K, 1);
+	errorGrad.block(L*K, 0, Blocks*K, 1) = errorGrad_SIG;
+	errorGrad_SIG.resize(Blocks,K);
+
+	// (6) Resize t, MU, SIG & PI
+	MU.resize(L*K, 1);
+	SIG.resize(Blocks*K, 1);
+	PI.resize(Blocks*K, 1);
+	t.resize(L, 1);
+
 	return errorGrad; 
-
-	/*
-
-	// (1) Compute Gamma matrix as posterior 
-	// gamma_k ( t | x ) = pi_k * gauss(t | mu_k, var_k) * NORM
-	static MAT gamma(K,1); // bayesian prior - we define it here  as static variable so that we can multithread over it
-
-	fREAL normCoeff = 0;
-	int32_t i = 0;
-	//#pragma omp parallel for private(i) shared(gamma, normCoeff)
-	for (i = 0; i < K; ++i) {
-		gamma(i,0) = param(i,L+1)*normalDistribution(t, param.block(i, 0, 1, L).transpose(),  param(i,L)*param(i, L));
-		//#pragma omp critical
-		normCoeff += gamma(i,0);
-	}
-	gamma /= normCoeff;  // normalize
-
-	//(2) Go through the different parts of the parameter matrix 
-	// and compute the associated error.
-	
-	// (2.1) Mixture Density Coefficient error
-	errorGrad.rightCols(1) = param.rightCols(1) - gamma;
-	
-	// (2.2) Mu Error gamma_k * (mu_k - t)
-	// Note, that gamma is (K,1)
-	// t is (L,1)
-	// and mu is (K,L)
-	MAT temp = param.leftCols(L) - t.transpose().replicate(K, 1);
-
-
-	// temp is used later again and is a (K,L) matrix
-	
-	errorGrad.leftCols(L) = (gamma.cwiseQuotient( param.block(0,L,K,1).unaryExpr(&norm)  )).replicate(1,L); // make it a row vector
-	errorGrad.leftCols(L) =  errorGrad.leftCols(L).cwiseProduct(temp);
-	
-	// (2.3) Variance Error
-	// The variance is a single column in the param & error-gradient matrix
-	// of length K 
-	// collapse temp rowwise and take the squared norm
-	temp = (temp.unaryExpr(&norm)).rowwise().sum(); //|| mu_k - t|| ^2 -> (K,1) again
-	// the gradient wRt to the variance reads gamma_k * (L - || t - mu_k || ^2 / var_k^2 ) 
-	//errorGrad.block(0, 1, K, 1) = -gamma.cwiseProduct(temp.cwiseQuotient(param.block(0, 1, K, 1).unaryExpr(&cube) + epsilons));
-	//errorGrad.block(0, 1, K, 1) += gamma.cwiseQuotient(param.block(0, 1, K, 1) + epsilons);
-	errorGrad.block(0, L, K, 1) = gamma.cwiseProduct(Ls - temp.cwiseQuotient(param.block(0, L, K, 1).unaryExpr(&norm) ));
-	assert(errorGrad.allFinite());
-
-	errorGrad.resize(K*(L + 2), 1);
-	return errorGrad; */
 }
 
 MAT MixtureDensityModel::reconstructTarget(const MAT & diffMatrix)
@@ -286,23 +284,35 @@ MAT MixtureDensityModel::reconstructTarget(const MAT & diffMatrix)
 	return actSave - diffMatrix; // target = estimate - delta
 }
 
-fREAL MixtureDensityModel::negativeLogLikelihood(const MAT& t) const
+fREAL MixtureDensityModel::negativeLogLikelihood(MAT& t)
 {
 	const fREAL epsilon = 1E-14;
 	fREAL result = 0;
 	fREAL blockResult = 0;
 	int32_t i = 0;
 	fREAL temp = 0;
+
+	t.resize(NOUTY, NOUTX);
+	PI.resize(Blocks, K);
+	MU.resize(NOUTY, NOUTX*K);
+	SIG.resize(Blocks, K);
+
 	for (size_t b = 0; b < Blocks; ++b) {
 		blockResult = 0;
-		MAT tBlock = t.block(b*LBlock, 0, LBlock, 1);
+		MAT tBlock = t.__MUS2D(b, 0);
 		//#pragma omp parallel for private(i, temp) shared(result)
 		for (size_t k = 0; k < K; ++k) {
-			temp = param.__PI(b,k) *  normalDistribution(tBlock, param.__MU(b,k).transpose(), param.__SIGMA(b, k)*param.__SIGMA(b, k));
+			temp = PI(b,k) *  normalDistribution(tBlock, MU.__MUS2D(b,k), SIG(b,k)*SIG(b,k));
 			//#pragma omp critical
 			blockResult += temp;
 		}
 		result -= 1.0f/Blocks*log(blockResult);
 	}
+	// Resize everything back
+	t.resize(L, 1);
+	PI.resize(Blocks*K, 1);
+	SIG.resize(Blocks, K);
+	MU.resize(L*K, 1);
+
 	return result;
 }

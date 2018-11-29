@@ -51,7 +51,8 @@ struct learnPars {
 	uint32_t adam;
 	uint32_t batch_update;
 	uint32_t weight_normalization;
-	uint32_t initializationPass;
+	uint32_t firstTrain;
+	uint32_t lastTrain;
 };
 // library functions
 
@@ -90,7 +91,9 @@ inline void copyToOut(T* const in, T* const out, uint32_t N) {
 		out[i] = in[i];
 	}
 }
-
+inline bool inRange(uint32_t x, uint32_t a, uint32_t b) {
+	return x >= a && x <= b;
+}
 inline fREAL iden(fREAL f) {
 	return f;
 }

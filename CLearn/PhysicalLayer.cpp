@@ -44,40 +44,43 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 	/* new version of this function
 	*/
 	// Get gradient
-	batch.swallowGradient(grad(input));
-	if (0 == pars.batch_update) {
-		// gradient reference can be accessed in batch.avgGradient() 
-		if (pars.weight_normalization) {
-			/* The step under weight normalization is slightly different and depends on the structure of the weights.
-			* Therefore, it affects higher level operation.
-			*/
-			if (!weightNormMode) {
-				initG();
-				initV();
-				weightNormMode = true;
+	if (inRange(getLayerNumber(), pars.firstTrain, pars.lastTrain)) {
+		batch.swallowGradient(grad(input));
+		if (0 == pars.batch_update) {
+			// gradient reference can be accessed in batch.avgGradient() 
+			if (pars.weight_normalization) {
+				/* The step under weight normalization is slightly different and depends on the structure of the weights.
+				* Therefore, it affects higher level operation.
+				*/
+				if (!weightNormMode) {
+					initG();
+					initV();
+					weightNormMode = true;
+					inversVNorm();
+					updateW();
+				}
+				// (1) Update the InversVNorm matrix, since it is used several times
+				MAT Ggradient = gGrad(batch.avgGradient());
+				// (2) Perform stoch grad steps on G and V
+				GStepper.stepLayer(G, Ggradient, pars);
+				VStepper.stepLayer(V, vGrad(batch.avgGradient(), Ggradient), pars);
+				// (3) Recompute inversNorm and update the layer weight matrix
 				inversVNorm();
 				updateW();
-			} 
-			// (1) Update the InversVNorm matrix, since it is used several times
-			MAT Ggradient = gGrad(batch.avgGradient());
-			// (2) Perform stoch grad steps on G and V
-			GStepper.stepLayer(G, Ggradient, pars);
-			VStepper.stepLayer(V, vGrad(batch.avgGradient(), Ggradient), pars);
-			// (3) Recompute inversNorm and update the layer weight matrix
-			inversVNorm();
-			updateW();
-		} else {
-			/* Standard step.
-			*/
-			if (weightNormMode) {
-				// We were in weight normalization mode before!
-				// So we have to reset all the velocity, vt, mt ...etc matrices.
-				stepper.reset();
 			}
-			weightNormMode = false;
-			stepper.stepLayer(layer, batch.avgGradient(), pars);
+			else {
+				/* Standard step.
+				*/
+				if (weightNormMode) {
+					// We were in weight normalization mode before!
+					// So we have to reset all the velocity, vt, mt ...etc matrices.
+					stepper.reset();
+				}
+				weightNormMode = false;
+				stepper.stepLayer(layer, batch.avgGradient(), pars);
+			}
+			batch.clearGradient();
 		}
-		batch.clearGradient();
 	}
 	// Recursion
 	if (getHierachy() != hierarchy_t::output && recursive) {

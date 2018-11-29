@@ -23,8 +23,9 @@ void CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	if (getLayerNumber() > 0) { // .. so there is one
 		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT,  type, *(getLast())); // don't want to forward declare this..
 		layers.push_back(fcl);
-	}
-	else {
+	} else {
+		// then it's the input layer
+
 		FullyConnectedLayer* fcl = new FullyConnectedLayer(NOUT, NIN,type);
 		layers.push_back(fcl);
 	}
@@ -37,7 +38,7 @@ void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, 
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, features, sideChannels, type);
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN-sideChannels), kernelXY, stride, features, sideChannels, type);
 		layers.push_back(cl);
 	}
 }
@@ -80,14 +81,14 @@ void CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
 				layers.push_back(mpl);
 			}
 			break;
-		case pooling_t::average:
+		case pooling_t::average: // not yet implemented
 			break;
 	}
 }
-void CNet::addMixtureDensity(size_t K, size_t L, size_t Blocks) {
+void CNet::addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY) {
 	
 	if (getLayerNumber() > 0 ) {
-		MixtureDensityModel* mdm = new MixtureDensityModel(K, L, Blocks, *(getLast()));
+		MixtureDensityModel* mdm = new MixtureDensityModel(sqrt(NOUT), sqrt(NOUT), features, BlockXY, BlockXY, *(getLast()));
 		layers.push_back(mdm);
 	} else {
 		// this is not really defined so don't do anything
@@ -105,7 +106,7 @@ CNet::~CNet() {
 
 size_t CNet::getNOUT() const {
 	if (getLayerNumber() > 0) {
-		return layers.back()->getNOUT();
+		return getLast()->getNOUT();
 	}
 	else {
 		return 0;
@@ -123,12 +124,15 @@ void CNet::saveToFile(string filePath) const {
 }
 void CNet::loadFromFile(string filePath) {
 	for(size_t i =0; i< getLayerNumber(); ++i) {
-		ifstream file(filePath + "\\CNetLayer_" + to_string(i) + ".dat");
-		if (file.is_open()) {
-			file >> (*layers[i]);
-		}
-		file.close();
+		loadFromFile_layer(filePath, i);
 	}
+}
+void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
+	ifstream file(filePath + "\\CNetLayer_" + to_string(layerNr) + ".dat");
+	if (file.is_open()) {
+		file >> (*layers[layerNr]);
+	}
+	file.close();
 }
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
@@ -141,10 +145,10 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	
 	// (0) Check in- & output
-	//if (!input.allFinite()
-	//	|| !outDesired.allFinite()) {
-	//	return 1; // just skip this sample 
-	//}
+	if (!input.allFinite()
+		|| !outDesired.allFinite()) {
+		return 1; // just skip this sample 
+	}
 	// (0.5) Initialize error and difference matrix
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;

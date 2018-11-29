@@ -26,16 +26,10 @@
 	For each block, we have the following structure. 
 
 	All these components are transmitted in a single matrix of size 
-	K x (LBlock +2 ) according to the following format:																	SIGMA											PI
-	Block 0								Block 1							... Block Blocks-1		...						Block 0		...		Block Blocks-1 				Block 0				...			Block-1
-	0			...		LBlock-1		LBlock				2*LBlock-1		(Blocks-1)*LBLock	...	BLocks*LBlock-1		Blocks*LBLock		Blocks*LBlock+Blocks-1		Blocks*LBlock+Blocks			BLocks*(LBlock+2)-1
-	Mu_{0,0}	...		Mu_{0,LB-1}		Mu_{0,0}	...		Mu_{0,LB-1}		Mu_{0,0}				Mu_{0,LB-1}			Sigma_0		...		Sigma_0						Pi_0							Pi_0
-	Mu_{1,0}	...		Mu_{1,LB-1}		Mu_{1,0}				.			.											Sigma_1		...		Sigma_1						Pi_1							Pi_1
-	.					.				.						.			.											.					.							.								.
-	.					.				.						.			.											.					.							.								.
-	.					.				.						.														.					.							.								.
-	Mu_{K-1,0}	...		Mu_{K-1, LB-1}	Mu_{K-1,0}	...		Mu_{K-1, LB-1}	Mu_{K-1,0}			...	Mu_{K-1, LB-1}		Sigma_(K-1) ...		Sigma_(K-1)					Pi_(K-1)						Pi_(K-1)
-
+	K x (LBlock +2 ) according to the following format:																	
+	MU = (NOUTY, NOUTX* K), SIGPI= K*Blocks*2 
+	L = NOUTY * NOUTX
+	
 	The parameters are stored in the param matrix in the x-direction.
 
 	Each block has K*(LBlock+2) elements. The tot
@@ -44,8 +38,8 @@
 
 class MixtureDensityModel : public DiscarnateLayer{
 public:
-	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, CNetLayer& lower);
-	MixtureDensityModel(size_t _K, size_t _L, size_t _BLock, size_t NIN);
+	MixtureDensityModel(size_t _NOUTX, size_t _NOUTY, size_t _features, size_t _BlockX, size_t _BlockY, CNetLayer& lower);
+	MixtureDensityModel(size_t _NOUTX, size_t _NOUTY, size_t _features, size_t _BlockX, size_t _BlockY);
 	~MixtureDensityModel();
 	layer_t whoAmI() const;
 
@@ -53,7 +47,7 @@ public:
 	void forProp(MAT& in, bool saveActivation, bool recursive);
 	void backPropDelta(MAT& delta, bool recursive);
 
-	fREAL negativeLogLikelihood(const MAT& t) const;
+	fREAL negativeLogLikelihood(MAT& t);
 	inline size_t getNOUT() const { return L; };
 
 private:
@@ -61,16 +55,26 @@ private:
 	void maxMixtureCoefficient(MAT& networkOut); // output function
 	void updateParameters(MAT& networkOut);
 	void getParameters(MAT& toCopyTo); // output function
-	MAT computeErrorGradient(const MAT& t);
+	MAT computeErrorGradient(MAT& t);
 	MAT reconstructTarget(const MAT& diffMatrix);
+
+	// 2D index function
+	inline size_t _BLOCKY(size_t b) const { return b % (uint32_t)sqrt(Blocks); };
+	inline size_t _BLOCKX(size_t b) const { return b / (uint32_t)sqrt(Blocks); }
 
 	size_t K; // number of mixture coefficients
 	size_t L; // just for convenience - dimension of network output
 	size_t LBlock;
 	size_t Blocks; // 
+	size_t BlockX;
+	size_t BlockY;
+	size_t NOUTX;
+	size_t NOUTY;
 	
-	MAT param; // Matrix(K,L) of kernel centres mu_j. For each mixture kernel, a scalar variance. We assume the gaussian to be spherical.
-				// Mixture coefficients - sum to one.
+	MAT SIG; // sigmas, each (block, feature) has a single variance (std)
+	MAT PI;
+	MAT MU;
+
 	void init();
 	void saveToFile(ostream& os) const;
 	void loadFromFile(ifstream& in);

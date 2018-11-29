@@ -8,6 +8,7 @@ CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN) : NOUT(_NOUT), NIN(_NIN), actSav
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
+	layerNumber = 0;
 }
 
 CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : NOUT(_NOUT), NIN(_NIN), actSave(_NOUT, 1), deltaSave(_NOUT, 1) {
@@ -17,6 +18,7 @@ CNetLayer::CNetLayer(size_t _NOUT, size_t _NIN, actfunc_t type) : NOUT(_NOUT), N
 	below = NULL;
 	above = NULL;
 	hierarchy = hierarchy_t::input;
+	layerNumber = 0;
 }
 
 CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT), actSave(_NOUT, 1), deltaSave(_NOUT, 1) {
@@ -26,6 +28,7 @@ CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT
 	NIN = lower.getNOUT();
 	below = &lower;
 	below->connectAbove(this);
+	layerNumber = below->getLayerNumber() + 1;
 	hierarchy = hierarchy_t::output;
 }
 
@@ -83,7 +86,7 @@ ostream& operator<<(ostream& os, const CNetLayer& toSave) {
 }
 
 void CNetLayer::saveMother(ostream& os) const {
-	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy)<<endl;
+	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy)<< " "<< getLayerNumber() <<endl;
 }
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 	int32_t type;

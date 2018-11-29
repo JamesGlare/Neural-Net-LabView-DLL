@@ -16,7 +16,7 @@ void BatchBuffer::notifyFormChange(MATIND _newForm) {
 	gradientBuffer.resize(_newForm.rows, _newForm.cols);
 }
 void BatchBuffer::swallowGradient(const MAT& gradient) {
-	gradientBuffer.noalias() += gradient;
+	gradientBuffer += gradient;
 	stillToGo++;
 }
 

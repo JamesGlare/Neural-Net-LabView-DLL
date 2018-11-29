@@ -28,7 +28,7 @@ void FullyConnectedLayer::init() {
 	//fREAL max = 1.0f / getNIN();
 	//fREAL min = -1.0f / getNIN();
 	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
-	layer /= sqrt(sqrt(getNOUT()*getNIN())); // ... but small.
+	layer /= sqrt(getNIN()); //sqrt(sqrt(getNOUT()*getNIN())); // ... but small.
 
 	assert(actSave.rows() == getNOUT());
 	assert(deltaSave.rows() == getNOUT());

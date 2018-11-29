@@ -26,7 +26,7 @@ class CNet {
 		void addPoolingLayer(size_t maxOverXY, pooling_t type);
 		void addDropoutLayer(fREAL ratio);
 		void addPassOnLayer(actfunc_t type);
-		void addMixtureDensity(size_t K, size_t L, size_t Blocks);
+		void addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY);
 
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
@@ -36,6 +36,7 @@ class CNet {
 		// Save-to-file functionality.
 		void saveToFile(string filePath) const;
 		void loadFromFile(string filePath);
+		void loadFromFile_layer(string filePath, uint32_t layerNr);
 
 		void debugMsg(fREAL* msg);
 		// Getter functions

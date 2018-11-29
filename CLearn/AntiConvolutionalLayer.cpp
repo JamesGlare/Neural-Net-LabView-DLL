@@ -59,6 +59,7 @@ void AntiConvolutionalLayer::init() {
 	sideChannelBuffer = MAT(sideChannels, 1);
 	sideChannelBuffer.setZero();
 	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
+	layer *= ((fREAL)features) / layer.size();
 }
 
 // weight normalization reparametrize

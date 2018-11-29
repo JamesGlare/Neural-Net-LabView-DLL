@@ -32,6 +32,7 @@ class CNetLayer {
 		// Getter Functions
 		inline size_t getNIN() const { return NIN; };
 		inline size_t getNOUT() const { return NOUT; };
+		inline size_t getLayerNumber() const { return layerNumber; };
 		inline hierarchy_t getHierachy() const { return hierarchy; };
 		virtual uint32_t getFeatures() const;
 
@@ -66,6 +67,7 @@ class CNetLayer {
 		size_t NIN; // number of inputs. Does not contain the bias node. 
 		void assignActFunc(actfunc_t type);
 
+		size_t layerNumber;
 
 };
 
