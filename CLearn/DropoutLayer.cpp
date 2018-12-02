@@ -63,7 +63,11 @@ void DropoutLayer::assertGeometry() {
 	assert(ratio >= 0.0f);
 }
 // File functions - we don't need to save anything
-void DropoutLayer::saveToFile(ostream& os) const {}
-void DropoutLayer::loadFromFile(ifstream& in) {}
+void DropoutLayer::saveToFile(ostream& os) const {
+	os << ratio;
+}
+void DropoutLayer::loadFromFile(ifstream& in) {
+	in >> ratio;
+}
 // Destructor
 DropoutLayer::~DropoutLayer(){}

@@ -37,7 +37,7 @@ layer_t CNetLayer::whoAmI() const {
 }
 
 uint32_t CNetLayer::getFeatures() const {
-	return 1;
+	return 1; // default
 }
 
 MAT CNetLayer::getDACT() const {
@@ -86,7 +86,7 @@ ostream& operator<<(ostream& os, const CNetLayer& toSave) {
 }
 
 void CNetLayer::saveMother(ostream& os) const {
-	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy)<< " "<< getLayerNumber() <<endl;
+	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy) <<endl;
 }
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 	int32_t type;
@@ -108,6 +108,17 @@ void CNetLayer::reconstructMother(ifstream& in) {
 	in >> NIN;
 	in >> temp;
 	hierarchy = static_cast<hierarchy_t>(temp);
+
+	// Check if the output loaded from the file is actually correct -
+	// since sometimes I load layers into bigger networks
+	if (above != 0 && below !=0) {
+		hierarchy = hierarchy_t::hidden;
+	} else if (above != 0) {
+		hierarchy = hierarchy_t::input;
+	} else {
+		hierarchy = hierarchy_t::output;
+	}
+
 	actSave = MAT(NOUT, 1);
 	deltaSave = MAT(NOUT, 1);
 	actSave.setZero();

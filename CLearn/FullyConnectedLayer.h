@@ -18,6 +18,7 @@ class FullyConnectedLayer : public PhysicalLayer {
 		// backprop
 		void backPropDelta(MAT& delta, bool recursive);
 		MAT grad(MAT& input);
+		uint32_t getFeatures() const;
 
 private:
 	/* Weight normalization functions

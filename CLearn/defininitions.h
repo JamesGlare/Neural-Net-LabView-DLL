@@ -38,7 +38,7 @@ typedef fREAL(*ACTFUNC)(fREAL);
 typedef LLT<MAT> CHOL;
 
 enum actfunc_t {RELU =1, TANH=2, SIG=3, NONE=4};
-enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6, dropout=7, mixtureDensity=8}; // enumerators: 1, 2, 4 range: 0..7
+enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6, dropout=7, mixtureDensity=8, reshape=9}; // enumerators: 1, 2, 4 range: 0..7
 enum pooling_t {max =1, average = 2};
 enum hierarchy_t { input = 1, hidden = 2, output = 3};
 

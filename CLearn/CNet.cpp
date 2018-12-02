@@ -6,6 +6,7 @@
 #include "MaxPoolLayer.h"
 #include "PassOnLayer.h"
 #include "DropoutLayer.h"
+#include "Reshape.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
@@ -59,6 +60,15 @@ void CNet::addPassOnLayer( actfunc_t type) {
 	} else {
 		PassOnLayer* pol = new PassOnLayer(NIN, NIN, type);
 		layers.push_back(pol);
+	}
+}
+void CNet::addReshape() {
+	if (getLayerNumber() > 0) {
+		Reshape* rs = new Reshape(*(getLast()));
+		layers.push_back(rs);
+	} else {
+		Reshape* rs = new Reshape(NIN);
+		layers.push_back(rs);
 	}
 }
 void CNet::addDropoutLayer(fREAL ratio) {
@@ -136,7 +146,7 @@ void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 }
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
-	layers.front()->forProp(in, false, true);
+	getFirst()->forProp(in, false, true);
 	
 	return l2_error(errorMatrix(in, outDesired));
 }
@@ -145,17 +155,17 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	
 	// (0) Check in- & output
-	if (!input.allFinite()
+	/*if (!input.allFinite()
 		|| !outDesired.allFinite()) {
 		return 1; // just skip this sample 
-	}
+	}*/
 	// (0.5) Initialize error and difference matrix
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;
 
 	// (1) Propagate in forward direction (with saveActivations == true)
 	MAT outPredicted(input);
-	layers.front()->forProp(outPredicted, true, true);
+	getFirst()->forProp(outPredicted, true, true);
 	
 	// (2) calculate error matrix and error
 	diffMatrix = move(errorMatrix(outPredicted, outDesired)); // delta =  estimate - target

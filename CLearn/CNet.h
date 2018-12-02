@@ -27,6 +27,7 @@ class CNet {
 		void addDropoutLayer(fREAL ratio);
 		void addPassOnLayer(actfunc_t type);
 		void addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY);
+		void addReshape();
 
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);

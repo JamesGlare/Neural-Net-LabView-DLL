@@ -32,6 +32,10 @@ __declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOver
 __declspec(dllexport) void __stdcall addPassOnLayer(CNet* ptr) {
 	ptr->addPassOnLayer(actfunc_t::NONE);
 } 
+__declspec(dllexport) void __stdcall addReshapeLayer(CNet* ptr) {
+	ptr->addReshape();
+}
+
 __declspec(dllexport) void __stdcall addDropoutLayer(CNet* ptr, fREAL ratio) {
 	 ptr->addDropoutLayer(ratio);
 }

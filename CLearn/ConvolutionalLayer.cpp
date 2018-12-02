@@ -289,7 +289,7 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	stepper.reset();
 
 	for (size_t i = 0; i < layer.size(); ++i) {
-		in >> layer(i);
+		in >> layer(i,0);
 	}
 	layer.resize(kernelY, features*kernelX);
 

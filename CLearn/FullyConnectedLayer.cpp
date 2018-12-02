@@ -27,13 +27,16 @@ void FullyConnectedLayer::init() {
 
 	//fREAL max = 1.0f / getNIN();
 	//fREAL min = -1.0f / getNIN();
-	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
+	layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
 	layer /= sqrt(getNIN()); //sqrt(sqrt(getNOUT()*getNIN())); // ... but small.
 
 	assert(actSave.rows() == getNOUT());
 	assert(deltaSave.rows() == getNOUT());
 	assert(layer.rows() == getNOUT());
 	assert(layer.cols() == getNIN() + 1);
+}
+uint32_t FullyConnectedLayer::getFeatures() const {
+	return 1;
 }
 // weight normalization reparametrize
 void FullyConnectedLayer::updateW() {
@@ -177,7 +180,7 @@ void FullyConnectedLayer::loadFromFile(ifstream& in) {
 		}
 	}*/
 	for (size_t i = 0; i < layer.size(); ++i) {
-		in >> layer(i);
+		in >> layer(i,0);
 	}
 	layer.resize(getNOUT(), getNIN() + 1);
 	//layer.rowwise().reverseInPlace();
