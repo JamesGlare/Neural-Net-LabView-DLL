@@ -4,7 +4,7 @@
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, 
 	uint32_t _features, uint32_t _outBoxes, uint32_t _sideChannels, actfunc_t type)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), outBoxes(_outBoxes), sideChannels(_sideChannels),
-	PhysicalLayer(_outBoxes*_NOUTX*_NOUTY + _sideChannels, _outBoxes*_features*_NINX*_NINY + _sideChannels, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
+	PhysicalLayer(_outBoxes*_NOUTX*_NOUTY + _sideChannels, _outBoxes*_features*_NINX*_NINY + _sideChannels, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
 		MATIND{ 1,_features}) {
 	
 	init();
@@ -13,7 +13,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY,  uint32_t _strideX, 
 	uint32_t _features, uint32_t _outBoxes, uint32_t _sideChannels, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), outBoxes(_outBoxes), 
-	sideChannels(_sideChannels), PhysicalLayer(_outBoxes*_NOUTX*_NOUTY+_sideChannels, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
+	sideChannels(_sideChannels), PhysicalLayer(_outBoxes*_NOUTX*_NOUTY+_sideChannels, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
 		MATIND{ 1,_features }, lower) {
 	
 	init();
@@ -23,7 +23,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 // second most convenient constructor
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _outBoxes, uint32_t _sideChannels, actfunc_t type)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),outBoxes(_outBoxes), sideChannels(_sideChannels),
-	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY + _sideChannels, _outBoxes*_features*_NINXY*_NINXY + _sideChannels, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY },
+	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY + _sideChannels, _outBoxes*_features*_NINXY*_NINXY + _sideChannels, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY },
 		MATIND{ 1,_features}) {
 	
 	init();
@@ -34,7 +34,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, si
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _outBoxes, uint32_t _sideChannels, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(sqrt(lower.getNOUT() / (_outBoxes*_features))), NINY(sqrt(lower.getNOUT() / (_outBoxes*_features))), kernelX(_kernelXY), kernelY(_kernelXY),
 	strideY(_stride), strideX(_stride), features(_features), outBoxes(_outBoxes), sideChannels(_sideChannels),
-	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY + _sideChannels, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1, _features}, lower) {
+	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY + _sideChannels, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1, _features}, lower) {
 	
 	init();
 	assertGeometry();

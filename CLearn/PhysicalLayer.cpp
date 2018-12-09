@@ -2,18 +2,18 @@
 #include "PhysicalLayer.h"
 
 // pass constructor to base class
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) : 
-	batch(_layerIndex, _NOUT, _NIN ), stepper(_layerIndex), VStepper(_VIndex),GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols), 
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL _kappa, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
+	batch(_layerIndex, _NOUT, _NIN ), kappa(_kappa), stepper(_layerIndex), VStepper(_VIndex),GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols), 
 	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
-	batch(_layerIndex, _NOUT,_NIN), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL _kappa,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
+	batch(_layerIndex, _NOUT,_NIN), kappa(_kappa), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
 	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN, type) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
-	batch(_layerIndex, _NOUT, lower.getNOUT()), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
+PhysicalLayer::PhysicalLayer(size_t _NOUT, fREAL _kappa, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
+	batch(_layerIndex, _NOUT, lower.getNOUT()), kappa(_kappa), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
 	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, type, lower) {
 	init();
 }
@@ -24,14 +24,9 @@ void PhysicalLayer::init() {
 	VInversNorm.setZero();
 	weightNormMode = false;
 }
-void PhysicalLayer::copyLayer(fREAL* const toCopyTo) {
-	layer.transposeInPlace();
-	size_t rows = layer.rows();
-	size_t cols = layer.cols();
-	layer.resize(layer.size(), 1);
-	copyToOut(layer.data(), toCopyTo, layer.size());
-	layer.resize(rows, cols);
-	layer.transposeInPlace();
+MAT PhysicalLayer::copyLayer() const{
+	MAT temp = layer;
+	return temp;
 }
 void PhysicalLayer::setLayer(const MAT& newLayer) {
 	assert(layer.rows() == newLayer.rows());
@@ -67,8 +62,7 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				// (3) Recompute inversNorm and update the layer weight matrix
 				inversVNorm();
 				updateW();
-			}
-			else {
+			} else {
 				/* Standard step.
 				*/
 				if (weightNormMode) {

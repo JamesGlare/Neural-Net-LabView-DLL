@@ -18,7 +18,7 @@ class CNet {
 		CNet(size_t NIN);
 		~CNet();
 		// Physical Layers (i.e. layers with weight parameters)
-		void addFullyConnectedLayer(size_t NOUT, actfunc_t type);
+		void addFullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type);
 		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
 		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, size_t sideChannels, actfunc_t type);
 
@@ -28,6 +28,9 @@ class CNet {
 		void addPassOnLayer(actfunc_t type);
 		void addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY);
 		void addReshape();
+
+		// Share Layer Functionality
+		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
 
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
@@ -45,6 +48,7 @@ class CNet {
 		inline size_t getNIN() const { return NIN; };
 		void copyNthLayer(size_t layer, fREAL* const toCopyTo) const;
 		void setNthLayer(size_t layer, const MAT& newLayer);
+		void copyNthActivation(size_t layer, fREAL* const toCopyTo) const;
 		size_t getNOUT() const;
 
 		void inquireDimensions (size_t layer, size_t& rows, size_t& cols) const;
@@ -64,6 +68,10 @@ class CNet {
 				&& layers[layer]->whoAmI()	!= layer_t::mixtureDensity
 				);
 		}
+		// (Re) link the chain must be called directly before forward/backward propagation
+		// this enables dynamical switching of layers.
+		void linkChain();
+
 		size_t NIN;
 		vector<CNetLayer*> layers;
 };

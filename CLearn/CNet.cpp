@@ -19,15 +19,15 @@ void CNet::debugMsg(fREAL* msg) {
 	msg[3] = layers[1]->getNIN();
 }
 
-void CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
+void CNet::addFullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type) {
 	// now we need to check if there is a layer already
 	if (getLayerNumber() > 0) { // .. so there is one
-		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT,  type, *(getLast())); // don't want to forward declare this..
+		FullyConnectedLayer* fcl =  new FullyConnectedLayer(NOUT, kappa, type, *(getLast())); // don't want to forward declare this..
 		layers.push_back(fcl);
 	} else {
 		// then it's the input layer
 
-		FullyConnectedLayer* fcl = new FullyConnectedLayer(NOUT, NIN,type);
+		FullyConnectedLayer* fcl = new FullyConnectedLayer(NOUT, NIN, kappa,type);
 		layers.push_back(fcl);
 	}
 }
@@ -105,6 +105,50 @@ void CNet::addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY) {
 	}
 }
 
+void CNet::shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer) {
+	for (uint32_t i = firstLayer; i <= lastLayer; ++i) {
+		if (i < otherNet->getLayerNumber()) {
+			layers.push_back(otherNet->layers[i]);
+
+			/*switch (layer->whoAmI()) {
+				case layer_t::antiConvolutional:
+					layers.push_back(dynamic_cast<AntiConvolutionalLayer*>(layer));
+					break;
+				case layer_t::convolutional: 
+					layers.push_back(dynamic_cast<ConvolutionalLayer*>(layer));
+					break;
+				case layer_t::dropout:
+					layers.push_back(dynamic_cast<DropoutLayer*>(layer));
+					break;
+				case layer_t::fullyConnected:
+					layers.push_back(dynamic_cast<FullyConnectedLayer*>(layer));
+					break;
+				case layer_t::maxPooling:
+					layers.push_back(dynamic_cast<MaxPoolLayer*>(layer));
+					break;
+				case layer_t::mixtureDensity:
+					layers.push_back(dynamic_cast<MixtureDensityModel*>(layer));
+					break;
+				case layer_t::passOn:
+					layers.push_back(dynamic_cast<PassOnLayer*>(layer));
+					break;
+				case layer_t::reshape:
+					layers.push_back(dynamic_cast<Reshape*>(layer));
+					break;
+			}*/
+		}
+	}
+}
+
+void CNet::linkChain()
+{
+	if (getLayerNumber() > 1) {
+		getFirst()->connectBelow(NULL);
+		getLast()->connectAbove(NULL);
+		getFirst()->checkHierarchy(true);
+	}
+}
+
 // Destructor
 CNet::~CNet() {
 	for (std::vector< CNetLayer* >::iterator it = layers.begin(); it != layers.end(); ++it) {
@@ -117,8 +161,7 @@ CNet::~CNet() {
 size_t CNet::getNOUT() const {
 	if (getLayerNumber() > 0) {
 		return getLast()->getNOUT();
-	}
-	else {
+	} else {
 		return 0;
 	}
 }
@@ -143,9 +186,12 @@ void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 		file >> (*layers[layerNr]);
 	}
 	file.close();
+	 // relink the chain
+	linkChain();
 }
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
+	linkChain();
 	getFirst()->forProp(in, false, true);
 	
 	return l2_error(errorMatrix(in, outDesired));
@@ -153,7 +199,9 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 
 // Backpropagation 
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
-	
+	// (-1) Relink the chain for dynamical switching of layers
+	linkChain();
+
 	// (0) Check in- & output
 	/*if (!input.allFinite()
 		|| !outDesired.allFinite()) {
@@ -193,10 +241,26 @@ void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 		}
 	}
 }
+void CNet::copyNthActivation(size_t layer, fREAL* const toCopyTo) const {
+	if (layer < getLayerNumber()) {
+		MAT temp = layers[layer]->getACT();
+		temp.transposeInPlace();
+		size_t rows = temp.rows();
+		size_t cols = temp.cols();
+		temp.resize(temp.size(), 1);
+		copyToOut(temp.data(), toCopyTo, temp.size());
+		
+	}
+}
 void CNet::copyNthLayer(size_t layer, fREAL* const toCopyTo) const {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			dynamic_cast<PhysicalLayer*>(layers[layer])->copyLayer(toCopyTo);
+			MAT temp = dynamic_cast<PhysicalLayer*>(layers[layer])->copyLayer();
+			temp.transposeInPlace();
+			size_t rows = temp.rows();
+			size_t cols = temp.cols();
+			temp.resize(temp.size(), 1);
+			copyToOut(temp.data(), toCopyTo, temp.size());
 		}
 	}
 }

@@ -50,11 +50,33 @@ MAT CNetLayer::getACT() const {
 
 void CNetLayer::connectAbove(CNetLayer* ptr) {
 	above = ptr;
-	if (hierarchy != hierarchy_t::input)
-		hierarchy = hierarchy_t::hidden; // change from output to hidden
+	//if (hierarchy != hierarchy_t::input)
+	//	hierarchy = hierarchy_t::hidden; // change from output to hidden
 }
 
-
+void CNetLayer::connectBelow(CNetLayer* ptr) {
+	below = ptr;
+	//if(hierarchy !=output)
+	//	hi
+}
+// 
+void CNetLayer::checkHierarchy(bool recursive) {
+	if (below) {
+		// either hidden or output
+		if (above) {
+			// definitely hidden
+			hierarchy = hierarchy_t::hidden;
+			if(recursive)
+				above->checkHierarchy(true); 
+		} else {
+			// definitely output
+			hierarchy = hierarchy_t::output;
+		}
+	} else {
+		// definitely input or invalid single-layer network
+		hierarchy = hierarchy_t::input;
+	}
+}
 // assign the activation function
 void CNetLayer::assignActFunc(actfunc_t type) {
 	activationType = type; // save type
@@ -107,17 +129,17 @@ void CNetLayer::reconstructMother(ifstream& in) {
 	in >> NOUT;
 	in >> NIN;
 	in >> temp;
-	hierarchy = static_cast<hierarchy_t>(temp);
+	// We ignore the hierarchy bit, since we're loading files
+	// into bigger networks.
+	//hierarchy = static_cast<hierarchy_t>(temp);
 
-	// Check if the output loaded from the file is actually correct -
-	// since sometimes I load layers into bigger networks
-	if (above != 0 && below !=0) {
+	/*if (above != 0 && below !=0) {
 		hierarchy = hierarchy_t::hidden;
 	} else if (above != 0) {
 		hierarchy = hierarchy_t::input;
 	} else {
 		hierarchy = hierarchy_t::output;
-	}
+	}*/
 
 	actSave = MAT(NOUT, 1);
 	deltaSave = MAT(NOUT, 1);

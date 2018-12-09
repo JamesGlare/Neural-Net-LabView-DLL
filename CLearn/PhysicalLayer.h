@@ -16,9 +16,9 @@ public:
 	/* Constructors
 	* Initialize Base Class (CNetLayer) and internal instance of MiniBatchNormalization.
 	*/ 
-	PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower);
+	PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL kappa, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
+	PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL kappa, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
+	PhysicalLayer(size_t _NOUT, fREAL kappa, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower);
 	virtual ~PhysicalLayer() {}; // purely abstract
 
 	/* Forward Propagation 
@@ -34,7 +34,7 @@ public:
 	void applyUpdate(const learnPars& pars, MAT& input, bool recursive); // recursive
 	
 	// Read-only access to weight parameters.
-	void copyLayer(fREAL* const toCopyTo);
+	MAT copyLayer() const;
 	// Set the layer weights (e.g. for initialization)
 	void setLayer(const MAT& newLayer);
 	MATIND layerDimensions() const;
@@ -64,6 +64,7 @@ protected:
 	/* Internal weights and parameters
 	*/
 	MAT layer; // actual layer
+	fREAL kappa; // l2-regularization
 	/* Subclasses 
 	* initialized in derived classes
 	*/

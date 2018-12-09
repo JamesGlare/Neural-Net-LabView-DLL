@@ -41,10 +41,12 @@ class CNetLayer {
 
 		// Connect to layer above and change hierarchy from output to hidden
 		void connectAbove(CNetLayer* ptr);
+		void connectBelow(CNetLayer* ptr);
+		void checkHierarchy(bool recursive);
+
 		// save to file
 		friend ostream& operator<<(ostream& os, const CNetLayer& toSave); // almost virtual member
 		friend ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct);
-		
 
 	protected:
 		MAT actSave; // keep activation before propagation

@@ -17,8 +17,8 @@ __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 	*ptr = new CNet(NIN);
 }
 
-__declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT) {
-	ptr->addFullyConnectedLayer(NOUT, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT, fREAL kappa) {
+	ptr->addFullyConnectedLayer(NOUT, kappa, actfunc_t::RELU);
 }
 __declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels) {
 	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
@@ -104,8 +104,15 @@ __declspec(dllexport) void __stdcall loadCNet_layer(CNet* ptr, uint32_t layer, c
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 	ptr->~CNet();
 }
+// share-Layer functionality which enables dynamical switching
+__declspec(dllexport) void __stdcall shareLayer(CNet* ptr, CNet* ptrOther, uint32_t firstLayer, uint32_t lastLayer) {
+	ptr->shareLayers(ptrOther, firstLayer, lastLayer);
+}
 __declspec(dllexport) void __stdcall writeLayer(CNet* ptr, uint32_t layer, fREAL* const toCopyTo) {
 	ptr->copyNthLayer(layer, toCopyTo);
+}
+__declspec(dllexport) void __stdcall getActivation(CNet* ptr, uint32_t layer, fREAL* const toCopyTo) {
+	ptr->copyNthActivation(layer, toCopyTo);
 }
 __declspec(dllexport) void __stdcall getLayerDimension(CNet* ptr, uint32_t layer, uint32_t* rows, uint32_t* cols) {
 	size_t rows_ = 0;

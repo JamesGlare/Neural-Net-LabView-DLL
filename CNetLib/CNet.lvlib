@@ -10,14 +10,17 @@
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
 	<Item Name="addMixtureDensity.vi" Type="VI" URL="../addMixtureDensity.vi"/>
 	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>
+	<Item Name="addReshape.vi" Type="VI" URL="../addReshape.vi"/>
 	<Item Name="debugMsg.vi" Type="VI" URL="../debugMsg.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
+	<Item Name="getActivation.vi" Type="VI" URL="../getActivation.vi"/>
 	<Item Name="getLayerDimensions.vi" Type="VI" URL="../getLayerDimensions.vi"/>
 	<Item Name="getWeights.vi" Type="VI" URL="../getWeights.vi"/>
 	<Item Name="InitializeCNet.vi" Type="VI" URL="../InitializeCNet.vi"/>
 	<Item Name="loadFromFile.vi" Type="VI" URL="../loadFromFile.vi"/>
 	<Item Name="saveToFile.vi" Type="VI" URL="../saveToFile.vi"/>
 	<Item Name="setWeights.vi" Type="VI" URL="../setWeights.vi"/>
+	<Item Name="shareLayers.vi" Type="VI" URL="../shareLayers.vi"/>
 	<Item Name="Start.vi" Type="VI" URL="../Start.vi"/>
 	<Item Name="train.vi" Type="VI" URL="../train.vi"/>
 	<Item Name="validate.vi" Type="VI" URL="../validate.vi"/>
