@@ -59,10 +59,11 @@ void CNetLayer::connectBelow(CNetLayer* ptr) {
 	//if(hierarchy !=output)
 	//	hi
 }
-// 
+// Reset Hierarchy and LayerNumber
 void CNetLayer::checkHierarchy(bool recursive) {
 	if (below) {
 		// either hidden or output
+		layerNumber = below->getLayerNumber() + 1;
 		if (above) {
 			// definitely hidden
 			hierarchy = hierarchy_t::hidden;
@@ -75,6 +76,10 @@ void CNetLayer::checkHierarchy(bool recursive) {
 	} else {
 		// definitely input or invalid single-layer network
 		hierarchy = hierarchy_t::input;
+		layerNumber = 0;
+		if (above && recursive) {
+			above->checkHierarchy(true);
+		}
 	}
 }
 // assign the activation function
@@ -129,17 +134,9 @@ void CNetLayer::reconstructMother(ifstream& in) {
 	in >> NOUT;
 	in >> NIN;
 	in >> temp;
-	// We ignore the hierarchy bit, since we're loading files
-	// into bigger networks.
-	//hierarchy = static_cast<hierarchy_t>(temp);
-
-	/*if (above != 0 && below !=0) {
-		hierarchy = hierarchy_t::hidden;
-	} else if (above != 0) {
-		hierarchy = hierarchy_t::input;
-	} else {
-		hierarchy = hierarchy_t::output;
-	}*/
+	hierarchy = static_cast<hierarchy_t>(temp);
+	// if we load partial networks or single layers from other chains,
+	// the linkChain function will reset the network structure.
 
 	actSave = MAT(NOUT, 1);
 	deltaSave = MAT(NOUT, 1);

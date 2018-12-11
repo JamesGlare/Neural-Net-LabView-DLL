@@ -12,6 +12,18 @@
 /* CNet LIBRARY FUNCTIONS 
 */
 
+bool sameCNet(CNet* ptr) {
+	// save ptr
+	static CNet* ptrCache = NULL;
+
+	if (ptr != ptrCache) {
+		ptrCache = ptr;
+		return false;
+	} else {
+		return true;
+	}
+	
+}
 typedef std::shared_ptr<CNet> CNETPTR;
 __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 	*ptr = new CNet(NIN);
@@ -40,6 +52,13 @@ __declspec(dllexport) void __stdcall addDropoutLayer(CNet* ptr, fREAL ratio) {
 	 ptr->addDropoutLayer(ratio);
 }
 __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input, fREAL* const output, int32_t* const inFormat, int32_t* const outFormat) {
+	// if change of CNet instance, relink the chain
+
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
+
 	learnPars pars{0,0,0,0,0,0,0,0,0,0};
 	assert(ptr->getNOUT() == outFormat[0]*outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0]*inFormat[1]);
@@ -62,6 +81,11 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update, 
 	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain,int32_t* const inFormat, int32_t* const outFormat) {
 	
+	// if change of CNet instance, relink the chain
+	if (! sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
 	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain};
 
 	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
@@ -89,16 +113,34 @@ __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
 }
 __declspec(dllexport) uint32_t __stdcall initializeNetwork(CNet* ptr) {
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
 	return ptr->getLayerNumber();
 }
 __declspec(dllexport) void __stdcall saveCNet(CNet* ptr, char* filePath) {
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
 	ptr->saveToFile(string(filePath));
 }
 __declspec(dllexport) void __stdcall loadCNet(CNet* ptr, char* filePath) {
+
 	ptr->loadFromFile(string(filePath));
+
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
 }
 __declspec(dllexport) void __stdcall loadCNet_layer(CNet* ptr, uint32_t layer, char* filePath) {
+	
 	ptr->loadFromFile_layer(string(filePath), layer);
+
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
 }
 
 __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {

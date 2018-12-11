@@ -108,7 +108,8 @@ void CNet::addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY) {
 void CNet::shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer) {
 	for (uint32_t i = firstLayer; i <= lastLayer; ++i) {
 		if (i < otherNet->getLayerNumber()) {
-			layers.push_back(otherNet->layers[i]);
+		layers.push_back(otherNet->layers[i]);
+
 
 			/*switch (layer->whoAmI()) {
 				case layer_t::antiConvolutional:
@@ -143,8 +144,17 @@ void CNet::shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastL
 void CNet::linkChain()
 {
 	if (getLayerNumber() > 1) {
+		// set lowest and highest layer links
 		getFirst()->connectBelow(NULL);
 		getLast()->connectAbove(NULL);
+
+		// rebuild connections 
+		for (std::vector< CNetLayer* >::iterator it = layers.begin(); 
+			it != layers.end() - 1; ++it) { // go until penultimate element
+			(*it)->connectAbove(*(it + 1));
+			(*(it + 1))->connectBelow(*it);
+		}
+		// make elements reset their hierarchy
 		getFirst()->checkHierarchy(true);
 	}
 }
@@ -186,12 +196,9 @@ void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 		file >> (*layers[layerNr]);
 	}
 	file.close();
-	 // relink the chain
-	linkChain();
 }
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
-	linkChain();
 	getFirst()->forProp(in, false, true);
 	
 	return l2_error(errorMatrix(in, outDesired));
@@ -199,8 +206,6 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 
 // Backpropagation 
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
-	// (-1) Relink the chain for dynamical switching of layers
-	linkChain();
 
 	// (0) Check in- & output
 	/*if (!input.allFinite()

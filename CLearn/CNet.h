@@ -43,6 +43,10 @@ class CNet {
 		void loadFromFile_layer(string filePath, uint32_t layerNr);
 
 		void debugMsg(fREAL* msg);
+		// (Re) link the chain must be called directly before forward/backward propagation
+		// this enables dynamical switching of layers.
+		void linkChain();
+
 		// Getter functions
 		inline size_t getLayerNumber() const { return layers.size(); };
 		inline size_t getNIN() const { return NIN; };
@@ -66,11 +70,10 @@ class CNet {
 				&& layers[layer]->whoAmI()	!= layer_t::passOn
 				&& layers[layer]->whoAmI()	!= layer_t::dropout
 				&& layers[layer]->whoAmI()	!= layer_t::mixtureDensity
+				&& layers[layer]->whoAmI() != layer_t::reshape
 				);
 		}
-		// (Re) link the chain must be called directly before forward/backward propagation
-		// this enables dynamical switching of layers.
-		void linkChain();
+
 
 		size_t NIN;
 		vector<CNetLayer*> layers;
