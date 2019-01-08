@@ -51,9 +51,9 @@ void FullyConnectedLayer::updateW() {
 }
 
 void FullyConnectedLayer::initV() {
-	//V = layer;
-	V.setRandom();
-	V /= sqrt(getNIN());
+	V = layer;
+	//V.setRandom();
+	//V /= sqrt(getNIN());
 	//normalizeV();
 }
 void FullyConnectedLayer::normalizeV() {

@@ -32,17 +32,32 @@ __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 __declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT, fREAL kappa) {
 	ptr->addFullyConnectedLayer(NOUT, kappa, actfunc_t::RELU);
 }
-__declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels) {
-	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features) {
+	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features,  actfunc_t::RELU);
 }
-__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t outBoxes, uint32_t sideChannels) {
-	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, sideChannels, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t outBoxes) {
+	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes,  actfunc_t::RELU);
 }
 __declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	ptr->addPoolingLayer(maxOverXY, pooling_t::max);
 }
-__declspec(dllexport) void __stdcall addPassOnLayer(CNet* ptr) {
-	ptr->addPassOnLayer(actfunc_t::NONE);
+__declspec(dllexport) void __stdcall addPassOnLayer(CNet* ptr, uint32_t function) {
+	switch (function) {
+		case 0:
+			ptr->addPassOnLayer(actfunc_t::NONE);
+			break;
+		case 1:
+			ptr->addPassOnLayer(actfunc_t::RELU);
+			break;
+		case 2:
+			ptr->addPassOnLayer(actfunc_t::TANH);
+			break;
+		case 3:
+			ptr->addPassOnLayer(actfunc_t::SIG);
+			break;
+		default:
+			ptr->addPassOnLayer(actfunc_t::NONE);
+	}
 } 
 __declspec(dllexport) void __stdcall addReshapeLayer(CNet* ptr) {
 	ptr->addReshape();
@@ -95,7 +110,6 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]); 
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
-
 	fREAL error = ptr->backProp(inputMatrix, outputDesiredMatrix, pars);
 
 	// Resize the output matrix & copy into outgoing array.
@@ -104,6 +118,44 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
 	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
 	
+	return error;
+}
+__declspec(dllexport) void __stdcall feedSideChannel(CNet* ptr, fREAL* const sideChannelArray, int32_t* const format) {
+
+
+	MAT sideChannelMatrix = MATMAP_ROWMAJOR(sideChannelArray, format[0], format[1]);
+	sideChannelMatrix.resize(format[0] * format[1], 1);
+	ptr->preFeedSideChannel(sideChannelMatrix);
+
+}
+__declspec(dllexport) fREAL __stdcall backPropCNet_SideChannel(CNet* ptr, fREAL* const input, fREAL* const output, fREAL* const sideChannel, fREAL* const eta,
+	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat, int32_t* const sideChannelFormat) {
+
+	// if change of CNet instance, relink the chain
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
+	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain };
+
+	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
+	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
+
+	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
+	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
+	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]);
+	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
+
+	
+	fREAL error = ptr->backProp(inputMatrix, outputDesiredMatrix, pars);
+
+	// Resize the output matrix & copy into outgoing array.
+	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
+	outputDesiredMatrix.transposeInPlace(); // Go back to Row-major format
+	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
+	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
+
 	return error;
 }
 __declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t NOUT, size_t features, size_t BlockXY) {
@@ -129,17 +181,16 @@ __declspec(dllexport) void __stdcall loadCNet(CNet* ptr, char* filePath) {
 
 	ptr->loadFromFile(string(filePath));
 
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
-	}
+	sameCNet(ptr); // store ptr 
+	ptr->linkChain(); // relink chain regardless
+	
 }
 __declspec(dllexport) void __stdcall loadCNet_layer(CNet* ptr, uint32_t layer, char* filePath) {
 	
 	ptr->loadFromFile_layer(string(filePath), layer);
 
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
-	}
+	sameCNet(ptr); // store ptr
+	ptr->linkChain();// relink chain regardless
 
 }
 

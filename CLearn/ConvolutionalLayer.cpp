@@ -14,9 +14,9 @@
 * - The CNetLayer::NOUT variable contains information about the number of features.
 */
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, 
-	uint32_t _features, uint32_t _sideChannels, actfunc_t type)
-	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), sideChannels(_sideChannels),
-	PhysicalLayer(_features*_NOUTX*_NOUTY+_sideChannels, _NINX*_NINY+_sideChannels, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }) {
+	uint32_t _features,  actfunc_t type)
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), 
+	PhysicalLayer(_features*_NOUTX*_NOUTY, _NINX*_NINY, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }) {
 	// the layer matrix will act as convolutional kernel
 	inFeatures = 1;
 	init();
@@ -24,9 +24,9 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NIN
 }
 
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, 
-	uint32_t _features, uint32_t _sideChannels, actfunc_t type, CNetLayer& lower)
-: NOUTX(_NOUTX), NOUTY(_NOUTY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), sideChannels(_sideChannels),
-PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY+_sideChannels, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }, lower) {
+	uint32_t _features,  actfunc_t type, CNetLayer& lower)
+: NOUTX(_NOUTX), NOUTY(_NOUTY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), 
+PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }, lower) {
 	
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	inFeatures = lower.getFeatures();
@@ -37,22 +37,22 @@ PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY+_sideChannels, 0.0f, t
 	assertGeometry();
 }
 // second most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _sideChannels, actfunc_t type)
-	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features), sideChannels(_sideChannels),
-	PhysicalLayer(_features*_NOUTXY*_NOUTXY+_sideChannels, _NINXY*_NINXY+_sideChannels, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }) {
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type)
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
+	PhysicalLayer(_features*_NOUTXY*_NOUTXY, _NINXY*_NINXY, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }) {
 	inFeatures = 1;
 	init();
 	assertGeometry();
 }
 
 // most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _sideChannels, actfunc_t type, CNetLayer& lower)
-	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features), sideChannels(_sideChannels),
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& lower)
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
 	PhysicalLayer(lower.getFeatures()*_features*_NOUTXY*_NOUTXY, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }, lower) {
 	
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	inFeatures = lower.getFeatures(); // product of all features so far
-	NINX = sqrt((lower.getNOUT()-sideChannels) / inFeatures); // sqrt(2* 5*5/2) = 5 
+	NINX = sqrt((lower.getNOUT()) / inFeatures); // sqrt(2* 5*5/2) = 5 
 	NINY = NINX; // this is only for squares.
 	
 	init();
@@ -67,19 +67,17 @@ layer_t ConvolutionalLayer::whoAmI() const {
 	return layer_t::convolutional;
 }
 void ConvolutionalLayer::assertGeometry() {
-	assert(inFeatures*features*NOUTX*NOUTY + sideChannels == getNOUT());
-	assert(NINX*NINY*inFeatures+sideChannels == getNIN());
+	assert(inFeatures*features*NOUTX*NOUTY == getNOUT());
+	assert(NINX*NINY*inFeatures== getNIN());
 	// Feature dimensions
 	assert((strideX*NOUTX - strideX - NINX + kernelX) % 2 == 0);
 	assert((strideY*NOUTY - strideY - NINY + kernelY) % 2 == 0);
 }
 void ConvolutionalLayer::init() {
 
-	sideChannelBuffer = MAT(sideChannels, 1);
-	sideChannelBuffer.setZero();
-	deltaSave = MAT(getNOUT() - sideChannels, 1);
+	deltaSave = MAT(getNOUT(), 1);
 	deltaSave.setZero();
-	actSave = MAT(getNOUT() - sideChannels, 1);
+	actSave = MAT(getNOUT(), 1);
 	actSave.setZero();
 	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
 	layer *= ((fREAL) features) / layer.size();
@@ -138,52 +136,32 @@ MAT ConvolutionalLayer::vGrad(const MAT& grad, MAT& ggrad) {
 }
 void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	
-	// (1) Take care of the sidechannel inputs
-	if (sideChannels > 0) {
-		sideChannelBuffer = inBelow.bottomRows(sideChannels);
-		inBelow.conservativeResize(getNIN()-sideChannels,1); // drop bottom rows
-	}
-	// (2) Reshape the remaining input
+
+	// (1) Reshape the remaining input
 	
 	inBelow.resize(NINY, inFeatures*NINX);
 	
 	//inBelow = conv(inBelow, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features); // square convolution
 	inBelow = conv_(inBelow, layer, NOUTY, NOUTX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
-	inBelow.resize(getNOUT()-sideChannels, 1);
+	inBelow.resize(getNOUT(), 1);
 
 	if (training) {
 		actSave = inBelow;
 		if (getHierachy() != hierarchy_t::output) {
 			inBelow = actSave.unaryExpr(act);
 			if (recursive) {
-				if (sideChannels > 0) {
-					inBelow.conservativeResize(getNOUT(), 1); // append sideChannel-rows
-					inBelow.bottomRows(sideChannels) = sideChannelBuffer;
-				}
+	
 				above->forProp(inBelow, true, true);
-			}
-		} else {
-			if (sideChannels > 0) {
-				inBelow.conservativeResize(getNOUT(), 1); // append sideChannel-rows
-				inBelow.bottomRows(sideChannels) = sideChannelBuffer;
 			}
 		}
 	} else {
 		if (getHierachy() != hierarchy_t::output) {
 			inBelow = inBelow.unaryExpr(act);
 			if (recursive) {
-				if (sideChannels > 0) {
-					inBelow.conservativeResize(getNOUT(), 1); // append sideChannel-rows
-					inBelow.bottomRows(sideChannels) = sideChannelBuffer;
-				}
+
 				above->forProp(inBelow, false, true);
 			}
-		}	else {
-			if (sideChannels > 0) {
-				inBelow.conservativeResize(getNOUT(), 1); // append sideChannel-rows
-				inBelow.bottomRows(sideChannels) = sideChannelBuffer;
-			}
-		}
+		}	
 	}
 }
 uint32_t ConvolutionalLayer::getFeatures() const {
@@ -195,24 +173,17 @@ uint32_t ConvolutionalLayer::getFeatures() const {
 }
 // backprop
 void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
-	if (sideChannels > 0) {
-		sideChannelBuffer = deltaAbove.bottomRows(sideChannels);
-		deltaAbove.conservativeResize(getNOUT() - sideChannels, 1);
-	}
+
 	deltaSave = deltaAbove; // just overwrite this matrix with an (NOUT-sideChannel)-sized vector
 
 	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 		deltaSave.resize(NOUTY, inFeatures*features*NOUTX); // keep track of this!!!
 		//deltaAbove = backPropConv_(deltaSave, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		deltaAbove = antiConv_(deltaSave, layer, NINY, NINX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
-		deltaAbove.resize(getNIN()-sideChannels, 1);
-		
-		if (sideChannels > 0) {
-			deltaAbove.conservativeResize(getNIN(), 1);
-			deltaAbove.bottomRows(sideChannels) = sideChannelBuffer;
-		}
+		deltaAbove.resize(getNIN(), 1);
+
 		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj), we dont need eval.
-		deltaSave.resize(getNOUT() - sideChannels, 1); // resize back
+		deltaSave.resize(getNOUT(), 1); // resize back
 		if (recursive) {
 			below->backPropDelta(deltaAbove, true); // cascade...
 		}
@@ -222,46 +193,33 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 MAT ConvolutionalLayer::grad(MAT& input) { // deltaSave: (NOUT-sideChannel) sized vector
 	deltaSave.resize(NOUTY, inFeatures*features*NOUTX);
 	if (getHierachy() == hierarchy_t::input) {
-		if (sideChannels > 0) {
-			sideChannelBuffer = input.bottomRows(sideChannels);
-			input.conservativeResize(getNIN()-sideChannels, 1); // drop sidechannel inputs - not relevant for gradient
-		}
+		
 		input.resize(NINY, inFeatures*NINX);
 
 		MAT convoluted = convGrad_(input, deltaSave, kernelY, kernelX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		//MAT convoluted = convGrad(input, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 
-		deltaSave.resize(getNOUT()-sideChannels, 1); // make sure to resize to NOUT-sideChannels
+		deltaSave.resize(getNOUT(), 1); // make sure to resize to NOUT-sideChannels
 
-		input.resize(getNIN()-sideChannels, 1);
+		input.resize(getNIN(), 1);
 		
-		// Leave the dimensionality of input intact
-		if (sideChannels > 0) {
-			input.conservativeResize(getNIN(), 1);
-			input.bottomRows(sideChannels) = sideChannelBuffer; 
-		}
+
 		return convoluted;
 	} else {
 		MAT fromBelow = below->getACT();
-		if (sideChannels > 0) {
-			sideChannelBuffer = fromBelow.bottomRows(sideChannels);
-			fromBelow.conservativeResize(getNIN() - sideChannels, 1);
-		}
+
 		fromBelow.resize(NINY, inFeatures*NINX);
 		
 		MAT convoluted = convGrad_(fromBelow, deltaSave, kernelY, kernelX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		//MAT convoluted = convGrad(fromBelow, deltaSave, strideY, strideX, kernelY, kernelX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features);
 		
-		deltaSave.resize(getNOUT()-sideChannels, 1);  // make sure to resize to NOUT-sideChannels
-		if (sideChannels > 0) {
-			fromBelow.conservativeResize(getNIN(), 1);
-			fromBelow.bottomRows(sideChannels) = sideChannelBuffer;
-		}
+		deltaSave.resize(getNOUT(), 1);  // make sure to resize to NOUT-sideChannels
+
 		return convoluted;
 	}
 }
 void ConvolutionalLayer::saveToFile(ostream& os) const {
-	os << NOUTY << " " << NOUTX << " " << NINY << " " << NINX << " " << kernelY << " " << kernelX << " " << strideY<< " " << strideX<< " " << features<< " " << inFeatures <<" " << sideChannels <<endl;
+	os << NOUTY << " " << NOUTX << " " << NINY << " " << NINX << " " << kernelY << " " << kernelX << " " << strideY<< " " << strideX<< " " << features<< " " << inFeatures <<endl;
 	MAT temp = layer;
 	temp.resize(layer.size(), 1);
 	os << temp<< endl;
@@ -278,7 +236,7 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> strideX;
 	in >> features;
 	in >> inFeatures;
-	in >> sideChannels;
+	//in >> sideChannels;
 
 	layer = MAT(kernelY*features*kernelX,1); // initialize as a column vector
 	V = MAT(kernelY, features*kernelX);

@@ -113,7 +113,7 @@ ostream& operator<<(ostream& os, const CNetLayer& toSave) {
 }
 
 void CNetLayer::saveMother(ostream& os) const {
-	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy) <<endl;
+	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy) << " " << layerNumber<<endl;
 }
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 	int32_t type;
@@ -137,6 +137,7 @@ void CNetLayer::reconstructMother(ifstream& in) {
 	hierarchy = static_cast<hierarchy_t>(temp);
 	// if we load partial networks or single layers from other chains,
 	// the linkChain function will reset the network structure.
+	in >> layerNumber; //... and also the layerNumber
 
 	actSave = MAT(NOUT, 1);
 	deltaSave = MAT(NOUT, 1);

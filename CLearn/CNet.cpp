@@ -7,6 +7,7 @@
 #include "PassOnLayer.h"
 #include "DropoutLayer.h"
 #include "Reshape.h"
+#include "SideChannel.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
@@ -31,24 +32,24 @@ void CNet::addFullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type) {
 		layers.push_back(fcl);
 	}
 }
-void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type) {
+void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type) {
 	// At the moment, I only allow for square-shaped input.
 	// this may need to change in the future.
 	if (getLayerNumber() > 0) {
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, type, *(getLast()));
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, type, *(getLast()));
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN-sideChannels), kernelXY, stride, features, sideChannels, type);
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, features,  type);
 		layers.push_back(cl);
 	}
 }
-void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, size_t sideChannels, actfunc_t type) {
+void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, sideChannels, type, *(getLast()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, type, *(getLast()));
 		layers.push_back(acl);
 	} else {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, outBoxes, sideChannels, type);
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, outBoxes, type);
 		layers.push_back(acl);
 	}
 }
@@ -68,6 +69,12 @@ void CNet::addReshape() {
 		layers.push_back(rs);
 	} else {
 		Reshape* rs = new Reshape(NIN);
+		layers.push_back(rs);
+	}
+}
+void CNet::addSideChannel(size_t sideChannelSize) {
+	if (getLayerNumber() > 0) {
+		SideChannel* rs = new SideChannel(*(getLast()), sideChannelSize );
 		layers.push_back(rs);
 	}
 }
@@ -185,11 +192,13 @@ void CNet::saveToFile(string filePath) const {
 		file.close();
 	}
 }
+
 void CNet::loadFromFile(string filePath) {
 	for(size_t i =0; i< getLayerNumber(); ++i) {
 		loadFromFile_layer(filePath, i);
 	}
 }
+
 void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 	ifstream file(filePath + "\\CNetLayer_" + to_string(layerNr) + ".dat");
 	if (file.is_open()) {
@@ -197,21 +206,36 @@ void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 	}
 	file.close();
 }
+
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
+
+	// (1) Forward propagation
 	getFirst()->forProp(in, false, true);
-	
-	return l2_error(errorMatrix(in, outDesired));
+	// (2) return the error 
+	return l2_error(l2_errorMatrix(in, outDesired));
+}
+
+// Prefeeding function
+void CNet::preFeedSideChannel(const MAT& sideChannelInput) {
+
+	// Go through each layer - like this we don't need flags and
+	// don't need to reroute the chain all the time when saved/restored.
+	for (CNetLayer* layer : layers) {
+		if (layer->whoAmI() == layer_t::sideChannel) {
+			dynamic_cast<SideChannel*>(layer)->preFeed(sideChannelInput);
+			break;
+		}
+	}
 }
 
 // Backpropagation 
 fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 
-	// (0) Check in- & output
-	/*if (!input.allFinite()
-		|| !outDesired.allFinite()) {
-		return 1; // just skip this sample 
-	}*/
+	// (0) Check if Input contains no NaN's or Infinities.
+	// ... 
+	// ...
+	
 	// (0.5) Initialize error and difference matrix
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;
@@ -221,7 +245,7 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	getFirst()->forProp(outPredicted, true, true);
 	
 	// (2) calculate error matrix and error
-	diffMatrix = move(errorMatrix(outPredicted, outDesired)); // delta =  estimate - target
+	diffMatrix = move(l2_errorMatrix(outPredicted, outDesired)); // delta =  estimate - target
 	errorOut = l2_error(diffMatrix);
 
 	// (3) back propagate the deltas
@@ -232,6 +256,53 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars) {
 	
 	// (5) Write predicted output to output matrix
 	outDesired = outPredicted;
+
+	// DONE
+	return errorOut;
+}
+
+
+// Backpropagation 
+fREAL CNet::backProp_GAN(MAT& input,  bool real, const learnPars& pars) {
+	
+	// (0) Check if Input contains no NaN's or Infinities.
+	// ... 
+	// ...
+	// (0.5) Initialize error and difference matrix
+	static bool real_flag = 0;
+	static bool fake_flag = 0;
+	static MAT cross_entropy_gradient_real(getNOUT(),1);
+	static MAT cross_entropy_gradient_fake(getNOUT(),1);
+
+	fREAL errorOut = 0.0f;
+
+	// (1) Propagate in forward direction (with saveActivations == true)
+	MAT logits(input);
+	static MAT labels(getNOUT(), 1);
+
+	getFirst()->forProp(logits, true, true);
+	if (real) {
+		labels.setOnes();
+		cross_entropy_gradient_real = move(sigmoid_cross_entropy_errorMatrix(logits, labels)); // delta =  estimate - target
+		real_flag = true;
+	} else {
+		labels.setZero();
+		cross_entropy_gradient_fake = move(sigmoid_cross_entropy_errorMatrix(logits, labels)); // delta =  estimate - target
+		fake_flag = true;
+	}
+
+	// (2) calculate error matrix and error
+	errorOut = sigmoid_cross_entropy_with_logits(logits, labels);
+	// Check if we've computed error gradients 
+	// for both fake and real datasets
+	if (real_flag &&
+		fake_flag) {
+		// (3) back propagate the deltas
+		MAT deltaMatrix = cross_entropy_gradient_fake + cross_entropy_gradient_real;
+		getLast()->backPropDelta(deltaMatrix, true);
+		// (4) Apply update
+		getFirst()->applyUpdate(pars, input, true);
+	}
 
 	// DONE
 	return errorOut;
@@ -276,8 +347,18 @@ void CNet::setNthLayer(size_t layer, const MAT& newLayer) {
 		}
 	}
 }
-MAT CNet::errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
+MAT CNet::l2_errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
 	return outPrediction - outDesired; // force Visual C++ to return without temporary - since RVO doesn't work ???!
+}
+fREAL CNet::sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labels) { 
+	// obvsly logits.shape == labels.shape
+	return (logits - logits.cwiseProduct(labels) - (logits).unaryExpr(&LogExp)).mean();
+}
+MAT CNet::sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels) {
+	
+	static MAT ones = MAT(getNOUT(), 1);
+	ones.setOnes();
+	return ones - labels - ((-1)*logits).unaryExpr(&Sig);
 }
 fREAL CNet::l2_error(const MAT& diff) {
 	fREAL sum = cumSum(matNorm(diff));

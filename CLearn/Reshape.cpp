@@ -1,5 +1,4 @@
 #include "stdafx.h"
-
 #include "Reshape.h"
 
 Reshape::Reshape(size_t NIN) : DiscarnateLayer(NIN, NIN, actfunc_t::NONE) {

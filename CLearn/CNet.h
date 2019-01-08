@@ -19,8 +19,8 @@ class CNet {
 		~CNet();
 		// Physical Layers (i.e. layers with weight parameters)
 		void addFullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type);
-		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
-		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, size_t sideChannels, actfunc_t type);
+		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
+		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, actfunc_t type);
 
 		// Discarnate Layers (i.e. layers without weight parameters)
 		void addPoolingLayer(size_t maxOverXY, pooling_t type);
@@ -28,6 +28,7 @@ class CNet {
 		void addPassOnLayer(actfunc_t type);
 		void addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY);
 		void addReshape();
+		void addSideChannel(size_t sideChannelSize);
 
 		// Share Layer Functionality
 		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
@@ -36,7 +37,12 @@ class CNet {
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
 		// Backpropagate through network. 
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars);
-		
+		// Specialized functions for training GANs
+		fREAL backProp_GAN(MAT& input, bool real, const learnPars& pars);
+		// Feed a tensor into the sidechannel of the network
+		// TODO - Generalize to arbitrarily many sidechannels.
+		void preFeedSideChannel(const MAT& sideChannel);
+
 		// Save-to-file functionality.
 		void saveToFile(string filePath) const;
 		void loadFromFile(string filePath);
@@ -63,8 +69,10 @@ class CNet {
 		inline CNetLayer* getFirst() const { return layers.front(); };
 
 		// error related functions
-		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
+		MAT l2_errorMatrix(const MAT& outPrediction, const MAT& outDesired);
 		fREAL l2_error(const MAT& diff);
+		fREAL sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labels);
+		MAT sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels);
 		inline bool isPhysical(size_t layer) const {
 			return (layers[layer]->whoAmI()	!= layer_t::maxPooling
 				&& layers[layer]->whoAmI()	!= layer_t::passOn
