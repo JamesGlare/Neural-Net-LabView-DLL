@@ -11,7 +11,9 @@ The library currently supports
 4. Dropout Layers
 5. Max-Pooling Layers
 6. Pass-On Layers (apply some elementwise function)
-7. Mixture Density Layer (Probability distribution of likely output values - can be placed anywhere within the network!)
+7. Mixture Density Layer (Probability distribution of likely output values)
+9. Layer sharing between networks
+10. Vanilla GAN-training functions
 </pre>
 with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
 
