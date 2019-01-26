@@ -94,3 +94,18 @@ for CT data (which is another famous inverse problem).
 The inverse GAN approach works really well on all toy problems that I could conceive of, but it seems difficult to train the GAN's on my holography data. That's probably why the guys from Sweden used Wasserstein GAN's and trained them with gradient penalty.
 
 Gradient penalty is almost impossible to implement without automatic differentiation though. I will therefore have to train the network using tensorflow and then export the graph into a format that allows me to transfer it to my network here, so that I can actually produce holograms.
+
+<h2> Another approach - Forward/Backward Nets </h2>
+
+Arguably, the most naive approach to inverse problems might be to simply train two nets - one that simply learns the forward mapping, F: h -> I (where h is a hologramm and I is the intensity) and one that learns the inverse, B : I-> h' . 
+
+The loss function would have to read || F(B(I)) - I ||^2 and the training needs to proceed in two steps
+<pre>
+1. Train forward mapping F: h->I, minimize( || F(h) - I || ^2
+2. Train backward mapping B inside forward F, i.e. minimize  || F(B(I)) - I ||^2
+</pre>
+
+One could even think about extending B with some latent variables Z, essentially turning it into a conditional generator.
+One could also try and add another training step, where F is trained on the output of Setup( B(I)), since the holograms that B will produce won't likely be within the distribution of holograms that F sees during training....
+
+Lots of things to try!
