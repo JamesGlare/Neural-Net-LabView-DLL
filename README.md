@@ -79,3 +79,18 @@ It it is probably hopeless to learn the holograms directly. Instead, I chose a d
 This also solves on my biggest headaches, which was the so-called 'phase problem': Two holograms that only differ in a global phase will produce the same intensity distribution. The mapping of holograms -> Intensity is not injective.
 
 [![Video of Inverse HoloNet training](./pictures/inversVideo1.png)](https://youtu.be/LHtNtG6rQkg "Inverse HoloNet prediction examples.")
+
+
+
+UPDATE2: As Bishop writes in his book, Mixture Density models run into problems when the problem is invariant over not just a single branch of a function (like the inverse of x^2), but over a manifold of higher dimensionality (like r^2 = x^2 + y^2). This probably explains why mixture density approaches do not work for dimensions higher than 4x4.
+
+<h2> Conditional GAN's for inverse problems </h2>
+A much better approach to learning the input distribution for inverse problems is to train a conditional generative adversarial network (see https://arxiv.org/pdf/1811.05910.pdf) on the problem. The idea is to condition both the critic and the generator on the output of the setup (the intensity) and ask the generator for a possible input that might have lead to this output.
+
+We had this idea here in Cambridge a couple of months ago ;) (seriously), but it got published in the mean time ->  https://arxiv.org/pdf/1811.05910.pdf
+
+for CT data (which is another famous inverse problem).
+
+The inverse GAN approach works really well on all toy problems that I could conceive of, but it seems difficult to train the GAN's on my holography data. That's probably why the guys from Sweden used Wasserstein GAN's and trained them with gradient penalty.
+
+Gradient penalty is almost impossible to implement without automatic differentiation though. I will therefore have to train the network using tensorflow and then export the graph into a format that allows me to transfer it to my network here, so that I can actually produce holograms.
