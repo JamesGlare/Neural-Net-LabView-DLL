@@ -68,15 +68,19 @@ When you follow the link below, you will see a video with a non-cherry picked se
 
 [![Video of HoloNet training](./pictures/videocover_1.png)](https://youtu.be/_551pK6AVos "HoloNet prediction examples.")
 
-<h2> Inverse Holography (Phase Retrieval) using Mixture-Density Convolutional Networks </h2>
+<h2> Inverse Holography (Phase Retrieval)</h2>
 
 The next challenge is to inversely "predict" the hologram from its own intensity field. This is an [inverse problem](https://en.wikipedia.org/wiki/Inverse_problem) and, unfortunately, it is "ill-posed", since there are many holograms that should give rise to the same or a very similar intensity fields (optical aberrations that destroy this theoretical invariance might save us, but that is not yet clear).
 
 I am currently trying to tackle this problem using Mixture-Density networks (see [C Bishop 1994](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/bishop-ncrg-94-004.pdf)).
 
-UPDATE:
-It it is probably hopeless to learn the holograms directly. Instead, I chose a different approach. The network is trained in fourier space, which is much lower in dimensionality and captures the essential information of the holograms.
-This also solves on my biggest headaches, which was the so-called 'phase problem': Two holograms that only differ in a global phase will produce the same intensity distribution. The mapping of holograms -> Intensity is not injective.
+It it is probably hopeless to learn the holograms directly, since 800x600 (or any meaningful subset thereof) is too high dimensional. Instead, I chose a different approach. The network is trained in fourier space, which is much lower in dimensionality (8x8 if I only take the real part of the coefficients, otherwise it's 16x8). In any case, the fourier coefficients capture the essential information of the holograms (some sort of latent space?).
+
+This trick should solve one my biggest headaches, which was the so-called 'phase problem': Two holograms that only differ in a global phase will produce the same intensity distribution. The mapping of holograms -> Intensity is not injective.
+
+I thought, naively, that the mapping Fourier Coefficients -> Intensity might be injective. This, however, is not the case.
+I discovered that there are additional invariances in the problem arising from (1) non-linearities in the liquid crystals, which are difficult to _completely_ get rid of and (2) light interference (laser light is coherent after all).
+So even in fourier space, the inverse problem is ill-posed.
 
 [![Video of Inverse HoloNet training](./pictures/inversVideo1.png)](https://youtu.be/LHtNtG6rQkg "Inverse HoloNet prediction examples.")
 
