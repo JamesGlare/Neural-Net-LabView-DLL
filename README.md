@@ -84,7 +84,7 @@ This also solves on my biggest headaches, which was the so-called 'phase problem
 
 UPDATE2: As Bishop writes in his book, Mixture Density models run into problems when the problem is invariant over not just a single branch of a function (like the inverse of x^2), but over a manifold of higher dimensionality (like r^2 = x^2 + y^2). This probably explains why mixture density approaches do not work for dimensions higher than 4x4.
 
-<h2> Conditional GAN's for inverse problems </h2>
+<h2> Much better - Conditional (Wasserstein) GAN's for inverse problems </h2>
 A much better approach to learning the input distribution for inverse problems is to train a conditional generative adversarial network (see https://arxiv.org/pdf/1811.05910.pdf) on the problem. The idea is to condition both the critic and the generator on the output of the setup (the intensity) and ask the generator for a possible input that might have lead to this output.
 
 We had this idea here in Cambridge a couple of months ago ;) (seriously), but it got published in the mean time ->  https://arxiv.org/pdf/1811.05910.pdf
