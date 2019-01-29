@@ -11,6 +11,7 @@ it's best done using this sidechannel class
 */
 class SideChannel : public DiscarnateLayer {
 public:
+	SideChannel(size_t NIN, size_t _sideChannelSize);
 	SideChannel(CNetLayer& lower, size_t _sidechannelSize);
 
 	~SideChannel();

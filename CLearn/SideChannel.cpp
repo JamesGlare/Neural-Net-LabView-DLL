@@ -1,22 +1,38 @@
 #include "stdafx.h"
 #include "SideChannel.h"
 
+
+SideChannel::SideChannel(size_t NIN, size_t _sideChannelSize) : sideChannelSize(_sideChannelSize),
+	DiscarnateLayer(NIN+_sideChannelSize, NIN, actfunc_t::NONE) {
+	
+	sideChannelMatrix = MAT(_sideChannelSize, 1);
+	sideChannelMatrix.setZero();
+	deltaSave = MAT(sideChannelSize, 1);
+	deltaSave.setZero();
+}
+
 SideChannel::SideChannel(CNetLayer& lower, size_t _sideChannelSize) 
 	: sideChannelSize(_sideChannelSize), DiscarnateLayer(lower.getNOUT()+_sideChannelSize, actfunc_t::NONE, lower){
 	sideChannelMatrix = MAT(_sideChannelSize, 1);
 	sideChannelMatrix.setZero();
+	deltaSave = MAT(sideChannelSize, 1);
+	deltaSave.setZero();
 }
 
 SideChannel::~SideChannel() {}
 
 void SideChannel::forProp(MAT& in, bool saveActivation, bool recursive) {
-	in.conservativeResize(in.size() + sideChannelSize,1);
+	in.conservativeResize(getNIN() + sideChannelSize,1);
 	in.bottomRows(sideChannelSize) = sideChannelMatrix;
 	if (recursive && getHierachy() != hierarchy_t::output)
 		above->forProp(in, saveActivation, true);
 }
 void SideChannel::backPropDelta(MAT& delta, bool recursive) {
-	delta.conservativeResize(delta.size() - sideChannelSize,1);
+	//// ATTENTION - WE ONLY COPY SIDE CHANNEL-SPECIFIC DELTAS
+	//// THIS IS SPECIAL BEHAVIOUR TO CUT COMP COST
+	deltaSave = delta.bottomRows(sideChannelSize);
+	// proceed as normal
+	delta.conservativeResize(getNOUT() - sideChannelSize,1);
 	if (recursive && getHierachy() != hierarchy_t::input)
 		below->backPropDelta(delta, true);
 }

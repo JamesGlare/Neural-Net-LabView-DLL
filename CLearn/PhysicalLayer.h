@@ -16,10 +16,10 @@ public:
 	/* Constructors
 	* Initialize Base Class (CNetLayer) and internal instance of MiniBatchNormalization.
 	*/ 
-	PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL kappa, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL kappa, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT, fREAL kappa, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower);
-	virtual ~PhysicalLayer() {}; // purely abstract
+	PhysicalLayer(size_t _NOUT, size_t _NIN,  MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
+	PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex);
+	PhysicalLayer(size_t _NOUT,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower);
+	virtual ~PhysicalLayer(); // purely abstract
 
 	/* Forward Propagation 
 	*  Implementation on child class level.
@@ -52,7 +52,7 @@ protected:
 	MAT G; // as many as NOUT for FC layers
 	MAT V; // store V and update W each time
 	MAT VInversNorm;
-
+	
 	virtual void updateW() = 0; // to W
 	virtual void initV() = 0;
 	virtual void initG() =0;
@@ -61,10 +61,16 @@ protected:
 	virtual MAT gGrad(const MAT& grad) = 0; // gradient in g's
 	virtual MAT vGrad(const MAT& grad, MAT& ggrad) = 0; // gradient in V
 	
+	/* Spectral Normalization
+	*/
+	MAT u1;
+	MAT v1;
+	fREAL sigma;
+
+
 	/* Internal weights and parameters
 	*/
 	MAT layer; // actual layer
-	fREAL kappa; // l2-regularization
 	/* Subclasses 
 	* initialized in derived classes
 	*/

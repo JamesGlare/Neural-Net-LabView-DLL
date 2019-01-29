@@ -2,14 +2,14 @@
 #include "FullyConnectedLayer.h"
 
 // constructor - for input layers
-FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, size_t _NIN, fREAL kappa, actfunc_t type) : 
-	PhysicalLayer(_NOUT, _NIN, kappa, type, MATIND{ _NOUT, _NIN + 1 }, MATIND{ _NOUT, _NIN +1 }, MATIND{ _NOUT, 1 }) {
+FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, size_t _NIN,  actfunc_t type) : 
+	PhysicalLayer(_NOUT, _NIN,  type, MATIND{ _NOUT, _NIN + 1 }, MATIND{ _NOUT, _NIN +1 }, MATIND{ _NOUT, 1 }) {
 	 // declare matrix
 	init();
 }
 // constructor - for hidden layers and output layers
-FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, fREAL kappa, actfunc_t type, CNetLayer& lower) : 
-	PhysicalLayer(_NOUT, kappa, type, MATIND{ _NOUT, lower.getNOUT() + 1 }, MATIND{ _NOUT, lower.getNOUT() +1 }, MATIND{ _NOUT, 1 },lower) {
+FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower) : 
+	PhysicalLayer(_NOUT,  type, MATIND{ _NOUT, lower.getNOUT() + 1 }, MATIND{ _NOUT, lower.getNOUT() +1 }, MATIND{ _NOUT, 1 },lower) {
 	// layer and velocity matrices
 	init();
 }
@@ -27,8 +27,10 @@ void FullyConnectedLayer::init() {
 
 	//fREAL max = 1.0f / getNIN();
 	//fREAL min = -1.0f / getNIN();
-	layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
+	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
+	//layer.setRandom();
 	layer /= sqrt(getNIN()); //sqrt(sqrt(getNOUT()*getNIN())); // ... but small.
+	layer.rightCols(1).setZero(); // set bias terms zero
 
 	assert(actSave.rows() == getNOUT());
 	assert(deltaSave.rows() == getNOUT());
@@ -150,12 +152,12 @@ MAT FullyConnectedLayer::grad(MAT& input) {
 			// VC does not perform RVO for some reason :/
 		return deltaSave*appendOneInline(input).transpose() ; //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
 	} else {
-		if (kappa > 0.0f) {
-			MAT temp = appendOneInline(below->getACT()).transpose();
-			return (deltaSave + kappa*getDACT())*temp;
-		} else { // if no l2-reg applied, don't even store the temp matrix
-			return deltaSave*appendOneInline(below->getACT()).transpose();
-		}
+		//if (kappa > 0.0f) {
+		//	MAT temp = appendOneInline(below->getACT()).transpose();
+		//	return (deltaSave + kappa*getDACT())*temp;
+		//} else { // if no l2-reg applied, don't even store the temp matrix
+		return deltaSave*appendOneInline(below->getACT()).transpose();
+		//}
 		
 	}
 }

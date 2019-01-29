@@ -38,6 +38,7 @@ class CNetLayer {
 
 		MAT getDACT() const; // derivative of activation function
 		MAT getACT() const; // activation function
+		MAT getDelta() const; // get backpropagated delta
 
 		// Connect to layer above and change hierarchy from output to hidden
 		void connectAbove(CNetLayer* ptr);

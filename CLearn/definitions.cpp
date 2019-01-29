@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "defininitions.h"
-
+#include <random>
 /* Define a few more complex functions
 */
 
@@ -14,6 +14,11 @@ void shrinkOne(MAT& in) {
 	in.conservativeResize(in.rows() - 1, in.cols());
 }
 
+fREAL normal_dist(fREAL mu, fREAL stddev) {
+	static mt19937 rng(42);
+	static normal_distribution<fREAL> nd(mu, stddev);
+	return nd(rng);
+}
 MAT& appendOneInline(MAT& toAppend) {
 	//MAT temp = MAT(toAppend.rows() + 1, toAppend.cols());
 	//temp.setOnes();
@@ -37,6 +42,18 @@ void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop) {
 		in(ind(i, 0), 0) = 0.0f;
 	}
 }
+/* WEight clipping routine for Lifshitz property in Wasserstein GANs
+*/
+void clipWeights(MAT& layer, fREAL clip) {
+	int32_t i = 0;
+	#pragma omp parallel for private(i) shared(layer)
+	for (i = 0; i < layer.cols(); ++i) {
+		for (size_t j = 0; j < layer.rows(); ++j) {
+			layer(i, j) = abs(layer(i, j)) > clip ? sgn(layer(i, j))*clip : layer(i, j);
+		}
+	}
+}
+
 /* Parallelized convolution routine.
 */
 MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features) {

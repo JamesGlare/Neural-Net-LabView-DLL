@@ -106,8 +106,8 @@ void MixtureDensityModel::forProp(MAT & in, bool saveActivation, bool recursive)
 	}
 }
 
-void MixtureDensityModel::backPropDelta(MAT & delta, bool recursive)
-{
+void MixtureDensityModel::backPropDelta(MAT & delta, bool recursive) {
+	deltaSave = delta;
 	if (getHierachy() != hierarchy_t::input) { // ... should be true
 		MAT t = reconstructTarget(delta);
 		delta = computeErrorGradient(t);

@@ -67,6 +67,10 @@ void Stepper::resetAdam() {
 	mt.setZero();
 	vt.setZero();
 }
+
+void Stepper::clipWeights(MAT& layer, fREAL clip) {
+	clipWeights(layer, clip);
+}
 void Stepper::doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
 	//if (gradient.allFinite()) {
 		beta1t *= beta1;

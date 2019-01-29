@@ -38,6 +38,7 @@ private:
 	/* Adam optimization
 	*/
 	void doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars);
+	void clipWeights(MAT& layer, fREAL clip);
 	void resetAdam();
 	bool mode_adamStep;
 	MAT mt;

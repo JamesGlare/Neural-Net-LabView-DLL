@@ -16,7 +16,7 @@
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, 
 	uint32_t _features,  actfunc_t type)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), 
-	PhysicalLayer(_features*_NOUTX*_NOUTY, _NINX*_NINY, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }) {
+	PhysicalLayer(_features*_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }) {
 	// the layer matrix will act as convolutional kernel
 	inFeatures = 1;
 	init();
@@ -26,7 +26,7 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NIN
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX, 
 	uint32_t _features,  actfunc_t type, CNetLayer& lower)
 : NOUTX(_NOUTX), NOUTY(_NOUTY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), 
-PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, 0.0f, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }, lower) {
+PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }, lower) {
 	
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	inFeatures = lower.getFeatures();
@@ -39,7 +39,7 @@ PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, 0.0f, type, MATIND{ _
 // second most convenient constructor
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
-	PhysicalLayer(_features*_NOUTXY*_NOUTXY, _NINXY*_NINXY, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }) {
+	PhysicalLayer(_features*_NOUTXY*_NOUTXY, _NINXY*_NINXY,  type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }) {
 	inFeatures = 1;
 	init();
 	assertGeometry();
@@ -48,7 +48,7 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _ke
 // most convenient constructor
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
-	PhysicalLayer(lower.getFeatures()*_features*_NOUTXY*_NOUTXY, 0.0f, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }, lower) {
+	PhysicalLayer(lower.getFeatures()*_features*_NOUTXY*_NOUTXY,  type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }, lower) {
 	
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	inFeatures = lower.getFeatures(); // product of all features so far
@@ -180,10 +180,10 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 		deltaSave.resize(NOUTY, inFeatures*features*NOUTX); // keep track of this!!!
 		//deltaAbove = backPropConv_(deltaSave, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		deltaAbove = antiConv_(deltaSave, layer, NINY, NINX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
-		deltaAbove.resize(getNIN(), 1);
-
-		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj), we dont need eval.
 		deltaSave.resize(getNOUT(), 1); // resize back
+
+		deltaAbove.resize(getNIN(), 1);
+		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj), we dont need eval.
 		if (recursive) {
 			below->backPropDelta(deltaAbove, true); // cascade...
 		}

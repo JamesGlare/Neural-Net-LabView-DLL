@@ -4,7 +4,7 @@
 #include <memory>
 #include "CNETLayer.h"
 #include "MixtureDensityModel.h"
-typedef std::unique_ptr<CNetLayer> layerPtr;
+//typedef std::unique_ptr<CNetLayer> layerPtr; // currently not in use.
  
 
 #ifndef CNET_CNET
@@ -18,7 +18,7 @@ class CNet {
 		CNet(size_t NIN);
 		~CNet();
 		// Physical Layers (i.e. layers with weight parameters)
-		void addFullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type);
+		void addFullyConnectedLayer(size_t NOUT, actfunc_t type);
 		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
 		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, actfunc_t type);
 
@@ -36,9 +36,15 @@ class CNet {
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
 		// Backpropagate through network. 
-		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars);
+		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars, bool deltaProvided=false); // set bool to 'true' if you outDesired contains delta's from other network
+
 		// Specialized functions for training GANs
-		fREAL backProp_GAN(MAT& input, bool real, const learnPars& pars);
+		fREAL backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Discriminator
+		fREAL backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Generator
+		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Discriminator
+		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Generator
+
+
 		// Feed a tensor into the sidechannel of the network
 		// TODO - Generalize to arbitrarily many sidechannels.
 		void preFeedSideChannel(const MAT& sideChannel);
@@ -59,6 +65,7 @@ class CNet {
 		void copyNthLayer(size_t layer, fREAL* const toCopyTo) const;
 		void setNthLayer(size_t layer, const MAT& newLayer);
 		void copyNthActivation(size_t layer, fREAL* const toCopyTo) const;
+		void copyNthDelta(size_t layer, fREAL* const toCopyTo, int32_t size) const;
 		size_t getNOUT() const;
 
 		void inquireDimensions (size_t layer, size_t& rows, size_t& cols) const;

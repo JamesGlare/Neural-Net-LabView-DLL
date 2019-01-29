@@ -48,6 +48,10 @@ MAT CNetLayer::getACT() const {
 	return actSave.unaryExpr(act);
 }
 
+MAT CNetLayer::getDelta() const {
+	return deltaSave;
+}
+
 void CNetLayer::connectAbove(CNetLayer* ptr) {
 	above = ptr;
 	//if (hierarchy != hierarchy_t::input)
@@ -102,6 +106,13 @@ void CNetLayer::assignActFunc(actfunc_t type) {
 			act = &iden; // nothing
 			dact = &DIden;
 			break;
+		case actfunc_t::SOFTPLUS:
+			act = &SoftPlus;
+			dact = &DSoftPlus;
+			break;
+		default:
+			act = &ReLu;
+			dact = &DReLu;
 	}
 }
 // save to file

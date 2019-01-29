@@ -7,8 +7,8 @@
 class FullyConnectedLayer : public PhysicalLayer {
 	public:
 		// Constructors
-		FullyConnectedLayer(size_t NOUT, size_t NIN, fREAL kappa, actfunc_t type); // specified in .cpp
-		FullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type, CNetLayer& lower);
+		FullyConnectedLayer(size_t NOUT, size_t NIN, actfunc_t type); // specified in .cpp
+		FullyConnectedLayer(size_t NOUT,  actfunc_t type, CNetLayer& lower);
 		~FullyConnectedLayer();
 		layer_t whoAmI() const;
 

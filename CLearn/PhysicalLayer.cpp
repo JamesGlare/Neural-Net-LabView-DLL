@@ -2,23 +2,36 @@
 #include "PhysicalLayer.h"
 
 // pass constructor to base class
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL _kappa, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
-	batch(_layerIndex, _NOUT, _NIN ), kappa(_kappa), stepper(_layerIndex), VStepper(_VIndex),GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols), 
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN,  MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
+	batch(_layerIndex, _NOUT, _NIN ), stepper(_layerIndex), VStepper(_VIndex),GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols), 
 	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, fREAL _kappa,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
-	batch(_layerIndex, _NOUT,_NIN), kappa(_kappa), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex) :
+	batch(_layerIndex, _NOUT,_NIN),stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
 	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN, type) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, fREAL _kappa, actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
-	batch(_layerIndex, _NOUT, lower.getNOUT()), kappa(_kappa), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
+PhysicalLayer::PhysicalLayer(size_t _NOUT,  actfunc_t type, MATIND _layerIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
+	batch(_layerIndex, _NOUT, lower.getNOUT()), stepper(_layerIndex), VStepper(_VIndex), GStepper(_GIndex), layer(_layerIndex.rows, _layerIndex.cols),
 	V(_VIndex.rows, _VIndex.cols), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, type, lower) {
 	init();
 }
+PhysicalLayer::~PhysicalLayer() {
+}
 void PhysicalLayer::init() {
+	
+	fREAL initStddev = 1.0f / sqrt(getNIN() / 4.0f);
 	layer.setRandom();
+	//layer += MAT::Constant(layer.cols(), layer.rows(), 1.0f);
+	//layer *= initStddev;
+	//layer.unaryExpr(&SoftPlus);
+	for (size_t i = 0; i < layer.cols(); ++i) {
+		for (size_t j = 0; j < layer.rows(); ++j) {
+			layer(j,i) = normal_dist(0.0f, initStddev);
+		}
+	}
+
 	G.setZero();
 	V.setZero();
 	VInversNorm.setZero();
@@ -40,7 +53,8 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 	*/
 	// Get gradient
 	if (inRange(getLayerNumber(), pars.firstTrain, pars.lastTrain)) {
-		batch.swallowGradient(grad(input));
+		if( pars.accept )
+			batch.swallowGradient(grad(input));
 		if (0 == pars.batch_update) {
 			// gradient reference can be accessed in batch.avgGradient() 
 			if (pars.weight_normalization) {
@@ -74,6 +88,10 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				stepper.stepLayer(layer, batch.avgGradient(), pars);
 			}
 			batch.clearGradient();
+			// Wasserstein GAN clipping
+			if (abs(pars.GAN_c) > 0.0f) {
+				clipWeights(layer, pars.GAN_c);
+			}
 		}
 	}
 	// Recursion
