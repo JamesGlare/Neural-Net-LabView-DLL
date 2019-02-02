@@ -44,7 +44,7 @@ void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop) {
 }
 /* WEight clipping routine for Lifshitz property in Wasserstein GANs
 */
-void clipWeights(MAT& layer, fREAL clip) {
+void clipParameters(MAT& layer, fREAL clip) {
 	int32_t i = 0;
 	#pragma omp parallel for private(i) shared(layer)
 	for (i = 0; i < layer.cols(); ++i) {
@@ -444,28 +444,22 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 	}
 	return kernelGrad;
 }
-/*
-MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSizeY, uint32_t kernelSizeX, uint32_t strideUsed, uint32_t paddingYUsed, uint32_t paddingXUsed) {
-	// outSize == kernelSize
+/* Spectral norm function
+*  Calculate the spectral norm of u,v
+*/
+fREAL spectralNorm(const MAT& W, const MAT& u1, const MAT& v1) {
+	return ((u1.transpose())*(W*v1))(0, 0) + fREAL(1e-8);
+}
 
-	size_t deltaSizeY = deltaAbove.rows();
-	size_t deltaSizeX = deltaAbove.cols();
-	MAT actPadded(actBelow.rows()+2*paddingYUsed, actBelow.cols()+2*paddingXUsed);
-	actPadded.setConstant(0);
-	actPadded.block(paddingYUsed, paddingXUsed, actBelow.rows() , actBelow.cols()) = actBelow;
-	MAT out(kernelSizeY, kernelSizeX);
-	out.setConstant(0);
-	for (size_t i = 0; i < kernelSizeX; i++) {
-		for (size_t j = 0; j < kernelSizeY; j++) {
-			for (size_t m = 0; m < deltaSizeY; m++) {
-				for (size_t n = 0; n < deltaSizeX; n++) {
-					out(j, i) += deltaAbove(m, n)*actPadded(j+strideUsed*m,i+strideUsed*n);
-				}
-			}
-		}
+void updateSingularVectors(const MAT& W, MAT& u, MAT& v, uint32_t n) {
+	MAT temp;
+	for (uint32_t i = 0; i < n; ++i) {
+		temp = W.transpose()*u;
+		v =  temp / normSum(temp);
+		temp = W*v;
+		u = temp / normSum(temp);
 	}
-	return out;
-}*/
+}
 
 MAT fourier(const MAT& in) {
 	size_t L = in.rows(); // == in.cols() 

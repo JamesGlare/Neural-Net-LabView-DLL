@@ -23,17 +23,22 @@ layer_t DropoutLayer::whoAmI() const {
 	return layer_t::dropout;
 }
 void DropoutLayer::forProp(MAT& in, bool saveActivation, bool recursive) {
-	// (1) shuffle indices
-	shuffleIndices();
-	//(2) Set stuff to zero
-	setZeroAtIndex(in, permut.indices().cast<size_t>(), (size_t) ratio*getNIN());
-	//(3) Resize down to NOUT (conserves top rows)
-	in *= (1.0f + ratio);
-	// (4) Pass on
-	if (saveActivation)
+	if (saveActivation) {
+		// (1) shuffle indices
+		shuffleIndices();
+		//(2) Set stuff to zero
+		setZeroAtIndex(in, permut.indices().cast<size_t>(), (size_t)ratio*getNIN());
+		//(3) Resize down to NOUT (conserves top rows)
+		in *= (1.0f + ratio);
+		// (4) Pass on
 		actSave = in;
-	if (getHierachy() != hierarchy_t::output && recursive)
-		above->forProp(in, saveActivation, recursive);
+		if (getHierachy() != hierarchy_t::output && recursive)
+			above->forProp(in, saveActivation, recursive);
+	} else {
+		if (getHierachy() != hierarchy_t::output && recursive)
+			above->forProp(in, false, true);
+	}
+	
 }
 
 void DropoutLayer::backPropDelta(MAT& deltaAbove, bool recursive) {

@@ -20,7 +20,8 @@ public:
 	layer_t whoAmI() const;
 	// forProp
 	void forProp(MAT& in, bool training, bool recursive);
-	MAT grad(MAT& input);
+	MAT w_grad(MAT& input);
+	MAT b_grad();
 	void backPropDelta(MAT& delta, bool recursive);
 	// Getter Function
 	inline size_t getNOUTX() const { return NOUTX; };
@@ -32,14 +33,21 @@ public:
 	uint32_t getFeatures() const ;
 
 private:
-	// Weight normalization functions
-	void updateW();
-	void normalizeV();
-	void inversVNorm();
-	MAT gGrad(const MAT& grad);
-	MAT vGrad(const MAT& grad, MAT& ggrad);
-	void initG();
-	void initV();
+	/* Weight normalization functions
+	*/ 
+	void wnorm_setW();
+	void wnorm_initV();
+	void wnorm_initG();
+	void wnorm_normalizeV();
+	void wnorm_inversVNorm();
+	MAT wnorm_gGrad(const MAT& grad); // gradient in g's
+	MAT wnorm_vGrad(const MAT& grad, MAT& ggrad); // gradient in V
+	
+	/* Spectral Normalization
+	*/
+	void snorm_setW();
+	void snorm_updateUVs();
+	MAT snorm_dWt(MAT& grad);
 
 	// Geometry
 	size_t NOUTX;
@@ -53,7 +61,6 @@ private:
 	size_t features;
 	uint32_t outBoxes;
 	void assertGeometry();
-	MAT sideChannelBuffer; // buffer for sidechannel inputs
 
 	// File function
 	void saveToFile(ostream& os) const;

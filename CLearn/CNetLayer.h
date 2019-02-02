@@ -19,10 +19,10 @@ class CNetLayer {
 		CNetLayer(const CNetLayer& other) = delete;
 		CNetLayer(CNetLayer&& other) = delete;
 		
-		virtual ~CNetLayer() {}; // purely abstract
+		virtual ~CNetLayer() {}; 
 
 		// type
-		virtual layer_t whoAmI() const;
+		virtual layer_t whoAmI() const = 0;
 		// forProp
 		virtual void forProp(MAT& in, bool training, bool recursive) = 0; // recursive
 		// backprop

@@ -32,10 +32,6 @@ CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT
 	hierarchy = hierarchy_t::output;
 }
 
-layer_t CNetLayer::whoAmI() const {
-	return layer_t::cnet;
-}
-
 uint32_t CNetLayer::getFeatures() const {
 	return 1; // default
 }

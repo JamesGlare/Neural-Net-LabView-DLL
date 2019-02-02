@@ -41,8 +41,8 @@ class CNet {
 		// Specialized functions for training GANs
 		fREAL backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Discriminator
 		fREAL backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Generator
-		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Discriminator
-		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Generator
+		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Wasserstein Critic
+		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Wasserstein Generator
 
 
 		// Feed a tensor into the sidechannel of the network
@@ -81,14 +81,15 @@ class CNet {
 		fREAL sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labels);
 		MAT sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels);
 		inline bool isPhysical(size_t layer) const {
-			return (layers[layer]->whoAmI()	!= layer_t::maxPooling
-				&& layers[layer]->whoAmI()	!= layer_t::passOn
-				&& layers[layer]->whoAmI()	!= layer_t::dropout
-				&& layers[layer]->whoAmI()	!= layer_t::mixtureDensity
-				&& layers[layer]->whoAmI() != layer_t::reshape
+			return (layers[layer]->whoAmI()	== layer_t::fullyConnected
+				|| layers[layer]->whoAmI()	== layer_t::convolutional
+				|| layers[layer]->whoAmI()	== layer_t::antiConvolutional
 				);
 		}
-
+		// Ugly function that breaks my architecture
+		// temporary fix to enable spectral normalization
+		// to work in the backward/forward scheme
+		void switchW_W_temp();
 
 		size_t NIN;
 		vector<CNetLayer*> layers;

@@ -2,37 +2,60 @@
 #include "BatchBuffer.h"
 
 
-BatchBuffer::BatchBuffer(MATIND _layerInd, size_t _NOUT, size_t _NIN) :  NIN(_NIN), NOUT(_NOUT), stillToGo(0){
+BatchBuffer::BatchBuffer(MATIND _WInd, size_t _NOUT, size_t _NIN) :  NIN(_NIN), NOUT(_NOUT){
 	mues = MAT(_NIN, 1); // each input has an independent offset...
 	sigmas= MAT(_NIN, 1);  // ... and offset.
-	gradientBuffer = MAT(_layerInd.rows, _layerInd.cols);
-	// init matrices
-	gradientBuffer.setZero();
+	// A correctly-shaped zero-gradient.
+	nullGradient = MAT(_WInd.rows, _WInd.cols);
+	nullGradient.setZero(); 
+
+	gradientBuffer = MATVEC();
 	mues.setZero();
 	sigmas.setOnes();
 
 }
-void BatchBuffer::notifyFormChange(MATIND _newForm) {
-	gradientBuffer.resize(_newForm.rows, _newForm.cols);
+
+void BatchBuffer::swallowGradient(const MAT& grad) {
+	if(gradientBuffer.size() < MAX_SIZE)
+		gradientBuffer.push_back(grad);
 }
-void BatchBuffer::swallowGradient(const MAT& gradient) {
-	gradientBuffer += gradient;
-	stillToGo++;
+// Average over mini batch
+MAT BatchBuffer::avgGradient() {
+	size_t bufferSize = gradientBuffer.size();
+	MAT grad;
+
+	if (bufferSize > 0) {
+		grad = gradientBuffer[0];
+	} else {
+		return nullGradient;
+	}
+	for (size_t i = 1; i < bufferSize; ++i) {
+		grad += gradientBuffer[i];
+	}
+	return grad / bufferSize;
+}
+// RMS needed for rms prop...
+MAT BatchBuffer::rmsGradient() {
+	size_t bufferSize = gradientBuffer.size();
+	MAT grad;
+
+	if (bufferSize > 0) {
+		grad = gradientBuffer[0].unaryExpr(&norm);
+	} else {
+		return nullGradient;
+	}
+	for (size_t i = 1; i < bufferSize; ++i) {
+		grad += gradientBuffer[i].unaryExpr(&norm);
+	}
+	return grad / bufferSize;
 }
 
-MAT BatchBuffer::avgGradient() {
-	if(stillToGo > 0)
-		gradientBuffer /= stillToGo;
-		return gradientBuffer;
-}
-void BatchBuffer::clearGradient() {
-	gradientBuffer.setZero();
-	stillToGo = 0;
+void BatchBuffer::clearGradients() {
+	gradientBuffer.clear();
 }
 void BatchBuffer::updateBuffer(MAT& input) {
 		this->batchBuffer.push_back(input);
 }
-
 void BatchBuffer::updateModel() {
 	size_t batchSize = batchBuffer.size();
 	// (1) Calculate mean of all inputs

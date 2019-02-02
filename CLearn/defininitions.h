@@ -10,6 +10,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <tuple>
 #include "Eigen/Core"
 #include "Eigen/Cholesky"
 using namespace Eigen;
@@ -25,6 +26,10 @@ typedef Matrix<uint8_t, Dynamic, Dynamic> MATU8;
 typedef Matrix<size_t, Dynamic, Dynamic> MATINDEX; // needed in MaxPool, Dropout
 typedef const Eigen::Block<const MAT> MATBLOCK;
 #define _FEAT(i) block(0, kernelX*i, kernelY, kernelX) // break of style *** TODO REPLACE WITH FUNCTION ***
+#define _UFEAT(i) block(kernelY*i, 0, kernelY, 1)
+#define _VFEAT(i) block(kernelX*i, 0, kernelX, 1)
+
+typedef tuple<MAT, MAT> MATPAIR;
 
 struct MATIND {
 	size_t rows;
@@ -43,14 +48,24 @@ enum pooling_t {max =1, average = 2};
 enum hierarchy_t { input = 1, hidden = 2, output = 3};
 
 struct learnPars {
+	learnPars() {
+		eta = 0.0f; GAN_c = 0.0f; gamma = 0.0f; lambda = 0.0f; rmsprop = 0; adam = 0;
+		batch_update = 0; weight_normalization = 0; spectral_normalization = 0; firstTrain = 0; lastTrain = 0; accept = true;
+	};
+	learnPars(fREAL _eta, fREAL _GAN_c, fREAL _gamma, fREAL _lambda, uint32_t _rmsprop, uint32_t _adam, uint32_t _batch_update,
+		uint32_t _weight_normalization, uint32_t _spectral_normalization, uint32_t _firstTrain, uint32_t _lastTrain, bool _accept)
+		: eta(_eta), GAN_c(_GAN_c), gamma(_gamma), lambda(_lambda), rmsprop(_rmsprop), adam(_adam), batch_update(_batch_update), weight_normalization(_weight_normalization),
+		spectral_normalization(_spectral_normalization), firstTrain(_firstTrain), lastTrain(_lastTrain), accept(_accept){};
+
 	fREAL eta; // learning rate
 	fREAL GAN_c; // e.g. for clipping weights or gradient penalty (wasserstein GAN)
 	fREAL gamma; // inertia term
 	fREAL lambda; // regularizer
-	uint32_t conjugate; // 0 or 1
+	uint32_t rmsprop; // 0 or 1
 	uint32_t adam;
 	uint32_t batch_update;
 	uint32_t weight_normalization;
+	uint32_t spectral_normalization;
 	uint32_t firstTrain;
 	uint32_t lastTrain;
 	bool accept;
@@ -67,8 +82,9 @@ MAT convGrad_(const MAT& input, const MAT& delta, uint32_t strideY, uint32_t str
 MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
 MAT antiConvGrad_(const MAT& delta, const MAT& input, size_t kernelY, size_t kernelX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t outBoxes);
 MAT fourier(const MAT& in);
-void clipWeights(MAT& layers, fREAL clip);
-
+void clipParameters(MAT& layers, fREAL clip);
+fREAL spectralNorm(const MAT& W, const MAT& u1, const MAT& v1);
+void updateSingularVectors(const MAT& W, MAT& u, MAT& v, uint32_t n);
 // found online - check for NANs and infinities
 template<typename Derived>
 inline bool is_finite(const Eigen::MatrixBase<Derived>& x)

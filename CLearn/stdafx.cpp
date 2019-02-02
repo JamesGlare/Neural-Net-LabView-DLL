@@ -76,7 +76,7 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	}
 
 
-	learnPars pars{0,0,0,0,0,0,0,0,0,0, true};
+	learnPars pars;
 	assert(ptr->getNOUT() == outFormat[0]*outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0]*inFormat[1]);
 
@@ -95,8 +95,9 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 /* BACK
 */
 __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const output, fREAL* const eta, 
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain,int32_t* const inFormat, int32_t* const outFormat, uint32_t* const deltaProvided) {
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam ,uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, 
+	int32_t* const outFormat, uint32_t* const deltaProvided) {
 	
 	// if change of CNet instance, relink the chain
 	if (! sameCNet(ptr)) {
@@ -107,7 +108,7 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 		deltaProvided_bool = true;
 	}
 
-	learnPars pars = { *eta, *clip, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain, true};
+	learnPars pars( *eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update,  *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
 
 	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
@@ -129,15 +130,15 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 
 
 __declspec(dllexport) fREAL __stdcall backPropCNet_GAN_D(CNet* ptr, fREAL* const input, fREAL* const output, uint32_t* const real, fREAL* const eta,
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam, uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
 
 	// if change of CNet instance, relink the chain
 	if (!sameCNet(ptr)) {
 		ptr->linkChain();
 	}
 
-	learnPars pars = { *eta, *clip, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain, true };
+	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
 
 	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
@@ -159,15 +160,15 @@ __declspec(dllexport) fREAL __stdcall backPropCNet_GAN_D(CNet* ptr, fREAL* const
 	return error;
 }
 __declspec(dllexport) fREAL __stdcall backPropCNet_WGAN_D(CNet* ptr, fREAL* const input, fREAL* const output, uint32_t* const real, fREAL* const eta,
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam, uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
 
 	// if change of CNet instance, relink the chain
 	if (!sameCNet(ptr)) {
 		ptr->linkChain();
 	}
 
-	learnPars pars = { *eta, *clip, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain, true };
+	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
 
 	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
@@ -189,17 +190,17 @@ __declspec(dllexport) fREAL __stdcall backPropCNet_WGAN_D(CNet* ptr, fREAL* cons
 	return error;
 }
 __declspec(dllexport) fREAL __stdcall backPropCNet_GAN_G(CNet* ptr, fREAL* const input, fREAL* const deltaMatrix, fREAL* const eta,
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam, uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const deltaFormat) {
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const deltaFormat) {
 
 	// if change of CNet instance, relink the chain
 	if (!sameCNet(ptr)) {
 		ptr->linkChain();
 	}
 
-	learnPars pars = { *eta, *clip, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain, true };
+	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
 
-	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
+	assert(ptr->getNOUT() == deltaFormat[0] * deltaFormat[1]);
 	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
 
 	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
@@ -280,6 +281,12 @@ __declspec(dllexport) void __stdcall getDelta(CNet* ptr, uint32_t layer, fREAL* 
 	//test.setZero();
 	//copyToOut(test.data(), toCopyTo, 1);
 	ptr->copyNthDelta(layer, toCopyTo, (toCopyToFormat[0]* toCopyToFormat[1]));
+}
+__declspec(dllexport) void __stdcall getWeight(CNet* ptr, uint32_t layer, fREAL* const toCopyTo, int32_t* const toCopyToFormat) {
+	//MAT test(1, 1);
+	//test.setZero();
+	//copyToOut(test.data(), toCopyTo, 1);
+	ptr->copyNthLayer(layer, toCopyTo);
 }
 __declspec(dllexport) void __stdcall getLayerDimension(CNet* ptr, uint32_t layer, uint32_t* rows, uint32_t* cols) {
 	size_t rows_ = 0;

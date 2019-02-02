@@ -140,7 +140,7 @@ void CNet::linkChain(){
 		getLast()->connectAbove(NULL);
 
 		// rebuild connections 
-		for (std::vector< CNetLayer* >::iterator it = layers.begin(); 
+		for (vector< CNetLayer* >::iterator it = layers.begin(); 
 			it != layers.end() - 1; ++it) { // go until penultimate element
 			(*it)->connectAbove(*(it + 1));
 			(*(it + 1))->connectBelow(*it);
@@ -152,11 +152,10 @@ void CNet::linkChain(){
 
 // Destructor
 CNet::~CNet() {
-	for (std::vector< CNetLayer* >::iterator it = layers.begin(); it != layers.end(); ++it) {
-		delete (*it);
+	for (vector< CNetLayer* >::iterator it = layers.begin(); it != layers.end(); ++it) {
+		delete *it;
 	}
 	layers.clear();
-
 }
 
 size_t CNet::getNOUT() const {
@@ -324,10 +323,17 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 		// for this to work, the discriminator needs to be trained
 		// with the real data first and then with the fake data.
 		if (!real) { // we have the right input - the generator output
+			//if (pars.spectral_normalization) {
+			//	switchW_W_temp();
+			//}
 			labels.setOnes();
 			cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));// Generator loss
-
+			//MAT logits(input);
+			//getFirst()->forProp(logits, true, true);
 			getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
+			//if (pars.spectral_normalization) {
+			//	switchW_W_temp();
+			//}
 		}
 
 	}
@@ -483,11 +489,18 @@ fREAL CNet::backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars)
 	return 0.0f;
 }
 
+void CNet::switchW_W_temp() {
+	for (size_t i = 0; i < layers.size(); ++i) {
+		if (isPhysical(i)) {
+			dynamic_cast< PhysicalLayer*>(layers[i])->snorm_switchW();
+		}
+	}
+}
 
 void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			MATIND layerDimension = dynamic_cast<PhysicalLayer*>(layers[layer])->layerDimensions();
+			MATIND layerDimension = dynamic_cast<PhysicalLayer*>(layers[layer])->WDimensions();
 			rows = layerDimension.rows;
 			cols = layerDimension.cols;
 		}
@@ -518,7 +531,7 @@ void CNet::copyNthDelta(size_t layer, fREAL* const toCopyTo, int32_t size) const
 void CNet::copyNthLayer(size_t layer, fREAL* const toCopyTo) const {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			MAT temp = dynamic_cast<PhysicalLayer*>(layers[layer])->copyLayer();
+			MAT temp = dynamic_cast<PhysicalLayer*>(layers[layer])->copyW();
 			temp.transposeInPlace();
 			size_t rows = temp.rows();
 			size_t cols = temp.cols();
@@ -531,7 +544,7 @@ void CNet::copyNthLayer(size_t layer, fREAL* const toCopyTo) const {
 void CNet::setNthLayer(size_t layer, const MAT& newLayer) {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
-			dynamic_cast<PhysicalLayer*>(layers[layer])->setLayer(newLayer);
+			dynamic_cast<PhysicalLayer*>(layers[layer])->setW(newLayer);
 		}
 	}
 }

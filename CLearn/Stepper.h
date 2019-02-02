@@ -12,9 +12,8 @@
 class Stepper {
 public:
 	Stepper(MATIND _layerIndex); // give all matrices, so that stepper can see dimensions
-	void stepLayer(MAT& layer, const MAT& gradient, const learnPars&  pars);
-
-	void notifyFormChange(MATIND _newIndex);
+	void stepLayer(MAT& W, const MAT& grad, const learnPars&  pars);
+	void giveRMSgrad(const MAT& rmsGrad);
 	//void stepLayer_weightNormalized(MAT& layer, MAT& const V_gradient, MAT& const G_gradient,  learnPars& const pars);
 	void reset();
 
@@ -23,23 +22,14 @@ private:
 	/* Nesterov accelerated momentum 
 	*/
 	MAT velocity;
-	void doMomentumStep(MAT& layer, const MAT& gradient, const learnPars& pars);
-
-	/* Conjugate gradient 
-	*/
-	void doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars);
-	bool mode_conjugateGradient;
-	void resetConjugate(const MAT& gradient);
-	
-	MAT hi;
-	MAT gi_prev;
-	fREAL gamma;
+	void doMomentumStep(MAT& x, const MAT& grad, const learnPars& pars);
 	
 	/* Adam optimization
 	*/
-	void doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars);
-	void clipWeights(MAT& layer, fREAL clip);
+	void doAdamStep(MAT& x, const MAT& grad, const learnPars& pars);
 	void resetAdam();
+	void resetRMSProp();
+
 	bool mode_adamStep;
 	MAT mt;
 	MAT vt;
@@ -49,5 +39,17 @@ private:
 	fREAL beta2 = 0.999;
 	fREAL beta2t = 0.999;
 	MAT epsilon;
+
+	/* RMSProp optimization
+	*/
+	bool mode_RMSProp;
+	MAT prev_avgGrad;
+	MAT w_RMS;
+	void doRMSPropStep(MAT& x, const MAT& grad, const learnPars& pars);
+
+	/* Other
+ 	*/
+	void clipWeights(MAT& x, fREAL clip);
+	
 };
 #endif

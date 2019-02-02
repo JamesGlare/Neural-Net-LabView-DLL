@@ -28,7 +28,6 @@ private:
 	void shuffleIndices();
 	void assertGeometry();
 	fREAL ratio;
-
 	/* Keep a list of indices 
 	* and shuffle before every forward pass
 	* then, only forward the first NOUT indices.

@@ -1,64 +1,48 @@
 #include "stdafx.h"
 #include "Stepper.h"
 
-Stepper::Stepper(MATIND _layerIndex) {
+Stepper::Stepper(MATIND _WIndex) {
 	/* Initialized momentum stuff
 	*/
-	velocity = MAT(_layerIndex.rows, _layerIndex.cols);
+	velocity = MAT(_WIndex.rows, _WIndex.cols);
 	velocity.setZero();
-	/* Conjugate gradient
+	/* RMSProp
 	*/
-	hi = MAT(_layerIndex.rows, _layerIndex.cols); // same size as gradient = layer.size
-	hi.setZero();
-	gi_prev = MAT(_layerIndex.rows, _layerIndex.cols);  // gradient
-	gi_prev.setZero();
-	gamma = 1.0f;
-
+	
 	/* Adam step
 	*/
-	vt = MAT(_layerIndex.rows, _layerIndex.cols);
-	mt = MAT(_layerIndex.rows, _layerIndex.cols);
-	epsilon = MAT(_layerIndex.rows, _layerIndex.cols);
+	vt = MAT(_WIndex.rows, _WIndex.cols);
+	mt = MAT(_WIndex.rows, _WIndex.cols);
+	vt.setZero();
+	mt.setZero();
+	epsilon = MAT(_WIndex.rows, _WIndex.cols);
 	epsilon.setConstant(1E-8);
 	beta1t = beta1;
 	beta2t = beta2;
 	alphat = 0;
-	vt.setZero();
-	mt.setZero();
+	/* RMSprop step
+	*/
+	MAT prev_avgGrad = MAT(_WIndex.rows, _WIndex.cols); 
+	MAT w_RMS = MAT(_WIndex.rows, _WIndex.cols);
+	mode_RMSProp = false;
 	mode_adamStep = false;
-	mode_conjugateGradient = false;
-}
-void Stepper::notifyFormChange(MATIND _newForm) {
-	hi.resize(_newForm.rows, _newForm.cols);
-	gi_prev.resize(_newForm.rows, _newForm.cols);
-	velocity.resize(_newForm.rows, _newForm.cols);
 }
 
-void Stepper::resetConjugate(const MAT& gradient) {
-	gi_prev = -gradient;
-	hi= -gradient;
-}
 void Stepper::reset() {
 	resetAdam();
 //	resetConjugate();
 	velocity.setZero();
+	resetRMSProp();
+	mode_RMSProp = false;
+	mode_adamStep = false;
 }
-void Stepper::doConjugateStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
-	// Actually do the conjugate gradient step.
-	gamma = (gradient.cwiseProduct(gradient + gi_prev)).sum() / (gi_prev.cwiseProduct(gi_prev)).sum();
-	if (!isnan(gamma) && !isinf(gamma)) {
-		hi = -gradient + gamma*hi; // hi = gi + gamma*h(i-1)
-		layer = (1.0f - pars.lambda)*layer + pars.eta*hi; // !!!! do the actual step
-		gi_prev = -gradient; // save negative gradient	
-	} else { // something went wrong - reset.
-		resetConjugate(gradient);
-	}
-}
-void Stepper::doMomentumStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
+
+void Stepper::doMomentumStep(MAT& W, const MAT& grad,  const learnPars& pars) {
 	//layer += pars.gamma*velocity; // NESTEROV 1
 	// (2) apply the velocity step
-	velocity = pars.gamma*velocity - pars.eta*gradient;
-	layer = (1.0f - pars.lambda)*layer + velocity;
+	velocity = pars.gamma*velocity - pars.eta*grad;
+	W = (1.0f - pars.lambda)*W + velocity;
+	
 	//layer -= pars.gamma*velocity; // NESTEROV 2 - now we can calculate the next gradient
 }
 void Stepper::resetAdam() {
@@ -68,51 +52,45 @@ void Stepper::resetAdam() {
 	vt.setZero();
 }
 
-void Stepper::clipWeights(MAT& layer, fREAL clip) {
-	clipWeights(layer, clip);
+void Stepper::resetRMSProp(){
+	prev_avgGrad.setZero();
+	w_RMS.setZero();
 }
-void Stepper::doAdamStep(MAT& layer, const MAT& gradient, const learnPars& pars) {
-	//if (gradient.allFinite()) {
+
+void Stepper::clipWeights(MAT& W, fREAL clip) {
+	clipParameters(W, clip);
+}
+void Stepper::doAdamStep(MAT& W, const MAT& grad, const learnPars& pars) {
+
 		beta1t *= beta1;
 		beta2t *= beta2;
-		alphat = pars.gamma*pars.eta *  sqrt(abs(1.0f - beta2t)) / (1.0f - beta1t);
-		mt = beta1*mt + (1.0f - beta1)*gradient;
-		vt = beta2*vt + (1.0f - beta2)*gradient.unaryExpr(&norm);
+		alphat = pars.eta *  sqrt(abs(1.0f - beta2t)) / (1.0f - beta1t);
+		mt = beta1*mt + (1.0f - beta1)*grad;
+		vt = beta2*vt + (1.0f - beta2)*grad.unaryExpr(&norm);
 		
-		layer = (1.0f - pars.lambda)*layer - alphat*mt.cwiseQuotient(vt.unaryExpr(&sqroot) + epsilon);
-		//else
-			//resetAdam();
-	//} else {
-	//	resetAdam();
-	//}
+		W = (1.0f - pars.lambda)*W - alphat*mt.cwiseQuotient(vt.unaryExpr(&sqroot) + epsilon);
+		
+}
+void Stepper::doRMSPropStep(MAT & W, const MAT & grad, const learnPars & pars) {
+	prev_avgGrad *= 0.9;
+	prev_avgGrad += 0.1*grad.unaryExpr(&norm);
+
+	W = (1.0f - pars.lambda)*W - pars.eta*grad.cwiseQuotient( (prev_avgGrad + epsilon).unaryExpr(&sqroot));
 }
 /* Nesterov accelerated Momentum AND Conjugate Gradient in one
 */
-void Stepper::stepLayer(MAT& layer, const MAT& gradient, const learnPars& pars) {
-	if (pars.conjugate) {
-		/* Conjugate Gradient Method
-		* T Masters P 104
-		* * * * * * * * * * * * * *
-		* Initialization
-		* g_0:=  -gradient  [done in function resetConjugate]
-		* h_0 := -gradient  [done in function resetConjugate]
-		* * * * * * * * * * * * * *
-		* For each step i in (1, ..., N)
-		* gamma = (g_i-g_(i-1)).g_i/(g_(i-1).g_i)
-		* h_i := g_i + gamma*h_(i-1)
-		* Comments:
-		* gi_prev -> g_(i-1).
-		* hi -> h_i
-		* -gradient -> g_i
-		*/
-		if (!mode_conjugateGradient) { // user changed to conjugate gradient method
-			mode_conjugateGradient = true;
-			velocity.setZero(); //set the momentum velocity to zero, in case we switch back to momentum-descent.B
-			resetConjugate(gradient);
-		} else {
+void Stepper::stepLayer(MAT& W, const MAT& grad, const learnPars& pars) {
+	if (pars.rmsprop) {
+		if (!mode_RMSProp) {
+			velocity.setZero();
+			resetRMSProp();
+			prev_avgGrad = grad.unaryExpr(&norm);
 			mode_adamStep = false;
-			doConjugateStep(layer, gradient, pars);
+			mode_RMSProp = true;
+		} else {
+			doRMSPropStep(W, grad, pars);
 		}
+		
 	} else if (pars.adam) {
 		/*	Adam optimization
 		*	see D Kingma, J Lei Ba, 2015
@@ -125,19 +103,28 @@ void Stepper::stepLayer(MAT& layer, const MAT& gradient, const learnPars& pars) 
 		if (!mode_adamStep) {
 			resetAdam();
 			velocity.setZero(); //set the momentum velocity to zero, in case we switch back to momentum-descent.
+
 			mode_adamStep = true;
+			mode_RMSProp = false;
 		} else {
-			mode_conjugateGradient = false;
-			doAdamStep(layer, gradient, pars);
+			doAdamStep(W, grad, pars);
 		}
 	} else {
-		mode_conjugateGradient = false;
+		mode_RMSProp = false;
 		mode_adamStep = false;
 		/* Nesterov Accelerated Momentum
 		* v_t = gamma*v_(t-1) +eta*grad[ theta - gamma*v_(t-1) ]
 		* theta = theta - v_t 
 		*/
 		// (1) The gradient was computed at  theta - gamma*v_t-1 so reset that
-		doMomentumStep(layer, gradient, pars);
+		doMomentumStep(W, grad, pars);
 	}
+	// Wasserstein GAN clipping
+	if (abs(pars.GAN_c) > 0.0f) {
+		clipWeights(W, pars.GAN_c);
+	}
+}
+
+void Stepper::giveRMSgrad(const MAT & rmsGrad){
+	w_RMS = rmsGrad;
 }

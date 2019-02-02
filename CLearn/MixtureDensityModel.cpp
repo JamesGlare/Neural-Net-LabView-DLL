@@ -44,7 +44,7 @@ MixtureDensityModel::MixtureDensityModel(size_t _NOUTY, size_t _NOUTX, size_t _f
 	changeActFunc(lower, actfunc_t::NONE);
 	assert(getNIN() == Blocks*K*(LBlock + 2)); // OR K*(L+2*Blocks)
 	assert(LBlock*Blocks == L);
-	assert(BlockX*BLocks == NOUTX);
+	assert(BlockX*Blocks == NOUTX);
 	assert(BlockY*Blocks == NOUTY);
 	// Blocks*K*(LBlock+2) == K*Blocks* NOUTX*NOUTY/Blocks + 2 * Blocks*K == K*NOUTX*NOUTY+ 2*Blocks*K
 }
