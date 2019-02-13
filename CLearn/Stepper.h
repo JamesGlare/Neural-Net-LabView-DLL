@@ -34,9 +34,9 @@ private:
 	MAT mt;
 	MAT vt;
 	fREAL alphat = 0;
-	fREAL beta1 = 0.9;
+	fREAL beta1 = 0.5;
 	fREAL beta1t = 0.9;
-	fREAL beta2 = 0.999;
+	fREAL beta2 = 0.9;
 	fREAL beta2t = 0.999;
 	MAT epsilon;
 

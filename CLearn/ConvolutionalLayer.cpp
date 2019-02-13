@@ -71,14 +71,12 @@ void ConvolutionalLayer::assertGeometry() {
 	assert((strideY*NOUTY - strideY - NINY + kernelY) % 2 == 0);
 }
 void ConvolutionalLayer::init() {
+	W.unaryExpr(&SoftPlus);
 
 	deltaSave = MAT(getNOUT(), 1);
 	deltaSave.setZero();
 	actSave = MAT(getNOUT(), 1);
 	actSave.setZero();
-	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
-	W *= ((fREAL)features) / W.size();
-	b.setZero();
 }
 // Select submatrix of ith feature
 const MAT& ConvolutionalLayer::getIthFeature(size_t i) {
@@ -232,10 +230,20 @@ MAT ConvolutionalLayer::b_grad() {
 }
 void ConvolutionalLayer::saveToFile(ostream& os) const {
 	os << NOUTY << " " << NOUTX << " " << NINY << " " << NINX << " " << kernelY << " " << kernelX << " " << strideY << " " << strideX << " " << features << " " << inFeatures << endl;
+	os << spectralNormMode << " " << weightNormMode << endl;
+
 	MAT temp = W;
 	temp.resize(W.size(), 1);
 	os << temp << endl;
 	os << b << endl;
+	if (weightNormMode) {
+		temp = V;
+		temp.resize(V.size(), 1);
+		os << V << endl;
+		temp = G;
+		temp.resize(G.size(), 1);
+		os << temp << endl;
+	}
 }
 // first line has been read already
 void ConvolutionalLayer::loadFromFile(ifstream& in) {
@@ -260,6 +268,9 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	w_stepper.reset();
 	b_stepper.reset();
 
+	// Check for normalization flags
+	in >> spectralNormMode;
+	in >> weightNormMode;
 	for (size_t i = 0; i < W.size(); ++i) {
 		in >> W(i, 0);
 	}
@@ -267,5 +278,14 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 		in >> b(i, 0);
 	}
 	W.resize(kernelY, features*kernelX);
-
+	if (weightNormMode) {
+		V.resize(V.size(), 1);
+		for (size_t i = 0; i < V.size(); ++i) {
+			in >> V(i, 0);
+		}
+		V.resize(kernelY, features*kernelX);
+		for (size_t i = 0; i < G.size(); ++i) {
+			in >> G(0, i);
+		}
+	}
 }

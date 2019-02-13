@@ -177,6 +177,9 @@ inline fREAL invSqrt(fREAL f) {
 inline fREAL exp_fREAL(fREAL f) {
 	return exp(f);
 }
+inline fREAL logP1_fREAL(fREAL f) {
+	return log(f+1.0f);
+}
 inline MAT matNorm(const MAT& in) {
 	return in.unaryExpr(&norm);
 }

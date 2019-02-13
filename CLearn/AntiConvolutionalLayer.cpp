@@ -54,7 +54,8 @@ void AntiConvolutionalLayer::assertGeometry() {
 	assert(antiConvoSize(NINX, kernelX, antiConvPad(NINX, strideX, kernelX, NOUTX), strideX) == NOUTX);
 }
 void AntiConvolutionalLayer::init() {
-	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
+	W.setRandom();
+	W.unaryExpr(&SoftPlus); // make evrythng positive
 	W *= ((fREAL)features) / W.size();
 }
 
@@ -131,7 +132,7 @@ void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive
 
 	if (training) {
 		actSave = inBelow;
-		inBelow = move(getACT());
+		inBelow = move(this->getACT());
 		if (recursive && getHierachy() != hierarchy_t::output) {
 			above->forProp(inBelow, true, true);
 		}
@@ -200,10 +201,21 @@ MAT AntiConvolutionalLayer::b_grad() {
 }
 void AntiConvolutionalLayer::saveToFile(ostream& os) const {
 	os << NOUTY << " " << NOUTX << " " << NINY << " " << NINX << " " << kernelY << " " << kernelX << " " << strideY << " " << strideX << " " << features << " " << outBoxes << endl;
+	os << spectralNormMode << " " << weightNormMode << endl;
+
 	MAT temp = W;
 	temp.resize(W.size(), 1);
 	os << temp << endl;
 	os << b << endl;
+	os << spectralNormMode << " " << weightNormMode << endl;
+	if (weightNormMode) {
+		temp = V;
+		temp.resize(V.size(), 1);
+		os << V << endl;
+		temp = G;
+		temp.resize(G.size(), 1);
+		os << temp << endl;
+	}
 }
 // first line has been read already
 void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
@@ -218,7 +230,12 @@ void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> features;
 	in >> outBoxes;
 	//in >> sideChannels;
-
+	
+	// Load normalization settings
+	in >> spectralNormMode;
+	in >> weightNormMode;
+	
+	// Set up matrices.
 	W = MAT(kernelY*features*kernelX, 1); // initialize as a column vector
 	V = MAT(kernelY, features*kernelX);
 	G = MAT(1, features);
@@ -229,6 +246,7 @@ void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
 	w_stepper.reset();
 	b_stepper.reset();
 
+	// Load matrices
 	for (size_t i = 0; i < W.size(); ++i) {
 		in >> W(i, 0);
 	}
@@ -237,4 +255,14 @@ void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
 	}
 
 	W.resize(kernelY, features*kernelX);
+	if (weightNormMode) {
+		V.resize(V.size(), 1);
+		for (size_t i = 0; i < V.size(); ++i) {
+			in >> V(i, 0);
+		}
+		V.resize(kernelY, features*kernelX);
+		for (size_t i = 0; i < G.size(); ++i) {
+			in >> G(i, 0);
+		}
+	}
 }

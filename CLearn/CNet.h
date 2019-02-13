@@ -76,21 +76,26 @@ class CNet {
 		inline CNetLayer* getFirst() const { return layers.front(); };
 
 		// error related functions
-		MAT l2_errorMatrix(const MAT& outPrediction, const MAT& outDesired);
+		MAT l2_errorMatrix(const MAT& diff);
+		MAT l1_errorMatrix(const MAT& diff);
 		fREAL l2_error(const MAT& diff);
+		fREAL l1_error(const MAT& diff);
+		// GAN Error
 		fREAL sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labels);
 		MAT sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels);
+		MAT sigmoid_GEN_loss(const MAT& labels, const MAT& logits);
+		// Regularzier
+		MAT entropyRegularizer(const MAT& out);
+
+		
 		inline bool isPhysical(size_t layer) const {
 			return (layers[layer]->whoAmI()	== layer_t::fullyConnected
 				|| layers[layer]->whoAmI()	== layer_t::convolutional
 				|| layers[layer]->whoAmI()	== layer_t::antiConvolutional
 				);
 		}
-		// Ugly function that breaks my architecture
-		// temporary fix to enable spectral normalization
-		// to work in the backward/forward scheme
-		void switchW_W_temp();
-
+		
+		
 		size_t NIN;
 		vector<CNetLayer*> layers;
 };

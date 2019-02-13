@@ -121,7 +121,7 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 	#pragma omp parallel for private(xInd,yInd,f, inF,outF) shared(out, kernel, in) 
 	for (f = 0; f< inFeatures*outFeatures; ++f) {
 		inF = f / outFeatures;
-		outF = f % outFeatures;
+		outF = f % outFeatures; // moves first
 			for (size_t i = 0; i < NOUTX; ++i) {
 				for (size_t n = 0; n < kernelX; ++n) {
 					for (size_t m = 0; m < kernelY; ++m) {
@@ -270,7 +270,8 @@ MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t stride
 	}
 	return out.block(antiPaddingY, antiPaddingX, outSizeY, outSizeX);
 }
-MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t outBoxes) {
+MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, 
+	uint32_t features, uint32_t outBoxes) {
 	// (1) Geometry of the situation
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / (features*outBoxes);
@@ -292,8 +293,8 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint
 
 	#pragma omp parallel for private(xInd, yInd,f, F, outB) shared(out, kernel, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (f = 0; f < features*outBoxes; ++f) {
-		F = f / outBoxes; // Example: feats=3, outB=2 -> max[f]=5 -> max[F] = 5 /2 = 2, max[outB] = 5 % 2 == 1 
-		outB = f % outBoxes;
+		F = f % features; // Example: feats=3, outB=2 -> max[f]=5 -> max[F] = 5  % 2 = 2, max[outB] = 5 % 2 == 1 
+		outB = f / features;// Example: feats=3, outB=2 -> max[f] = 5 -> max[F] = 5 % 3 == 2, outB = 5 /3 == 1
 
 			for (size_t n = 0; n < kernelX; ++n) {
 				for (size_t i = 0; i < NINX; ++i) {
@@ -420,8 +421,8 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 
 	#pragma omp parallel for private(xInd, yInd,f, F, outB) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (f = 0; f < features*outBoxes; ++f) {
-		F = f / outBoxes;
-		outB = f % outBoxes;
+		F = f % features;
+		outB = f / features;
 
 		for (size_t n = 0; n < NINX; ++n) {
 			for (size_t i = 0; i < kernelX; ++i) {

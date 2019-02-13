@@ -120,9 +120,9 @@ void Stepper::stepLayer(MAT& W, const MAT& grad, const learnPars& pars) {
 		doMomentumStep(W, grad, pars);
 	}
 	// Wasserstein GAN clipping
-	if (abs(pars.GAN_c) > 0.0f) {
+	/*if (abs(pars.GAN_c) > 0.0f) {
 		clipWeights(W, pars.GAN_c);
-	}
+	}*/
 }
 
 void Stepper::giveRMSgrad(const MAT & rmsGrad){

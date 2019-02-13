@@ -29,22 +29,21 @@ void PhysicalLayer::init() {
 	u1.setRandom();
 	v1.setRandom();
 	W_temp.setZero();
-
-	fREAL initStddev = 1.0f / sqrt(getNIN() / 4.0f);
-	W.setRandom();
 	b.setZero();
-	//layer += MAT::Constant(layer.cols(), layer.rows(), 1.0f);
-	//layer *= initStddev;
-	//layer.unaryExpr(&SoftPlus);
+	fREAL initStddev =  1.0f/sqrt(getNIN()/4.0f);
 	for (size_t i = 0; i < W.cols(); ++i) {
 		for (size_t j = 0; j < W.rows(); ++j) {
 			W(j, i) = normal_dist(0.0f, initStddev);
 		}
 	}
-
-	G.setZero();
+	/*for (size_t i = 0; i < b.cols(); ++i) {
+		for (size_t j = 0; j < b.rows(); ++j) {
+			b(j,i) = normal_dist(0.0f, initStddev);
+		}
+	}*/
+	G.setOnes();
 	V.setZero();
-	VInversNorm.setZero();
+	VInversNorm.setOnes();
 	weightNormMode = false;
 	spectralNormMode = false;
 
@@ -83,10 +82,11 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 		if (pars.accept) {
 			w_batch.swallowGradient(w_grad(input));
 			b_batch.swallowGradient(b_grad());
-		} 
-		if (isDense &&  pars.spectral_normalization) { // collect special batch information for spectral normalization
-			lambdaBatch += (deltaSave.transpose()*(actSave - b)).sum(); // store this value
-			++lambdaCount;
+		// TODO ------ -------- Put this abomination of a hack into order. 
+			if (isDense &&  pars.spectral_normalization) { // collect special batch information for spectral normalization
+				lambdaBatch += (deltaSave.transpose()*(actSave - b)).sum(); // store this value
+				++lambdaCount;
+			}
 		}
 		if (0 == pars.batch_update) {
 			// gradient reference can be accessed in batch.avgGradient()
@@ -97,10 +97,11 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				if (!weightNormMode) {
 					wnorm_initG();
 					wnorm_initV();
-					weightNormMode = true;
 					wnorm_inversVNorm();
 					wnorm_setW();
 				}
+				weightNormMode = true;
+
 				// (1) Update the InversVNorm matrix, since it is used several times
 				MAT w_grad = w_batch.avgGradient();
 				MAT Ggradient = wnorm_gGrad(w_grad);
@@ -125,6 +126,8 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 					lambdaBatch = 0;
 					lambdaCount = 0;
 				} else {
+					spectralNormMode = true;
+
 					// We are in the business of spectral normalization
 					w_stepper.stepLayer(W_temp, snorm_dWt(w_batch.avgGradient()), pars);
 					b_stepper.stepLayer(b, b_batch.avgGradient(), pars);
@@ -135,17 +138,14 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 			} else {
 				/* Standard step.
 				*/
-				if (weightNormMode) {
-					// We were in weight normalization mode before!
+				if (weightNormMode || spectralNormMode) {
+					// We were in some normalization mode before.
 					// So we have to reset all the velocity, vt, mt ...etc matrices.
 					w_stepper.reset();
-				} else if (spectralNormMode) {
-					w_stepper.reset();
-					W = W_temp;
-				}
+				} 
+				
 				weightNormMode = false;
 				spectralNormMode = false;
-				
 				w_stepper.stepLayer(W, w_batch.avgGradient(), pars);
 				b_stepper.stepLayer(b, b_batch.avgGradient(), pars);
 			}

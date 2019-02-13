@@ -196,7 +196,7 @@ fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
 	// (1) Forward propagation
 	getFirst()->forProp(in, false, true);
 	// (2) return the error 
-	return l2_error(l2_errorMatrix(in, outDesired));
+	return l2_error(l2_errorMatrix(in- outDesired));
 }
 
 // Prefeeding function
@@ -229,7 +229,7 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 	
 	// (2) calculate error matrix and error
 	if (!deltaProvided)
-		diffMatrix = move(l2_errorMatrix(outPredicted, outDesired)); // delta =  estimate - target
+		diffMatrix = move(l2_errorMatrix(outPredicted - outDesired)); // delta =  estimate - target
 	else
 		diffMatrix = move(outDesired);
 	errorOut = l2_error(diffMatrix);
@@ -256,14 +256,14 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 	// ...
 	// (0.5) Initialize error and difference matrix
 	static MAT cross_entropy_gradient = MAT(getNOUT(), 1);
-
+	bool errFlag = false;
 	static bool real_flag = 0;
 	static bool fake_flag = 0;
 	static MAT cross_entropy_gradient_real(getNOUT(),1);
 	static MAT cross_entropy_gradient_fake(getNOUT(), 1);
 	
 	bool batchIsDue = pars.batch_update == 0;
-	learnPars newPars = pars; // we need to do this to hack the accept parameter
+	learnPars newPars(pars); // we need to do this to hack the accept parameter
 	newPars.accept = true;
 	fREAL errorOut = 0.0f;
 
@@ -277,7 +277,10 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 		labels.setOnes();
 		cross_entropy_gradient_real = move(sigmoid_cross_entropy_errorMatrix(logits, labels)); // delta =  estimate - target
 		// backprop the real gradient
-		getLast()->backPropDelta(cross_entropy_gradient_real, true);
+		if (cross_entropy_gradient_real.allFinite())
+			getLast()->backPropDelta(cross_entropy_gradient_real, true);
+		else
+			errFlag = true;
 		// NOW - WE have to HACK our "accept" and the batch_update parameters
 		// to make sure the gradients are not applied
 		// but instead we wait for the fake gradients to come in
@@ -290,7 +293,10 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 	} else {
 		labels.setZero();
 		cross_entropy_gradient_fake = move(sigmoid_cross_entropy_errorMatrix(logits, labels)); // delta =  estimate - target
-		getLast()->backPropDelta(cross_entropy_gradient_fake, true);
+		if (cross_entropy_gradient_fake.allFinite())
+			getLast()->backPropDelta(cross_entropy_gradient_fake, true);
+		else
+			errFlag = true;
 		// NOW - HACK AGAIN
 		if (batchIsDue ) {
 			newPars.batch_update = 1;
@@ -326,11 +332,16 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 			//if (pars.spectral_normalization) {
 			//	switchW_W_temp();
 			//}
+			errorOut = (logits - logits.unaryExpr(&LogExp)).mean();
 			labels.setOnes();
-			cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));// Generator loss
+			cross_entropy_gradient = move(sigmoid_GEN_loss(labels,logits));// Generator loss
+			//cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));
 			//MAT logits(input);
 			//getFirst()->forProp(logits, true, true);
-			getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
+			if (cross_entropy_gradient.allFinite())
+				getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
+			else
+				errFlag = true;
 			//if (pars.spectral_normalization) {
 			//	switchW_W_temp();
 			//}
@@ -340,6 +351,8 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 	
 	outPredicted = logits; // usually just a number
 	// DONE
+	if (errFlag)
+		errorOut = -42;
 	return errorOut;
 }
 
@@ -360,7 +373,7 @@ fREAL CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars) 
 	// (2) calculate error matrix and error
 	// Check if we've computed error gradients 
 	// for both fake and real datasets
-
+	//deltaMatrix += pars.lambda*l1_errorMatrix(deltaMatrix); // allow for regularization... 
 	// (3) back propagate the deltas
 	getLast()->backPropDelta(deltaMatrix, true);
 	// (4) Apply update
@@ -489,14 +502,6 @@ fREAL CNet::backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars)
 	return 0.0f;
 }
 
-void CNet::switchW_W_temp() {
-	for (size_t i = 0; i < layers.size(); ++i) {
-		if (isPhysical(i)) {
-			dynamic_cast< PhysicalLayer*>(layers[i])->snorm_switchW();
-		}
-	}
-}
-
 void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 	if (layer < getLayerNumber()) {
 		if (isPhysical(layer)) {
@@ -548,14 +553,20 @@ void CNet::setNthLayer(size_t layer, const MAT& newLayer) {
 		}
 	}
 }
-MAT CNet::l2_errorMatrix(const MAT& outPrediction, const MAT& outDesired) {
-	return outPrediction - outDesired; // force Visual C++ to return without temporary - since RVO doesn't work ???!
+MAT CNet::l2_errorMatrix(const MAT& diff) {
+	return diff; // force Visual C++ to return without temporary - since RVO doesn't work ???!
+}
+MAT CNet::l1_errorMatrix(const MAT& diff) {
+	return (diff).unaryExpr(&sgn<fREAL>);
 }
 fREAL CNet::sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labels) { 
 	// obvsly logits.shape == labels.shape
 	return (logits.unaryExpr(&ReLu) - logits.cwiseProduct(labels) + (logits).unaryExpr(&LogAbsExp)).mean();
 }
 
+MAT CNet::sigmoid_GEN_loss(const MAT& labels, const MAT& logits) {
+	return logits.unaryExpr(&Sig)-labels;
+}
 MAT CNet::sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels) {
 	
 	/*static MAT ones = MAT(getNOUT(), 1);
@@ -563,12 +574,22 @@ MAT CNet::sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels
 	return ones - labels - ((-1)*logits).unaryExpr(&Sig);*/
 	return logits.unaryExpr(&DReLu) - labels + logits.unaryExpr(&DLogAbsExp);
 }
+
+MAT CNet::entropyRegularizer(const MAT& out) {
+	fREAL sum = out.sum();
+	static const fREAL eps = 1E-8;
+	return  (out).unaryExpr(&logP1_fREAL);
+}
 fREAL CNet::l2_error(const MAT& diff) {
 	fREAL sum = cumSum(matNorm(diff));
 	//if (sum > 0.0f)
 		return 0.5f*sqrt(sum); //  / sqrt(sum)
 	//else
 	//	return 0.0f;
+}
+
+fREAL CNet::l1_error(const MAT& diff) {
+	return diff.cwiseAbs().sum();
 }
 
 

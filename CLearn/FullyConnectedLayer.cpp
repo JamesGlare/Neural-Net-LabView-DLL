@@ -22,11 +22,6 @@ layer_t FullyConnectedLayer::whoAmI() const {
 // init
 void FullyConnectedLayer::init() {
 
-
-	//fREAL max = 1.0f / getNIN();
-	//fREAL min = -1.0f / getNIN();
-	//layer += MAT::Constant(layer.rows(), layer.cols(), 1.0f); // make everything positive
-	//layer.setRandom();
 	//W /= getNIN(); //sqrt(sqrt(getNOUT()*getNIN())); // ... but small.
 	//b.setZero(); // set bias terms zero
 
@@ -184,19 +179,43 @@ MAT FullyConnectedLayer::snorm_dWt(MAT& grad) {
 }
 
 void FullyConnectedLayer::saveToFile(ostream& os) const {
+	// say which and if you're using a normalization
+	os << spectralNormMode << " " << weightNormMode << endl;
+
 	MAT temp = W;
 	temp.resize(W.size(), 1);
 	os << temp<<endl;
-	os << b;
+	os << b << endl;
+	if (spectralNormMode) {
+		temp = W_temp;
+		temp.resize(W_temp.size(), 1);
+		os << temp << endl;
+		os << u1 << endl;
+		os << v1 << endl;
+	}
+	if (weightNormMode) {
+		temp = V;
+		temp.resize(V.size(), 1);
+		os << V<< endl;
+		temp = G;
+		temp.resize(G.size(), 1);
+		os << temp << endl;
+	}
 	os << endl;
 }
 
 void FullyConnectedLayer::loadFromFile(ifstream& in) {
 
 	W = MAT(getNOUT()*getNIN(), 1);    // initialize as a column vector
+	W_temp = MAT(getNOUT(),getNIN());
+	u1 = MAT(getNOUT(), 1);
+	v1 = MAT(getNIN(), 1);
 	V = MAT(getNOUT(), getNIN());
 	G = MAT(getNOUT(), 1);
 	b = MAT(getNOUT(), 1);
+	W_temp.setZero();
+	u1.setZero();
+	v1.setZero();
 	b.setZero();
 	V.setZero();
 	G.setZero();
@@ -208,11 +227,36 @@ void FullyConnectedLayer::loadFromFile(ifstream& in) {
 	in >> layer(i,j);
 	}
 	}*/
+	in >> spectralNormMode;
+	in >> weightNormMode; 
 	for (size_t i = 0; i < W.size(); ++i) {
 		in >> W(i, 0);
 	}
 	W.resize(getNOUT(), getNIN());
 	for (size_t i = 0; i < b.size(); ++i) {
 		in >> b(i, 0);
+	}
+	if (spectralNormMode) {
+		W_temp.resize(W_temp.size(), 1);
+		for (size_t i = 0; i < W_temp.size(); ++i) {
+			in >> W_temp(i,0);
+		}
+		W_temp.resize(getNOUT(), getNIN());
+		for (size_t i = 0; i < u1.size(); ++i) {
+			in >> u1(i, 0);
+		}
+		for (size_t i = 0; i <v1.size(); ++i) {
+			in >> v1(i, 0);
+		}
+	} 
+	if (weightNormMode) {
+		V.resize(V.size(), 1);
+		for (size_t i = 0; i < V.size(); ++i) {
+			in >> V(i,0);
+		}
+		V.resize(getNOUT(), getNIN());
+		for (size_t i = 0; i < G.size(); ++i) {
+			in >> G(i, 0);
+		}
 	}
 }
