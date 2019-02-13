@@ -102,6 +102,9 @@ The inverse GAN approach works really well on all toy problems that I could conc
 
 Gradient penalty is almost impossible to implement without automatic differentiation though. I will therefore have to train the network using tensorflow and then export the graph into a format that allows me to transfer it to my network here, so that I can actually produce holograms.
 
+Update -- Another idea might be to train the discriminator using spectral normalization, which I now added to the library. Spectral normalization achieved really good results on ImageNet, especially when it comes to variability of produced patterns, which is what I am looking for. It's also much easier to implement than Gradient penalty and not as computationally demanding.
+Work in progres...
+
 <h2> Another approach - Forward/Backward Nets </h2>
 
 Arguably, the most naive approach to inverse problems might be to simply train two nets - one that simply learns the forward mapping, F: h -> I (where h is a hologramm and I is the intensity) and one that learns the inverse, B : I-> h' . 
