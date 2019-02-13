@@ -13,7 +13,7 @@ The library currently supports
 6. Pass-On Layers (apply some elementwise function)
 7. Mixture Density Layer (Probability distribution of likely output values)
 9. Layer sharing between networks
-10. Vanilla GAN-training functions
+10. Vanilla & Wasserstein GAN-training functions
 </pre>
 with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
 
@@ -21,11 +21,14 @@ Gradient descent is performed in minibatches and several methods are available
 
 <pre>
 1. Momentum-based descent (Nesterov's accelerated gradient currently commented out for technical reasons).
-2. Conjugate Gradient 
+2. RMSprop
 3. ADAM 
 </pre>
-
-Furhthermore, the library offers weight normalisation (irrespective of gradient-descent method).
+Furthermore, the library offers two normalization modes that can be used irrespective of the gradient-stepping scheme.
+<pre>
+1. weight normalisation
+2. spectral normalization
+</pre>
 
 All methods can be turned on and off dynamically during the training. All hyperparameters can always be changed during the training.
  
