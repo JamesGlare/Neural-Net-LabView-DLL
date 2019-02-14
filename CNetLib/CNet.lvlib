@@ -11,9 +11,12 @@
 	<Item Name="addMixtureDensity.vi" Type="VI" URL="../addMixtureDensity.vi"/>
 	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>
 	<Item Name="addReshape.vi" Type="VI" URL="../addReshape.vi"/>
+	<Item Name="addSideChannel.vi" Type="VI" URL="../addSideChannel.vi"/>
 	<Item Name="debugMsg.vi" Type="VI" URL="../debugMsg.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
+	<Item Name="feedSideChannel.vi" Type="VI" URL="../feedSideChannel.vi"/>
 	<Item Name="getActivation.vi" Type="VI" URL="../getActivation.vi"/>
+	<Item Name="getDelta.vi" Type="VI" URL="../getDelta.vi"/>
 	<Item Name="getLayerDimensions.vi" Type="VI" URL="../getLayerDimensions.vi"/>
 	<Item Name="getWeights.vi" Type="VI" URL="../getWeights.vi"/>
 	<Item Name="InitializeCNet.vi" Type="VI" URL="../InitializeCNet.vi"/>
@@ -23,5 +26,8 @@
 	<Item Name="shareLayers.vi" Type="VI" URL="../shareLayers.vi"/>
 	<Item Name="Start.vi" Type="VI" URL="../Start.vi"/>
 	<Item Name="train.vi" Type="VI" URL="../train.vi"/>
+	<Item Name="train_GAN_D.vi" Type="VI" URL="../train_GAN_D.vi"/>
+	<Item Name="train_GAN_G.vi" Type="VI" URL="../train_GAN_G.vi"/>
+	<Item Name="train_WGAN_D.vi" Type="VI" URL="../train_WGAN_D.vi"/>
 	<Item Name="validate.vi" Type="VI" URL="../validate.vi"/>
 </Library>

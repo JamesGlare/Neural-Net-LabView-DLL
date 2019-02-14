@@ -44,12 +44,13 @@ MixtureDensityModel::MixtureDensityModel(size_t _NOUTY, size_t _NOUTX, size_t _f
 	changeActFunc(lower, actfunc_t::NONE);
 	assert(getNIN() == Blocks*K*(LBlock + 2)); // OR K*(L+2*Blocks)
 	assert(LBlock*Blocks == L);
-	assert(BlockX*BLocks == NOUTX);
+	assert(BlockX*Blocks == NOUTX);
 	assert(BlockY*Blocks == NOUTY);
 	// Blocks*K*(LBlock+2) == K*Blocks* NOUTX*NOUTY/Blocks + 2 * Blocks*K == K*NOUTX*NOUTY+ 2*Blocks*K
 }
 MixtureDensityModel::MixtureDensityModel(size_t _NOUTX, size_t _NOUTY, size_t _features, size_t _BlockX, size_t _BlockY) :
-	K(_features), L(_NOUTX*_NOUTY), NOUTX(_NOUTX), NOUTY(_NOUTY), Blocks((_NOUTX / _BlockX)*(_NOUTY / _BlockY)), LBlock(_BlockX*_BlockY), BlockX(_BlockX), BlockY(_BlockY), DiscarnateLayer(_NOUTX*_NOUTY, Blocks*K*(LBlock + 2), actfunc_t::NONE) {
+	K(_features), L(_NOUTX*_NOUTY), NOUTX(_NOUTX), NOUTY(_NOUTY), Blocks((_NOUTX / _BlockX)*(_NOUTY / _BlockY)), LBlock(_BlockX*_BlockY), BlockX(_BlockX), BlockY(_BlockY), 
+	DiscarnateLayer(_NOUTX*_NOUTY, Blocks*K*(LBlock + 2), actfunc_t::NONE) {
 	init();
 }
 
@@ -105,8 +106,8 @@ void MixtureDensityModel::forProp(MAT & in, bool saveActivation, bool recursive)
 	}
 }
 
-void MixtureDensityModel::backPropDelta(MAT & delta, bool recursive)
-{
+void MixtureDensityModel::backPropDelta(MAT & delta, bool recursive) {
+	deltaSave = delta;
 	if (getHierachy() != hierarchy_t::input) { // ... should be true
 		MAT t = reconstructTarget(delta);
 		delta = computeErrorGradient(t);

@@ -7,8 +7,8 @@
 class FullyConnectedLayer : public PhysicalLayer {
 	public:
 		// Constructors
-		FullyConnectedLayer(size_t NOUT, size_t NIN, fREAL kappa, actfunc_t type); // specified in .cpp
-		FullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type, CNetLayer& lower);
+		FullyConnectedLayer(size_t NOUT, size_t NIN, actfunc_t type); // specified in .cpp
+		FullyConnectedLayer(size_t NOUT,  actfunc_t type, CNetLayer& lower);
 		~FullyConnectedLayer();
 		layer_t whoAmI() const;
 
@@ -17,20 +17,26 @@ class FullyConnectedLayer : public PhysicalLayer {
 
 		// backprop
 		void backPropDelta(MAT& delta, bool recursive);
-		MAT grad(MAT& input);
+		MAT w_grad(MAT& input);
+		MAT b_grad();
+
 		uint32_t getFeatures() const;
 
 private:
 	/* Weight normalization functions
 	*/
-	void updateW();
-	void normalizeV();
-	void inversVNorm();
-	MAT gGrad(const MAT& grad); // gradient in g's
-	MAT vGrad(const MAT& grad, MAT& ggrad); // gradient in V
-	void initG();
-	void initV();
-
+	void wnorm_setW(); // to W
+	void wnorm_initV();
+	void wnorm_initG();
+	void wnorm_normalizeV();
+	void wnorm_inversVNorm();
+	MAT wnorm_gGrad(const MAT& grad); // gradient in g's
+	MAT wnorm_vGrad(const MAT& grad, MAT& ggrad); // gradient in V
+	/* spectral normalization
+	*/
+	void snorm_setW();
+	void snorm_updateUVs();
+	MAT snorm_dWt(MAT& grad); // neecds to be multiplied element-wise to 
 	// initialization
 	void init();
 	void saveToFile(ostream& os) const;

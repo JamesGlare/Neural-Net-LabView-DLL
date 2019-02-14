@@ -29,25 +29,42 @@ __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 	*ptr = new CNet(NIN);
 }
 
-__declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT, fREAL kappa) {
-	ptr->addFullyConnectedLayer(NOUT, kappa, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT, uint32_t func) {
+	ptr->addFullyConnectedLayer(NOUT, static_cast<actfunc_t>(func));
 }
-__declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t sideChannels) {
-	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, sideChannels, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t func) {
+	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, static_cast<actfunc_t>(func));
 }
-__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t outBoxes, uint32_t sideChannels) {
-	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, sideChannels, actfunc_t::RELU);
+__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t outBoxes, uint32_t func) {
+	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, static_cast<actfunc_t>(func));
 }
 __declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
 	ptr->addPoolingLayer(maxOverXY, pooling_t::max);
 }
-__declspec(dllexport) void __stdcall addPassOnLayer(CNet* ptr) {
-	ptr->addPassOnLayer(actfunc_t::NONE);
+__declspec(dllexport) void __stdcall addPassOnLayer(CNet* ptr, uint32_t function) {
+	switch (function) {
+		case 0:
+			ptr->addPassOnLayer(actfunc_t::NONE);
+			break;
+		case 1:
+			ptr->addPassOnLayer(actfunc_t::RELU);
+			break;
+		case 2:
+			ptr->addPassOnLayer(actfunc_t::TANH);
+			break;
+		case 3:
+			ptr->addPassOnLayer(actfunc_t::SIG);
+			break;
+		default:
+			ptr->addPassOnLayer(actfunc_t::NONE);
+	}
 } 
 __declspec(dllexport) void __stdcall addReshapeLayer(CNet* ptr) {
 	ptr->addReshape();
 }
-
+__declspec(dllexport) void __stdcall addSideChannel(CNet* ptr, uint32_t sideChannelSize) {
+	ptr->addSideChannel(sideChannelSize);
+}
 __declspec(dllexport) void __stdcall addDropoutLayer(CNet* ptr, fREAL ratio) {
 	 ptr->addDropoutLayer(ratio);
 }
@@ -59,7 +76,7 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	}
 
 
-	learnPars pars{0,0,0,0,0,0,0,0,0,0};
+	learnPars pars;
 	assert(ptr->getNOUT() == outFormat[0]*outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0]*inFormat[1]);
 
@@ -78,15 +95,20 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 /* BACK
 */
 __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input, fREAL* const output, fREAL* const eta, 
-	fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const conjugate, uint32_t* const adam ,uint32_t* const batch_update, 
-	uint32_t* const weight_norm, uint32_t* const firstTrain, uint32_t* const lastTrain,int32_t* const inFormat, int32_t* const outFormat) {
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam ,uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, 
+	int32_t* const outFormat, uint32_t* const deltaProvided) {
 	
 	// if change of CNet instance, relink the chain
 	if (! sameCNet(ptr)) {
 		ptr->linkChain();
 	}
+	bool deltaProvided_bool = false;
+	if (*deltaProvided == 1) {
+		deltaProvided_bool = true;
+	}
 
-	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *conjugate, *adam, *batch_update,  *weight_norm, *firstTrain, *lastTrain};
+	learnPars pars( *eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update,  *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
 
 	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
@@ -95,8 +117,7 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
 	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]); 
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
-
-	fREAL error = ptr->backProp(inputMatrix, outputDesiredMatrix, pars);
+	fREAL error = ptr->backProp(inputMatrix, outputDesiredMatrix, pars, deltaProvided_bool);
 
 	// Resize the output matrix & copy into outgoing array.
 	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
@@ -106,6 +127,106 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	
 	return error;
 }
+
+
+__declspec(dllexport) fREAL __stdcall backPropCNet_GAN_D(CNet* ptr, fREAL* const input, fREAL* const output, uint32_t* const real, fREAL* const eta,
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
+
+	// if change of CNet instance, relink the chain
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
+	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
+
+	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
+	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
+
+	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
+	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
+	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]);
+	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
+	
+	bool real_fake = (bool)*real;
+
+	fREAL error = ptr->backProp_GAN_D(inputMatrix, outputDesiredMatrix, real_fake, pars);
+	// Resize the output matrix & copy into outgoing array.
+	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
+	outputDesiredMatrix.transposeInPlace(); // Go back to Row-major format
+	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
+	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
+
+	return error;
+}
+__declspec(dllexport) fREAL __stdcall backPropCNet_WGAN_D(CNet* ptr, fREAL* const input, fREAL* const output, uint32_t* const real, fREAL* const eta,
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
+
+	// if change of CNet instance, relink the chain
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
+	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
+
+	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
+	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
+
+	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
+	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
+	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]);
+	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
+
+	bool real_fake = (bool)*real;
+
+	fREAL error = ptr->backProp_WGAN_D(inputMatrix, outputDesiredMatrix, real_fake, pars);
+	// Resize the output matrix & copy into outgoing array.
+	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
+	outputDesiredMatrix.transposeInPlace(); // Go back to Row-major format
+	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
+	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
+
+	return error;
+}
+__declspec(dllexport) fREAL __stdcall backPropCNet_GAN_G(CNet* ptr, fREAL* const input, fREAL* const deltaMatrix, fREAL* const eta,
+	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
+	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const deltaFormat) {
+
+	// if change of CNet instance, relink the chain
+	if (!sameCNet(ptr)) {
+		ptr->linkChain();
+	}
+
+	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
+
+	assert(ptr->getNOUT() == deltaFormat[0] * deltaFormat[1]);
+	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
+
+	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
+	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
+	MAT deltas = MATMAP_ROWMAJOR(deltaMatrix, deltaFormat[0], deltaFormat[1]);
+	deltas.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
+
+
+	fREAL error = ptr->backProp_GAN_G(inputMatrix, deltas, pars);
+
+	// Resize the logit matrix & copy into outgoing delta array.
+	deltas.resize(deltaFormat[0], deltaFormat[1]);
+	deltas.transposeInPlace(); // Go back to Row-major format
+	deltas.resize(ptr->getNOUT(), 1);
+	copyToOut(deltas.data(), deltaMatrix, ptr->getNOUT());
+
+	return 0;
+}
+__declspec(dllexport) void __stdcall feedSideChannel(CNet* ptr, fREAL* const sideChannelArray, int32_t* const format) {
+
+	MAT sideChannelMatrix = MATMAP_ROWMAJOR(sideChannelArray, format[0], format[1]);
+	sideChannelMatrix.resize(format[0] * format[1], 1);
+	ptr->preFeedSideChannel(sideChannelMatrix);
+
+}
+
 __declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t NOUT, size_t features, size_t BlockXY) {
 	ptr->addMixtureDensity( NOUT,  features,  BlockXY);
 }
@@ -129,17 +250,16 @@ __declspec(dllexport) void __stdcall loadCNet(CNet* ptr, char* filePath) {
 
 	ptr->loadFromFile(string(filePath));
 
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
-	}
+	sameCNet(ptr); // store ptr 
+	ptr->linkChain(); // relink chain regardless
+	
 }
 __declspec(dllexport) void __stdcall loadCNet_layer(CNet* ptr, uint32_t layer, char* filePath) {
 	
 	ptr->loadFromFile_layer(string(filePath), layer);
 
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
-	}
+	sameCNet(ptr); // store ptr
+	ptr->linkChain();// relink chain regardless
 
 }
 
@@ -150,11 +270,23 @@ __declspec(dllexport) void __stdcall destroyCNet(CNet* ptr) {
 __declspec(dllexport) void __stdcall shareLayer(CNet* ptr, CNet* ptrOther, uint32_t firstLayer, uint32_t lastLayer) {
 	ptr->shareLayers(ptrOther, firstLayer, lastLayer);
 }
-__declspec(dllexport) void __stdcall writeLayer(CNet* ptr, uint32_t layer, fREAL* const toCopyTo) {
+__declspec(dllexport) void __stdcall writeLayer(CNet* ptr, uint32_t layer, fREAL* const toCopyTo, int32_t* toCopyToFormat) {
 	ptr->copyNthLayer(layer, toCopyTo);
 }
-__declspec(dllexport) void __stdcall getActivation(CNet* ptr, uint32_t layer, fREAL* const toCopyTo) {
+__declspec(dllexport) void __stdcall getActivation(CNet* ptr, uint32_t layer, fREAL* const toCopyTo, int32_t* toCopyToFormat) {
 	ptr->copyNthActivation(layer, toCopyTo);
+}
+__declspec(dllexport) void __stdcall getDelta(CNet* ptr, uint32_t layer, fREAL* const toCopyTo, int32_t* const toCopyToFormat) {
+	//MAT test(1, 1);
+	//test.setZero();
+	//copyToOut(test.data(), toCopyTo, 1);
+	ptr->copyNthDelta(layer, toCopyTo, (toCopyToFormat[0]* toCopyToFormat[1]));
+}
+__declspec(dllexport) void __stdcall getWeight(CNet* ptr, uint32_t layer, fREAL* const toCopyTo, int32_t* const toCopyToFormat) {
+	//MAT test(1, 1);
+	//test.setZero();
+	//copyToOut(test.data(), toCopyTo, 1);
+	ptr->copyNthLayer(layer, toCopyTo);
 }
 __declspec(dllexport) void __stdcall getLayerDimension(CNet* ptr, uint32_t layer, uint32_t* rows, uint32_t* cols) {
 	size_t rows_ = 0;
@@ -261,9 +393,9 @@ __declspec(dllexport) int __stdcall callClass(CLearn* ptr, uint8_t* const SLM, u
 	}
 	return 1;
 }
-__declspec(dllexport) fREAL __stdcall forward(CLearn* ptr, fREAL* const SLM, fREAL* const image, fREAL* const eta, fREAL* const metaEta, fREAL* const gamma, fREAL* const lambda, uint32_t* const nesterov, int* const validate) {
+__declspec(dllexport) fREAL __stdcall forward(CLearn* ptr, fREAL* const SLM, fREAL* const image, fREAL* const eta, fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const nesterov, int* const validate) {
 	// remember not to use .size() on a matrix. It's not numpy ;)
-	learnPars pars = { *eta, *metaEta, *gamma, *lambda, *nesterov };
+	learnPars pars = { *eta, *clip, *gamma, *lambda, *nesterov };
 
 	MAT in = MATMAP(SLM, ptr->get_NIN(), 1); // (NIN, 1) Matrix
 	MAT dOut = MATMAP(image, ptr->get_NOUT(), 1);

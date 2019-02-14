@@ -1,5 +1,4 @@
 #include "stdafx.h"
-
 #include "Reshape.h"
 
 Reshape::Reshape(size_t NIN) : DiscarnateLayer(NIN, NIN, actfunc_t::NONE) {
@@ -24,6 +23,7 @@ void Reshape::forProp(MAT& in, bool saveActivation, bool recursive) {
 		above->forProp(in, saveActivation, true);
 }
 void Reshape::backPropDelta(MAT& delta, bool recursive) {
+	//deltaSave = delta;
 	if (getHierachy() != hierarchy_t::input) {
 		size_t squaresize = sqrt(delta.size());
 		delta.resize(squaresize, squaresize);

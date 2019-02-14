@@ -30,6 +30,8 @@ void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 }
 
 void PassOnLayer::backPropDelta(MAT& delta, bool recursive) {
+	
+	deltaSave = delta; // need this to collect delta
 	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 
 		MAT temp = (below->getDACT()).cwiseProduct(delta);

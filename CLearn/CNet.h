@@ -4,7 +4,7 @@
 #include <memory>
 #include "CNETLayer.h"
 #include "MixtureDensityModel.h"
-typedef std::unique_ptr<CNetLayer> layerPtr;
+//typedef std::unique_ptr<CNetLayer> layerPtr; // currently not in use.
  
 
 #ifndef CNET_CNET
@@ -18,9 +18,9 @@ class CNet {
 		CNet(size_t NIN);
 		~CNet();
 		// Physical Layers (i.e. layers with weight parameters)
-		void addFullyConnectedLayer(size_t NOUT, fREAL kappa, actfunc_t type);
-		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t sideChannels, actfunc_t type);
-		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, size_t sideChannels, actfunc_t type);
+		void addFullyConnectedLayer(size_t NOUT, actfunc_t type);
+		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type);
+		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, actfunc_t type);
 
 		// Discarnate Layers (i.e. layers without weight parameters)
 		void addPoolingLayer(size_t maxOverXY, pooling_t type);
@@ -28,6 +28,7 @@ class CNet {
 		void addPassOnLayer(actfunc_t type);
 		void addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY);
 		void addReshape();
+		void addSideChannel(size_t sideChannelSize);
 
 		// Share Layer Functionality
 		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
@@ -35,8 +36,19 @@ class CNet {
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
 		// Backpropagate through network. 
-		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars);
-		
+		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars, bool deltaProvided=false); // set bool to 'true' if you outDesired contains delta's from other network
+
+		// Specialized functions for training GANs
+		fREAL backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars); // Discriminator
+		fREAL backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars); // Generator
+		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars); // Wasserstein Critic
+		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars); // Wasserstein Generator
+
+
+		// Feed a tensor into the sidechannel of the network
+		// TODO - Generalize to arbitrarily many sidechannels.
+		void preFeedSideChannel(const MAT& sideChannel);
+
 		// Save-to-file functionality.
 		void saveToFile(string filePath) const;
 		void loadFromFile(string filePath);
@@ -53,6 +65,7 @@ class CNet {
 		void copyNthLayer(size_t layer, fREAL* const toCopyTo) const;
 		void setNthLayer(size_t layer, const MAT& newLayer);
 		void copyNthActivation(size_t layer, fREAL* const toCopyTo) const;
+		void copyNthDelta(size_t layer, fREAL* const toCopyTo, int32_t size) const;
 		size_t getNOUT() const;
 
 		void inquireDimensions (size_t layer, size_t& rows, size_t& cols) const;
@@ -63,18 +76,26 @@ class CNet {
 		inline CNetLayer* getFirst() const { return layers.front(); };
 
 		// error related functions
-		MAT errorMatrix(const MAT& outPrediction, const MAT& outDesired);
+		MAT l2_errorMatrix(const MAT& diff);
+		MAT l1_errorMatrix(const MAT& diff);
 		fREAL l2_error(const MAT& diff);
+		fREAL l1_error(const MAT& diff);
+		// GAN Error
+		fREAL sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labels);
+		MAT sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels);
+		MAT sigmoid_GEN_loss(const MAT& labels, const MAT& logits);
+		// Regularzier
+		MAT entropyRegularizer(const MAT& out);
+
+		
 		inline bool isPhysical(size_t layer) const {
-			return (layers[layer]->whoAmI()	!= layer_t::maxPooling
-				&& layers[layer]->whoAmI()	!= layer_t::passOn
-				&& layers[layer]->whoAmI()	!= layer_t::dropout
-				&& layers[layer]->whoAmI()	!= layer_t::mixtureDensity
-				&& layers[layer]->whoAmI() != layer_t::reshape
+			return (layers[layer]->whoAmI()	== layer_t::fullyConnected
+				|| layers[layer]->whoAmI()	== layer_t::convolutional
+				|| layers[layer]->whoAmI()	== layer_t::antiConvolutional
 				);
 		}
-
-
+		
+		
 		size_t NIN;
 		vector<CNetLayer*> layers;
 };

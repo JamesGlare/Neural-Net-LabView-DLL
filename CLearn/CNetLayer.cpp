@@ -32,10 +32,6 @@ CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT
 	hierarchy = hierarchy_t::output;
 }
 
-layer_t CNetLayer::whoAmI() const {
-	return layer_t::cnet;
-}
-
 uint32_t CNetLayer::getFeatures() const {
 	return 1; // default
 }
@@ -46,6 +42,10 @@ MAT CNetLayer::getDACT() const {
 
 MAT CNetLayer::getACT() const {
 	return actSave.unaryExpr(act);
+}
+
+MAT CNetLayer::getDelta() const {
+	return deltaSave;
 }
 
 void CNetLayer::connectAbove(CNetLayer* ptr) {
@@ -102,6 +102,13 @@ void CNetLayer::assignActFunc(actfunc_t type) {
 			act = &iden; // nothing
 			dact = &DIden;
 			break;
+		case actfunc_t::SOFTPLUS:
+			act = &SoftPlus;
+			dact = &DSoftPlus;
+			break;
+		default:
+			act = &ReLu;
+			dact = &DReLu;
 	}
 }
 // save to file
@@ -113,7 +120,7 @@ ostream& operator<<(ostream& os, const CNetLayer& toSave) {
 }
 
 void CNetLayer::saveMother(ostream& os) const {
-	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy) <<endl;
+	os << static_cast<int32_t>(activationType) << " " << NOUT << " " << NIN << " "<< static_cast<int32_t>(hierarchy) << " " << layerNumber<<endl;
 }
 ifstream& operator >> (ifstream& in, CNetLayer& toReconstruct) {
 	int32_t type;
@@ -137,6 +144,7 @@ void CNetLayer::reconstructMother(ifstream& in) {
 	hierarchy = static_cast<hierarchy_t>(temp);
 	// if we load partial networks or single layers from other chains,
 	// the linkChain function will reset the network structure.
+	in >> layerNumber; //... and also the layerNumber
 
 	actSave = MAT(NOUT, 1);
 	deltaSave = MAT(NOUT, 1);

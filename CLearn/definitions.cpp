@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "defininitions.h"
-
+#include <random>
 /* Define a few more complex functions
 */
 
@@ -14,6 +14,11 @@ void shrinkOne(MAT& in) {
 	in.conservativeResize(in.rows() - 1, in.cols());
 }
 
+fREAL normal_dist(fREAL mu, fREAL stddev) {
+	static mt19937 rng(42);
+	static normal_distribution<fREAL> nd(mu, stddev);
+	return nd(rng);
+}
 MAT& appendOneInline(MAT& toAppend) {
 	//MAT temp = MAT(toAppend.rows() + 1, toAppend.cols());
 	//temp.setOnes();
@@ -37,6 +42,18 @@ void setZeroAtIndex(MAT& in, const MATINDEX& ind, size_t nrFromTop) {
 		in(ind(i, 0), 0) = 0.0f;
 	}
 }
+/* WEight clipping routine for Lifshitz property in Wasserstein GANs
+*/
+void clipParameters(MAT& layer, fREAL clip) {
+	int32_t i = 0;
+	#pragma omp parallel for private(i) shared(layer)
+	for (i = 0; i < layer.cols(); ++i) {
+		for (size_t j = 0; j < layer.rows(); ++j) {
+			layer(i, j) = abs(layer(i, j)) > clip ? sgn(layer(i, j))*clip : layer(i, j);
+		}
+	}
+}
+
 /* Parallelized convolution routine.
 */
 MAT conv(const MAT& in, const MAT& kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features) {
@@ -104,7 +121,7 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 	#pragma omp parallel for private(xInd,yInd,f, inF,outF) shared(out, kernel, in) 
 	for (f = 0; f< inFeatures*outFeatures; ++f) {
 		inF = f / outFeatures;
-		outF = f % outFeatures;
+		outF = f % outFeatures; // moves first
 			for (size_t i = 0; i < NOUTX; ++i) {
 				for (size_t n = 0; n < kernelX; ++n) {
 					for (size_t m = 0; m < kernelY; ++m) {
@@ -253,7 +270,8 @@ MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t stride
 	}
 	return out.block(antiPaddingY, antiPaddingX, outSizeY, outSizeX);
 }
-MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t outBoxes) {
+MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, 
+	uint32_t features, uint32_t outBoxes) {
 	// (1) Geometry of the situation
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / (features*outBoxes);
@@ -275,8 +293,8 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint
 
 	#pragma omp parallel for private(xInd, yInd,f, F, outB) shared(out, kernel, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (f = 0; f < features*outBoxes; ++f) {
-		F = f / outBoxes; // Example: feats=3, outB=2 -> max[f]=5 -> max[F] = 5 /2 = 2, max[outB] = 5 % 2 == 1 
-		outB = f % outBoxes;
+		F = f % features; // Example: feats=3, outB=2 -> max[f]=5 -> max[F] = 5  % 2 = 2, max[outB] = 5 % 2 == 1 
+		outB = f / features;// Example: feats=3, outB=2 -> max[f] = 5 -> max[F] = 5 % 3 == 2, outB = 5 /3 == 1
 
 			for (size_t n = 0; n < kernelX; ++n) {
 				for (size_t i = 0; i < NINX; ++i) {
@@ -403,8 +421,8 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 
 	#pragma omp parallel for private(xInd, yInd,f, F, outB) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (f = 0; f < features*outBoxes; ++f) {
-		F = f / outBoxes;
-		outB = f % outBoxes;
+		F = f % features;
+		outB = f / features;
 
 		for (size_t n = 0; n < NINX; ++n) {
 			for (size_t i = 0; i < kernelX; ++i) {
@@ -427,28 +445,22 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 	}
 	return kernelGrad;
 }
-/*
-MAT deltaActConv(const MAT& deltaAbove, const MAT& actBelow, uint32_t kernelSizeY, uint32_t kernelSizeX, uint32_t strideUsed, uint32_t paddingYUsed, uint32_t paddingXUsed) {
-	// outSize == kernelSize
+/* Spectral norm function
+*  Calculate the spectral norm of u,v
+*/
+fREAL spectralNorm(const MAT& W, const MAT& u1, const MAT& v1) {
+	return ((u1.transpose())*(W*v1))(0, 0) + fREAL(1e-8);
+}
 
-	size_t deltaSizeY = deltaAbove.rows();
-	size_t deltaSizeX = deltaAbove.cols();
-	MAT actPadded(actBelow.rows()+2*paddingYUsed, actBelow.cols()+2*paddingXUsed);
-	actPadded.setConstant(0);
-	actPadded.block(paddingYUsed, paddingXUsed, actBelow.rows() , actBelow.cols()) = actBelow;
-	MAT out(kernelSizeY, kernelSizeX);
-	out.setConstant(0);
-	for (size_t i = 0; i < kernelSizeX; i++) {
-		for (size_t j = 0; j < kernelSizeY; j++) {
-			for (size_t m = 0; m < deltaSizeY; m++) {
-				for (size_t n = 0; n < deltaSizeX; n++) {
-					out(j, i) += deltaAbove(m, n)*actPadded(j+strideUsed*m,i+strideUsed*n);
-				}
-			}
-		}
+void updateSingularVectors(const MAT& W, MAT& u, MAT& v, uint32_t n) {
+	MAT temp;
+	for (uint32_t i = 0; i < n; ++i) {
+		temp = W.transpose()*u;
+		v =  temp / normSum(temp);
+		temp = W*v;
+		u = temp / normSum(temp);
 	}
-	return out;
-}*/
+}
 
 MAT fourier(const MAT& in) {
 	size_t L = in.rows(); // == in.cols() 

@@ -168,6 +168,7 @@
     <ClInclude Include="PassOnLayer.h" />
     <ClInclude Include="PhysicalLayer.h" />
     <ClInclude Include="Reshape.h" />
+    <ClInclude Include="SideChannel.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Stepper.h" />
     <ClInclude Include="targetver.h" />
@@ -201,6 +202,7 @@
     <ClCompile Include="PassOnLayer.cpp" />
     <ClCompile Include="PhysicalLayer.cpp" />
     <ClCompile Include="Reshape.cpp" />
+    <ClCompile Include="SideChannel.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
