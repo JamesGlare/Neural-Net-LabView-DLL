@@ -5,7 +5,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 	uint32_t _features, uint32_t _outBoxes, actfunc_t type)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), outBoxes(_outBoxes),
 	PhysicalLayer(_outBoxes*_NOUTX*_NOUTY, _outBoxes*_features*_NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
-		MATIND{ 1,_features }) {
+		MATIND{ 1,_features }, MATIND{_features*_kernelY, _features*_kernelX}) {
 
 	init();
 }
@@ -14,7 +14,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 	uint32_t _features, uint32_t _outBoxes, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), outBoxes(_outBoxes),
 	PhysicalLayer(_outBoxes*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
-		MATIND{ 1,_features }, lower) {
+		MATIND{ 1,_features }, MATIND{ _features*_kernelY, _features*_kernelX }, lower) {
 
 	init();
 	assertGeometry();
@@ -24,7 +24,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _outBoxes, actfunc_t type)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features), outBoxes(_outBoxes),
 	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY, _outBoxes*_features*_NINXY*_NINXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY },
-		MATIND{ 1,_features }) {
+		MATIND{ 1,_features }, MATIND{ _features*_kernelXY, _features*_kernelXY }) {
 
 	init();
 	assertGeometry();
@@ -34,7 +34,8 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, si
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _outBoxes, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(sqrt(lower.getNOUT() / (_outBoxes*_features))), NINY(sqrt(lower.getNOUT() / (_outBoxes*_features))), kernelX(_kernelXY), kernelY(_kernelXY),
 	strideY(_stride), strideX(_stride), features(_features), outBoxes(_outBoxes),
-	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1, _features }, lower) {
+	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, 
+		MATIND{ 1, _features }, MATIND{ _features*_kernelXY, _features*_kernelXY }, lower) {
 
 	init();
 	assertGeometry();
@@ -59,7 +60,8 @@ void AntiConvolutionalLayer::init() {
 	W *= ((fREAL)features) / W.size();
 }
 
-// weight normalization reparametrize
+/* Weight Normalization Functions
+*/
 void AntiConvolutionalLayer::wnorm_setW() {
 	for (uint32_t i = 0; i < features; i++) {
 		fREAL vInversEntry = (VInversNorm._FEAT(i))(0, 0);
@@ -106,13 +108,40 @@ MAT AntiConvolutionalLayer::wnorm_vGrad(const MAT& grad, MAT& ggrad) {
 	}
 	return out;
 }
+/* Spectral Normalization Functions
+*/
 void AntiConvolutionalLayer::snorm_setW() {
-	W = W_temp;
+	for(size_t i=0; i< features; ++i)
+		W._FEAT(i) = W_temp._FEAT(i)/spectralNorm(W._FEAT(i),u1.block(i*kernelY,0, kernelY,1), v1.block(i*kernelX, 0, kernelX, 1));
 }
 void AntiConvolutionalLayer::snorm_updateUVs() {
+
+	MAT u_temp = u1.block(0, 0, kernelY, 1);
+	MAT v_temp = v1.block(0, 0, kernelX, 1);
+
+	for (size_t i = 0; i < features; ++i) {
+		// TODO Do this differently - without the copies here
+		u_temp = u1.block(i*kernelY, 0, kernelY, 1);
+		v_temp = v1.block(i*kernelX, 0, kernelX, 1);
+		updateSingularVectors(W_temp._FEAT(i), u_temp, v_temp, 1);
+		u1.block(i*kernelY, 0, kernelY, 1) = u_temp;
+		v1.block(i*kernelX, 0, kernelX, 1) = v_temp;
+	}
 }
 MAT AntiConvolutionalLayer::snorm_dWt(MAT& grad) {
-	return MAT();
+
+	if (lambdaCount > 0) {
+		fREAL ratio = lambdaBatch / lambdaCount;
+		for (size_t i = 0; i < features; ++i) {
+			grad._FEAT(i) -= ratio*(u1.block(i*kernelY, 0, kernelY, 1)*(v1.block(i*kernelX, 0, kernelX, 1)).transpose());
+
+			grad._FEAT(i) /= spectralNorm(W_temp._FEAT(i), u1.block(i*kernelY, 0, kernelY, 1), v1.block(i*kernelX, 0, kernelX, 1));
+
+		}
+		lambdaBatch = 0; // reset this
+		lambdaCount = 0;
+	}
+	return grad;
 }
 uint32_t AntiConvolutionalLayer::getFeatures() const {
 	// deconv layers restart the tree.

@@ -249,7 +249,7 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 
 
 // Backpropagation 
-fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars) {
+fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars) {
 	
 	// (0) Check if Input contains no NaN's or Infinities.
 	// ... 
@@ -337,7 +337,7 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 			cross_entropy_gradient = move(sigmoid_GEN_loss(labels,logits));// Generator loss
 			//cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));
 			//MAT logits(input);
-			//getFirst()->forProp(logits, true, true);
+			getFirst()->forProp(logits, true, true);
 			if (cross_entropy_gradient.allFinite())
 				getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
 			else
@@ -357,7 +357,7 @@ fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learn
 }
 
 // Backpropagation 
-fREAL CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars) {
+fREAL CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars) {
 
 	// (0) Check if Input contains no NaN's or Infinities.
 	// ... 
@@ -373,7 +373,8 @@ fREAL CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars) 
 	// (2) calculate error matrix and error
 	// Check if we've computed error gradients 
 	// for both fake and real datasets
-	//deltaMatrix += pars.lambda*l1_errorMatrix(deltaMatrix); // allow for regularization... 
+	deltaMatrix += pars.lambda*l1_errorMatrix(logits); // allow for regularization... 
+	pars.lambda = 0.0f;
 	// (3) back propagate the deltas
 	getLast()->backPropDelta(deltaMatrix, true);
 	// (4) Apply update
@@ -385,7 +386,7 @@ fREAL CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars) 
 }
 /* Wasserstein GAN critic training
 */
-fREAL CNet::backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars) {
+fREAL CNet::backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars) {
 
 	// (0) Check if Input contains no NaN's or Infinities.
 	// ... 
@@ -480,7 +481,7 @@ fREAL CNet::backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, const lear
 }
 
 // Backpropagation 
-fREAL CNet::backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars) {
+fREAL CNet::backProp_WGAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars) {
 
 	fREAL errorOut = 0.0f;
 

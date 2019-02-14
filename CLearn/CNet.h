@@ -39,10 +39,10 @@ class CNet {
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars, bool deltaProvided=false); // set bool to 'true' if you outDesired contains delta's from other network
 
 		// Specialized functions for training GANs
-		fREAL backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Discriminator
-		fREAL backProp_GAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Generator
-		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, const learnPars& pars); // Wasserstein Critic
-		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, const learnPars& pars); // Wasserstein Generator
+		fREAL backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars); // Discriminator
+		fREAL backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars); // Generator
+		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars); // Wasserstein Critic
+		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars); // Wasserstein Generator
 
 
 		// Feed a tensor into the sidechannel of the network

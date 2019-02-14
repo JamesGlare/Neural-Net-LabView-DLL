@@ -2,22 +2,22 @@
 #include "PhysicalLayer.h"
 
 // pass constructor to base class
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex) :
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, MATIND _u1v1Index) :
 	w_batch(_WIndex, _NOUT, _NIN), b_batch(MATIND{ _NOUT, 1 }, _NOUT, _NIN), w_stepper(_WIndex), b_stepper(MATIND{ _NOUT, 1 }), wnorm_Vstepper(_VIndex), wnorm_Gstepper(_GIndex), 
-	W(_WIndex.rows, _WIndex.cols), b(_NOUT, (size_t)1), V(_VIndex.rows, _VIndex.cols), W_temp(_WIndex.rows, _WIndex.cols), u1(_WIndex.rows, (size_t)1), v1(_WIndex.cols, (size_t)1),
+	W(_WIndex.rows, _WIndex.cols), b(_NOUT, (size_t)1), V(_VIndex.rows, _VIndex.cols), W_temp(_WIndex.rows, _WIndex.cols), u1(_u1v1Index.rows, 1), v1(_u1v1Index.cols, 1),
 	VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex) :
+PhysicalLayer::PhysicalLayer(size_t _NOUT, size_t _NIN, actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, MATIND _u1v1Index) :
 	w_batch(_WIndex, _NOUT, _NIN), b_batch(MATIND{ _NOUT, 1 }, _NOUT, _NIN), w_stepper(_WIndex), b_stepper(MATIND{ _NOUT, 1 }), wnorm_Vstepper(_VIndex), wnorm_Gstepper(_GIndex), 
-	W(_WIndex.rows, _WIndex.cols), b(_NOUT, (size_t)1), V(_VIndex.rows, _VIndex.cols), W_temp(_WIndex.rows, _WIndex.cols), u1(_WIndex.rows, (size_t)1), v1(_WIndex.cols, (size_t)1),
+	W(_WIndex.rows, _WIndex.cols), b(_NOUT, (size_t)1), V(_VIndex.rows, _VIndex.cols), W_temp(_WIndex.rows, _WIndex.cols), u1(_u1v1Index.rows, 1), v1(_u1v1Index.cols, 1),
 	VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols), CNetLayer(_NOUT, _NIN, type) {
 	init();
 }
-PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower) :
+PhysicalLayer::PhysicalLayer(size_t _NOUT, actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex,  MATIND _u1v1Index, CNetLayer& lower) :
 	w_batch(_WIndex, _NOUT, lower.getNOUT()), b_batch(MATIND{ _NOUT, 1 }, _NOUT, lower.getNOUT()), w_stepper(_WIndex), b_stepper(MATIND{ _NOUT, 1 }), wnorm_Vstepper(_VIndex),
 	wnorm_Gstepper(_GIndex), W(_WIndex.rows, _WIndex.cols), b(_NOUT, (size_t)1),
-	V(_VIndex.rows, _VIndex.cols), W_temp(_WIndex.rows, _WIndex.cols), u1(_WIndex.rows, (size_t)1), v1(_WIndex.cols, (size_t)1), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols),
+	V(_VIndex.rows, _VIndex.cols), W_temp(_WIndex.rows, _WIndex.cols), u1(_u1v1Index.rows, 1), v1(_u1v1Index.cols, 1), VInversNorm(_VIndex.rows, _VIndex.cols), G(_GIndex.rows, _GIndex.cols),
 	CNetLayer(_NOUT, type, lower) {
 	init();
 }
@@ -75,15 +75,13 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 	/* new version of this function
 	*/
 	// Get gradient
-	// EVIL HACK - TYPE INFERENCE
-	bool isDense = whoAmI() == layer_t::fullyConnected;
 
 	if (inRange(getLayerNumber(), pars.firstTrain, pars.lastTrain)) {
 		if (pars.accept) {
 			w_batch.swallowGradient(w_grad(input));
 			b_batch.swallowGradient(b_grad());
 		// TODO ------ -------- Put this abomination of a hack into order. 
-			if (isDense &&  pars.spectral_normalization) { // collect special batch information for spectral normalization
+			if (pars.spectral_normalization) { // collect special batch information for spectral normalization
 				lambdaBatch += (deltaSave.transpose()*(actSave - b)).sum(); // store this value
 				++lambdaCount;
 			}
@@ -114,7 +112,7 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				// (3) Recompute inversNorm and update the layer weight matrix
 				wnorm_inversVNorm();
 				wnorm_setW();
-			} else if (isDense && pars.spectral_normalization) {
+			} else if (pars.spectral_normalization) {
 				/* Spectral Normalization
 				*/
 				if (!spectralNormMode) {

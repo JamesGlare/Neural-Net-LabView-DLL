@@ -25,13 +25,16 @@ private:
 	void saveToFile(ostream& os) const;
 	void loadFromFile(ifstream& in);
 	void init();
-	void shuffleIndices();
+	//void shuffleIndices();
+	void randomize();
+	void round();
 	void assertGeometry();
 	fREAL ratio;
 	/* Keep a list of indices 
 	* and shuffle before every forward pass
 	* then, only forward the first NOUT indices.
 	*/
-	PermutationMatrix<Dynamic,Dynamic> permut;
+	MAT zeroOne;
+	//PermutationMatrix<Dynamic,Dynamic> permut;
 };
 #endif

@@ -3,13 +3,13 @@
 
 // constructor - for input layers
 FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, size_t _NIN, actfunc_t type) :
-	PhysicalLayer(_NOUT, _NIN, type, MATIND{ _NOUT, _NIN }, MATIND{ _NOUT, _NIN }, MATIND{ _NOUT, 1 }) {
+	PhysicalLayer(_NOUT, _NIN, type, MATIND{ _NOUT, _NIN }, MATIND{ _NOUT, _NIN }, MATIND{ _NOUT, 1 }, MATIND{ _NOUT, _NIN }) {
 	// declare matrix
 	init();
 }
 // constructor - for hidden layers and output layers
 FullyConnectedLayer::FullyConnectedLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower) :
-	PhysicalLayer(_NOUT, type, MATIND{ _NOUT, lower.getNOUT() }, MATIND{ _NOUT, lower.getNOUT() }, MATIND{ _NOUT, 1 }, lower) {
+	PhysicalLayer(_NOUT, type, MATIND{ _NOUT, lower.getNOUT() }, MATIND{ _NOUT, lower.getNOUT() }, MATIND{ _NOUT, 1 }, MATIND{_NOUT, lower.getNOUT()}, lower) {
 	// layer and velocity matrices
 	init();
 }

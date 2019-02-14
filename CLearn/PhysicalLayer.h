@@ -16,9 +16,9 @@ public:
 	/* Constructors
 	* Initialize Base Class (CNetLayer) and internal instance of MiniBatchNormalization.
 	*/ 
-	PhysicalLayer(size_t _NOUT, size_t _NIN,  MATIND _WIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex);
-	PhysicalLayer(size_t _NOUT,  actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, CNetLayer& lower);
+	PhysicalLayer(size_t _NOUT, size_t _NIN,  MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, MATIND _u1v1Index);
+	PhysicalLayer(size_t _NOUT, size_t _NIN,  actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, MATIND _u1v1Index);
+	PhysicalLayer(size_t _NOUT,  actfunc_t type, MATIND _WIndex, MATIND _VIndex, MATIND _GIndex, MATIND _u1v1Index, CNetLayer& lower);
 	virtual ~PhysicalLayer(); // purely abstract
 
 	/* Forward Propagation 

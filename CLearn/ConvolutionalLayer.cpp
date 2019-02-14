@@ -15,7 +15,8 @@ They are intended to be passed on to some dense layer where they can be incorpor
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
 	uint32_t _features, actfunc_t type)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features),
-	PhysicalLayer(_features*_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }) {
+	PhysicalLayer(_features*_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, 
+		MATIND{ 1,_features }, MATIND{ _features*_kernelY, _features*_kernelX }) {
 	// the layer matrix will act as convolutional kernel
 	inFeatures = 1;
 	init();
@@ -25,7 +26,8 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NIN
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
 	uint32_t _features, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features),
-	PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, MATIND{ 1,_features }, lower) {
+	PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, 
+		MATIND{ 1,_features }, MATIND{ _features*_kernelY, _features*_kernelX }, lower) {
 
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	inFeatures = lower.getFeatures();
@@ -38,7 +40,8 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NIN
 // second most convenient constructor
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
-	PhysicalLayer(_features*_NOUTXY*_NOUTXY, _NINXY*_NINXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }) {
+	PhysicalLayer(_features*_NOUTXY*_NOUTXY, _NINXY*_NINXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, 
+		MATIND{ 1,_features }, MATIND{ _features*_kernelXY, _features*_kernelXY }) {
 	inFeatures = 1;
 	init();
 	assertGeometry();
@@ -47,7 +50,8 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _ke
 // most convenient constructor
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
-	PhysicalLayer(lower.getFeatures()*_features*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ 1,_features }, lower) {
+	PhysicalLayer(lower.getFeatures()*_features*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, 
+		MATIND{ 1,_features }, MATIND{ _features*_kernelXY, _features*_kernelXY }, lower) {
 
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	inFeatures = lower.getFeatures(); // product of all features so far
@@ -130,18 +134,44 @@ MAT ConvolutionalLayer::wnorm_vGrad(const MAT& grad, MAT& ggrad) {
 	}
 	return out;
 }
-/* Spectral normalization
+/* Spectral normalization Functions
 */
 void ConvolutionalLayer::snorm_setW() {
-	W = W_temp;
+	for (size_t i = 0; i< features; ++i)
+		W._FEAT(i) = W_temp._FEAT(i) / spectralNorm(W._FEAT(i), u1.block(i*kernelY, 0, kernelY, 1), v1.block(i*kernelX, 0, kernelX, 1));
 }
 
 void ConvolutionalLayer::snorm_updateUVs() {
+
+	MAT u_temp = u1.block(0, 0, kernelY, 1);
+	MAT v_temp = v1.block(0, 0, kernelX, 1);
+
+	for (size_t i = 0; i < features; ++i) {
+		// TODO Do this differently - without the copies here
+		u_temp = u1.block(i*kernelY, 0, kernelY, 1);
+		v_temp = v1.block(i*kernelX, 0, kernelX, 1);
+		updateSingularVectors(W_temp._FEAT(i), u_temp, v_temp, 1);
+		u1.block(i*kernelY, 0, kernelY, 1) = u_temp;
+		v1.block(i*kernelX, 0, kernelX, 1) = v_temp;
+	}
 }
-MAT ConvolutionalLayer::snorm_dWt(MAT& grad)
-{
+MAT ConvolutionalLayer::snorm_dWt(MAT& grad){
+
+	if (lambdaCount > 0) {
+		fREAL ratio = lambdaBatch / lambdaCount;
+		for (size_t i = 0; i < features; ++i) {
+			grad._FEAT(i) -= ratio*(u1.block(i*kernelY, 0, kernelY, 1)*(v1.block(i*kernelX, 0, kernelX, 1)).transpose());
+
+			grad._FEAT(i) /= spectralNorm(W_temp._FEAT(i), u1.block(i*kernelY, 0, kernelY, 1), v1.block(i*kernelX, 0, kernelX, 1));
+
+		}
+		lambdaBatch = 0; // reset this
+		lambdaCount = 0;
+	}
 	return grad;
 }
+/* For/back prop
+*/
 void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 
 
