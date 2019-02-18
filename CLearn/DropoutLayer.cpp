@@ -31,7 +31,7 @@ void DropoutLayer::round() {
 
 }
 void DropoutLayer::randomize() {
-	zeroOne.setRandom(); // [0,1]
+	zeroOne.setRandom(); // [-1,1]
 	round();
 }
 void DropoutLayer::forProp(MAT& in, bool saveActivation, bool recursive) {
@@ -55,8 +55,9 @@ void DropoutLayer::forProp(MAT& in, bool saveActivation, bool recursive) {
 }
 
 void DropoutLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
+	deltaSave = deltaAbove;
 
-	if (getHierachy() != hierarchy_t::input || !recursive) {
+	if (getHierachy() != hierarchy_t::input) {
 		// we make use of a C++11 construct below
 		// unaryExpr takes functors which can be matrices
 		// the output should have the same dimensionality

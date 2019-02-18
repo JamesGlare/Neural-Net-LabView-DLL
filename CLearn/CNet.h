@@ -34,20 +34,19 @@ class CNet {
 		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
 
 		// Propagate input matrix through entire network. Results are stored in "in".
-		fREAL forProp(MAT& in, const MAT& outDesired, const learnPars& pars);
+		fREAL forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars);
 		// Backpropagate through network. 
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars, bool deltaProvided=false); // set bool to 'true' if you outDesired contains delta's from other network
 
 		// Specialized functions for training GANs
-		fREAL backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars); // Discriminator
-		fREAL backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars); // Generator
-		fREAL backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars); // Wasserstein Critic
-		fREAL backProp_WGAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars); // Wasserstein Generator
-
+		void train_GAN_D(MAT& Y_copy, MAT &Y, MAT& res, bool real, const learnPars& pars);
+		void train_GAN_G_D(MAT& Y_copy, MAT& res, const learnPars& pars);
+		void backProp_GAN_G(MAT& Y, MAT& deltaMatrix, learnPars& pars); // Generator
 
 		// Feed a tensor into the sidechannel of the network
 		// TODO - Generalize to arbitrarily many sidechannels.
 		void preFeedSideChannel(const MAT& sideChannel);
+		size_t getSideChannelSize();
 
 		// Save-to-file functionality.
 		void saveToFile(string filePath) const;

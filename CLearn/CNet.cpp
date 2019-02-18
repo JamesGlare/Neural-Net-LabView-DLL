@@ -191,10 +191,10 @@ void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 }
 
 // Simply output the network
-fREAL CNet::forProp(MAT& in, const MAT& outDesired, const learnPars& pars) {
+fREAL CNet::forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars) {
 
 	// (1) Forward propagation
-	getFirst()->forProp(in, false, true);
+	getFirst()->forProp(in, saveAct, true);
 	// (2) return the error 
 	return l2_error(l2_errorMatrix(in- outDesired));
 }
@@ -210,6 +210,17 @@ void CNet::preFeedSideChannel(const MAT& sideChannelInput) {
 			break;
 		}
 	}
+}
+
+size_t CNet::getSideChannelSize() {
+	size_t result = 0;
+	for (CNetLayer* layer : layers) {
+		if (layer->whoAmI() == layer_t::sideChannel) {
+			result = dynamic_cast<SideChannel*>(layer)->getSidechannelSize();
+			break;
+		}
+	}
+	return result;
 }
 
 // Backpropagation 
@@ -245,263 +256,74 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 
 	// DONE
 	return errorOut;
-}
-
-
-// Backpropagation 
-fREAL CNet::backProp_GAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars) {
-	
-	// (0) Check if Input contains no NaN's or Infinities.
-	// ... 
-	// ...
-	// (0.5) Initialize error and difference matrix
-	static MAT cross_entropy_gradient = MAT(getNOUT(), 1);
-	bool errFlag = false;
-	static bool real_flag = 0;
-	static bool fake_flag = 0;
-	static MAT cross_entropy_gradient_real(getNOUT(),1);
-	static MAT cross_entropy_gradient_fake(getNOUT(), 1);
-	
-	bool batchIsDue = pars.batch_update == 0;
-	learnPars newPars(pars); // we need to do this to hack the accept parameter
-	newPars.accept = true;
-	fREAL errorOut = 0.0f;
-
-	// (1) Propagate in forward direction (with saveActivations == true)
-	MAT logits(input);
+} 
+/* Train the Discriminator
+*/
+void CNet::train_GAN_D(MAT& Y_copy, MAT &Y, MAT& res, bool real, const learnPars& pars) {
 	static MAT labels(getNOUT(), 1);
+	static MAT cross_entropy_gradient(getNOUT(), 1);
+	bool batchIsDue = pars.batch_update == 0;
 
-	getFirst()->forProp(logits, true, true);
-
+	getFirst()->forProp(Y_copy, true, true);
 	if (real) {
 		labels.setOnes();
-		cross_entropy_gradient_real = move(sigmoid_cross_entropy_errorMatrix(logits, labels)); // delta =  estimate - target
-		// backprop the real gradient
-		if (cross_entropy_gradient_real.allFinite())
-			getLast()->backPropDelta(cross_entropy_gradient_real, true);
-		else
-			errFlag = true;
-		// NOW - WE have to HACK our "accept" and the batch_update parameters
-		// to make sure the gradients are not applied
-		// but instead we wait for the fake gradients to come in
-		if (batchIsDue) {
-			newPars.batch_update = 1;
-		}
-		getFirst()->applyUpdate(newPars, input, true);
-
-		real_flag = true;
 	} else {
 		labels.setZero();
-		cross_entropy_gradient_fake = move(sigmoid_cross_entropy_errorMatrix(logits, labels)); // delta =  estimate - target
-		if (cross_entropy_gradient_fake.allFinite())
-			getLast()->backPropDelta(cross_entropy_gradient_fake, true);
-		else
-			errFlag = true;
-		// NOW - HACK AGAIN
-		if (batchIsDue ) {
-			newPars.batch_update = 1;
-		}
-		getFirst()->applyUpdate(newPars, input, true);
-
-		fake_flag = true;
-	}
-
-	// (2) calculate error matrix and error
-	errorOut = sigmoid_cross_entropy_with_logits(logits, labels);
-
-	// (3) Descent the combined gradient
-	if (real_flag
-		&& fake_flag) {
-		// (3.1) set flags to false
-		real_flag = false;
-		fake_flag = false;
-		//cross_entropy_gradient = cross_entropy_gradient_real + cross_entropy_gradient_fake;
-
-		// (3.9) FINALLY Apply update
-		if (batchIsDue) { // Go ahead and apply combined gradients
-			newPars.batch_update = 0;
-			newPars.accept = false; // don't add the gradient another time
-			getFirst()->applyUpdate(newPars, input, true);
-		}
-
-		// (4) Now, we need to do one last thing - we need to 
-		// somehow the delta for the generator (labels = 0, but fake input.
-		// for this to work, the discriminator needs to be trained
-		// with the real data first and then with the fake data.
-		if (!real) { // we have the right input - the generator output
-			//if (pars.spectral_normalization) {
-			//	switchW_W_temp();
-			//}
-			errorOut = (logits - logits.unaryExpr(&LogExp)).mean();
-			labels.setOnes();
-			cross_entropy_gradient = move(sigmoid_GEN_loss(labels,logits));// Generator loss
-			//cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));
-			//MAT logits(input);
-			getFirst()->forProp(logits, true, true);
-			if (cross_entropy_gradient.allFinite())
-				getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
-			else
-				errFlag = true;
-			//if (pars.spectral_normalization) {
-			//	switchW_W_temp();
-			//}
-		}
-
 	}
 	
-	outPredicted = logits; // usually just a number
-	// DONE
-	if (errFlag)
-		errorOut = -42;
-	return errorOut;
+	cross_entropy_gradient = sigmoid_cross_entropy_errorMatrix(Y_copy, labels); // delta =  estimate - target
+	if (cross_entropy_gradient.allFinite()) {
+		getLast()->backPropDelta(cross_entropy_gradient, true);
+		getFirst()->applyUpdate(pars, Y, true);
+	}
+	
+	// calculate D-loss
+	res(0, 0) = sigmoid_cross_entropy_with_logits(Y_copy, labels);
 }
-
-// Backpropagation 
-fREAL CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars) {
-
-	// (0) Check if Input contains no NaN's or Infinities.
-	// ... 
-	// ...
-
-	fREAL errorOut = 0.0f;
-
-	// (1) Propagate in forward direction (with saveActivations == true)
-	MAT logits(input);
-
-	getFirst()->forProp(logits, true, true);
-
-	// (2) calculate error matrix and error
-	// Check if we've computed error gradients 
-	// for both fake and real datasets
-	deltaMatrix += pars.lambda*l1_errorMatrix(logits); // allow for regularization... 
-	pars.lambda = 0.0f;
-	// (3) back propagate the deltas
-	getLast()->backPropDelta(deltaMatrix, true);
-	// (4) Apply update
-	getFirst()->applyUpdate(pars, input, true);
-
-	deltaMatrix = logits; // overwrite the deltaMatrix with generator output
-	// DONE
-	return 0.0f;
-}
-/* Wasserstein GAN critic training
+/* Prepare the training of the generator
 */
-fREAL CNet::backProp_WGAN_D(MAT& input, MAT& outPredicted, bool real, learnPars& pars) {
+void CNet::train_GAN_G_D(MAT& Y_copy, MAT& res, const learnPars& pars) {
+	static MAT labels(getNOUT(), 1);
+	static MAT cross_entropy_gradient(getNOUT(), 1);
 
-	// (0) Check if Input contains no NaN's or Infinities.
-	// ... 
-	// ...
-	// (0.5) Initialize error and difference matrix
-	static MAT labels(1, 1);
-	//static MAT alpha = MAT(1, 1);
+	getFirst()->forProp(Y_copy, true, true);
 
-	static bool real_flag = 0;
-	static bool fake_flag = 0;
-	//static MAT input_real = MAT(getNIN(), 1);
-	//static MAT input_fake = MAT(getNIN(), 1);
+	// compute the gradient through Critic
+	labels.setOnes();
 
+	cross_entropy_gradient = move(sigmoid_GEN_loss(labels, Y_copy));// Generator loss
+	//cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));
 
-	bool batchIsDue = pars.batch_update == 0;
-	learnPars newPars = pars; // we need to do this to hack the accept parameter
-	newPars.accept = true;
-	static fREAL loss_critic = 0.0f;
-	fREAL result = 0.0f;
+	if (cross_entropy_gradient.allFinite())
+		getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
 
-	// (1) Propagate in forward direction (with saveActivations == true)
-	MAT critic_out(input);
+	// Calculate the generator loss
+	res(0,0) = (Y_copy - Y_copy.unaryExpr(&LogExp)).mean();
 
-	getFirst()->forProp(critic_out, true, true);
-
-	if (real) {
-		//input_real = move(input); // x 
-		result = critic_out.mean(); //- D_w(x)
-		real_flag = true;
-
-		// we need to abuse the batch buffer and store some gradients
-		labels.setOnes();
-		labels = (-1)*labels;
-
-		getLast()->backPropDelta(labels, true);
-		if (batchIsDue) {
-			newPars.batch_update = 1;
-		}
-		getFirst()->applyUpdate(newPars, input, true);
-
-
-	} else {
-		result = -critic_out.mean();
-		//input_fake = move(input);
-		fake_flag = true;
-		// we need to abuse the batch buffer and store some gradients
-		labels.setOnes();
-
-		getLast()->backPropDelta(labels, true);
-		if (batchIsDue) {
-			newPars.batch_update = 1;
-		}
-		getFirst()->applyUpdate(newPars, input, true);
-
-	}
-
-	// (3) Descent the combined gradient
-	if (real_flag
-		&& fake_flag) {
-		// now we have real and fake inputs.
-		// Draw random number for interpolating between  real and fake data
-		//alpha.Random().unaryExpr(&ReLu);
-		//MAT interp = alpha(0, 0)*input_real + (1.0f - alpha(0, 0))*input_fake;
-		// Now, we need to built the gradient wRt this interpolated input
-		//getFirst()->forProp(interp, true, true);
-		//labels.setOnes();
-		//getLast()->backPropDelta(labels, true);
-		loss_critic = 0.0f;
-		real_flag = false;
-		fake_flag = false;
-		//cross_entropy_gradient = cross_entropy_gradient_real + cross_entropy_gradient_fake;
-
-		// (3.9) FINALLY Apply update
-		if (batchIsDue) { // Go ahead and apply combined gradients
-			newPars.batch_update = 0;
-			newPars.accept = false; // don't add the gradient another time
-			getFirst()->applyUpdate(newPars, input, true);
-		}
-
-		// (4) Now, we need to do one last thing - we need to 
-		// somehow the delta for the generator (labels = 0, but fake input.
-		// for this to work, the discriminator needs to be trained
-		// with the real data first and then with the fake data.
-		if (!real) { // we have the right input - the generator output
-			labels.setOnes();
-			labels = (-1)*labels;
-			getLast()->backPropDelta(labels, true);// make sure the deltaSaves are updated
-		}
-	}
-
-	return result;
 }
 
 // Backpropagation 
-fREAL CNet::backProp_WGAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars) {
+void CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars) {
 
-	fREAL errorOut = 0.0f;
+	// (0) Check if Input contains no NaN's or Infinities.
 
 	// (1) Propagate in forward direction (with saveActivations == true)
-	MAT logits(input); 
+	//MAT logits(input);
 
-	getFirst()->forProp(logits, true, true);
+	//getFirst()->forProp(logits, true, true);
+
 	// (2) calculate error matrix and error
 	// Check if we've computed error gradients 
 	// for both fake and real datasets
-
+	//deltaMatrix += pars.lambda*l1_errorMatrix(logits); // allow for regularization... 
 	// (3) back propagate the deltas
 	getLast()->backPropDelta(deltaMatrix, true);
 	// (4) Apply update
 	getFirst()->applyUpdate(pars, input, true);
 
-	deltaMatrix = logits; // overwrite the deltaMatrix with generator output
-						  // DONE
-	return 0.0f;
+	//deltaMatrix = logits; // overwrite the deltaMatrix with generator output
 }
+
 
 void CNet::inquireDimensions(size_t layer, size_t& rows, size_t& cols) const {
 	if (layer < getLayerNumber()) {

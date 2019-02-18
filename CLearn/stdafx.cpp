@@ -84,8 +84,8 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]); 
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1); // (NIN, 1) Matrix
 	inputMatrix.resize(ptr->getNIN(), 1); // (NIN, 1) Matrix
-
-	fREAL error = ptr->forProp(inputMatrix, outputDesiredMatrix, pars);
+	
+	fREAL error = ptr->forProp(inputMatrix, outputDesiredMatrix,  false, pars);
 	inputMatrix.resize(outFormat[0], outFormat[1]);
 	inputMatrix.transposeInPlace(); // Go back to Row-major format
 	inputMatrix.resize(ptr->getNOUT(), 1);
@@ -128,97 +128,90 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	return error;
 }
 
+__declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL* const X, fREAL* const Y, 
+	uint32_t prepGen, uint32_t handOverLayer, fREAL* D_REAL_ERR, fREAL* D_FAKE_ERR, fREAL eta_D, fREAL eta_G, fREAL clip, fREAL gamma, fREAL lambda, uint32_t rmsprop, uint32_t adam, uint32_t batch_update,
+	uint32_t weight_norm, uint32_t spectral_norm, uint32_t firstTrain, uint32_t lastTrain, int32_t* const xFormat, int32_t* const yFormat) {
 
-__declspec(dllexport) fREAL __stdcall backPropCNet_GAN_D(CNet* ptr, fREAL* const input, fREAL* const output, uint32_t* const real, fREAL* const eta,
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
+	// Major GAN training function
+	learnPars pars(eta_D, clip, gamma, lambda, rmsprop, adam, batch_update, weight_norm, spectral_norm, firstTrain, lastTrain, true);
+	assert(ptr_D->getNIN() == yFormat[0] * yFormat[1]); 
+	assert(ptr_G->getNOUT() == xFormat[0] * xFormat[1]);
+	assert(ptr_D->getSideChannelSize() == ptr_G->getNOUT());
+	// Format the matrices
+	MAT x_matrix = MATMAP_ROWMAJOR(X, xFormat[0], xFormat[1]);
+	x_matrix.resize(ptr_G->getNOUT(), 1);// (NIN, 1) Matrix
+	MAT y_matrix = MATMAP_ROWMAJOR(Y, yFormat[0], yFormat[1]);
+	y_matrix.resize(ptr_D->getNIN(), 1);// (NOUT,1) Matrix
 
-	// if change of CNet instance, relink the chain
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
-	}
+	// (0) change a few settings for the discriminator
+	pars.weight_normalization = false; // only used for generator
+	bool batchIsDue = pars.batch_update == 0;
 
-	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
-
-	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
-	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
-
-	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
-	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
-	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]);
-	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
+	// (1) Train D real =====================================================================
+	MAT D_REAL_Y(y_matrix); // Y copy - expensive
+	MAT D_REAL_RES(1, 1);
+	D_REAL_RES.setZero();
 	
-	bool real_fake = (bool)*real;
+	if (batchIsDue) // hold back the update to the disc weights - need fake loss
+		pars.batch_update = 1;
 
-	fREAL error = ptr->backProp_GAN_D(inputMatrix, outputDesiredMatrix, real_fake, pars);
-	// Resize the output matrix & copy into outgoing array.
-	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
-	outputDesiredMatrix.transposeInPlace(); // Go back to Row-major format
-	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
-	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
+	ptr_D->preFeedSideChannel(x_matrix);
+	ptr_D->train_GAN_D(D_REAL_Y, y_matrix, D_REAL_RES, true, pars);
 
-	return error;
-}
-__declspec(dllexport) fREAL __stdcall backPropCNet_WGAN_D(CNet* ptr, fREAL* const input, fREAL* const output, uint32_t* const real, fREAL* const eta,
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const outFormat) {
+	*D_REAL_ERR = Sig(D_REAL_RES(0, 0));
 
-	// if change of CNet instance, relink the chain
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
+	//(2) Draw Z and produce generator sample ===============================================
+	MAT Z(ptr_G->getSideChannelSize(), 1);
+	Z.setRandom().unaryExpr(&abs<fREAL>);
+	ptr_G->preFeedSideChannel(Z);
+	MAT G_Sample(y_matrix);
+	ptr_G->forProp(G_Sample, x_matrix, false, pars); // G_Sample contains the generator sample
+
+	// (3) Train D fake =====================================================================
+	MAT D_FAKE_Y(y_matrix); // Y copy - expensive
+	MAT D_FAKE_RES(1, 1);
+	D_FAKE_RES.setZero();
+
+	if (batchIsDue) // undo the change to batch_update 
+		pars.batch_update = 0;
+
+	ptr_D->preFeedSideChannel(G_Sample);
+	ptr_D->train_GAN_D(D_FAKE_Y, y_matrix, D_FAKE_RES, false, pars);
+
+	*D_FAKE_ERR = Sig(D_FAKE_RES(0, 0));
+
+	// (4) Prepare and Train the Generator ==================================================
+	if (prepGen) {
+		Z.setRandom().unaryExpr(&abs<fREAL>);
+		ptr_G->preFeedSideChannel(Z);
+		G_Sample = y_matrix;
+		ptr_G->forProp(G_Sample, x_matrix, true, pars); // New Gen sample, SAVE = true!
+		ptr_D->preFeedSideChannel(G_Sample); // feed the new generator output to the discriminator
+
+		MAT D_G_Y(y_matrix);
+		MAT D_G_RES(1, 1);
+		D_G_RES.setZero();
+		ptr_D->train_GAN_G_D(D_G_Y, D_G_RES, pars); // forprop through new weights of D
+													// backprop as well so that we can collect deltas
+		MAT deltas(ptr_G->getNOUT(), 1);
+		ptr_D->copyNthDelta(handOverLayer, deltas.data(), ptr_G->getNOUT()); // collect deltas
+		
+		// Change a few settings for the generator
+		pars.spectral_normalization = false;
+		pars.weight_normalization = weight_norm;
+		pars.eta = eta_G;
+
+		ptr_G->backProp_GAN_G(y_matrix, deltas, pars); // backprop those deltas through G
 	}
+	// (5) Copy the G_sample into the X-Array ================================================
 
-	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
-
-	assert(ptr->getNOUT() == outFormat[0] * outFormat[1]);
-	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
-
-	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
-	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
-	MAT outputDesiredMatrix = MATMAP_ROWMAJOR(output, outFormat[0], outFormat[1]);
-	outputDesiredMatrix.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
-
-	bool real_fake = (bool)*real;
-
-	fREAL error = ptr->backProp_WGAN_D(inputMatrix, outputDesiredMatrix, real_fake, pars);
 	// Resize the output matrix & copy into outgoing array.
-	outputDesiredMatrix.resize(outFormat[0], outFormat[1]);
-	outputDesiredMatrix.transposeInPlace(); // Go back to Row-major format
-	outputDesiredMatrix.resize(ptr->getNOUT(), 1);
-	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
-
-	return error;
+	G_Sample.resize(xFormat[0], xFormat[1]);
+	G_Sample.transposeInPlace(); // Go back to Row-major format
+	G_Sample.resize(ptr_G->getNOUT(), 1);
+	copyToOut(G_Sample.data(), X, ptr_G->getNOUT());
 }
-__declspec(dllexport) fREAL __stdcall backPropCNet_GAN_G(CNet* ptr, fREAL* const input, fREAL* const deltaMatrix, fREAL* const eta,
-	fREAL* const clip, fREAL* const gamma, fREAL* const lambda, uint32_t* const rmsprop, uint32_t* const adam, uint32_t* const batch_update,
-	uint32_t* const weight_norm, uint32_t* const spectral_norm, uint32_t* const firstTrain, uint32_t* const lastTrain, int32_t* const inFormat, int32_t* const deltaFormat) {
 
-	// if change of CNet instance, relink the chain
-	if (!sameCNet(ptr)) {
-		ptr->linkChain();
-	}
-
-	learnPars pars(*eta, *clip, *gamma, *lambda, *rmsprop, *adam, *batch_update, *weight_norm, *spectral_norm, *firstTrain, *lastTrain, true);
-
-	assert(ptr->getNOUT() == deltaFormat[0] * deltaFormat[1]);
-	assert(ptr->getNIN() == inFormat[0] * inFormat[1]);
-
-	MAT inputMatrix = MATMAP_ROWMAJOR(input, inFormat[0], inFormat[1]);
-	inputMatrix.resize(ptr->getNIN(), 1);// (NIN, 1) Matrix
-	MAT deltas = MATMAP_ROWMAJOR(deltaMatrix, deltaFormat[0], deltaFormat[1]);
-	deltas.resize(ptr->getNOUT(), 1);// (NOUT,1) Matrix
-
-
-	fREAL error = ptr->backProp_GAN_G(inputMatrix, deltas, pars);
-
-	// Resize the logit matrix & copy into outgoing delta array.
-	deltas.resize(deltaFormat[0], deltaFormat[1]);
-	deltas.transposeInPlace(); // Go back to Row-major format
-	deltas.resize(ptr->getNOUT(), 1);
-	copyToOut(deltas.data(), deltaMatrix, ptr->getNOUT());
-
-	return 0;
-}
 __declspec(dllexport) void __stdcall feedSideChannel(CNet* ptr, fREAL* const sideChannelArray, int32_t* const format) {
 
 	MAT sideChannelMatrix = MATMAP_ROWMAJOR(sideChannelArray, format[0], format[1]);
