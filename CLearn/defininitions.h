@@ -42,7 +42,7 @@ typedef Map<MATU8> MATU8MAP;
 typedef fREAL(*ACTFUNC)(fREAL);
 typedef LLT<MAT> CHOL;
 
-enum actfunc_t {RELU =1, TANH=2, SIG=3, NONE=4, SOFTPLUS=5};
+enum actfunc_t {RELU =1, TANH=2, SIG=3, NONE=4, SOFTPLUS=5, LEAKYRELU=6};
 enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6, dropout=7, mixtureDensity=8, reshape=9, sideChannel = 10}; // enumerators: 1, 2, 4 range: 0..7
 enum pooling_t {max =1, average = 2};
 enum hierarchy_t { input = 1, hidden = 2, output = 3};
@@ -162,6 +162,14 @@ inline fREAL DReLu(fREAL f) {
 	return f > 0.0f ? 1.0f : 0.0f;
 	//
 }
+inline fREAL LeakyReLu(fREAL f) {
+	return f > 0.0f ? f : 0.2f*f;
+}
+
+inline fREAL DLeakyReLu(fREAL f) {
+	return f > 0.0f ? 1.0f : -0.2f;
+}
+
 inline fREAL norm(fREAL f) {
 	return f*f;
 }

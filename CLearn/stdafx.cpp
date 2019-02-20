@@ -32,32 +32,17 @@ __declspec(dllexport) void __stdcall initializeCNet(CNet** ptr, uint32_t NIN){
 __declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t NOUT, uint32_t func) {
 	ptr->addFullyConnectedLayer(NOUT, static_cast<actfunc_t>(func));
 }
-__declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t features, uint32_t func) {
-	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, features, static_cast<actfunc_t>(func));
+__declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, uint32_t func) {
+	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels, static_cast<actfunc_t>(func));
 }
-__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride,  uint32_t features, uint32_t outBoxes, uint32_t func) {
-	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, static_cast<actfunc_t>(func));
+__declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, uint32_t func) {
+	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels, static_cast<actfunc_t>(func));
 }
-__declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY) {
-	ptr->addPoolingLayer(maxOverXY, pooling_t::max);
+__declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY, uint32_t channels) {
+	ptr->addPoolingLayer(maxOverXY, channels, pooling_t::max);
 }
 __declspec(dllexport) void __stdcall addPassOnLayer(CNet* ptr, uint32_t function) {
-	switch (function) {
-		case 0:
-			ptr->addPassOnLayer(actfunc_t::NONE);
-			break;
-		case 1:
-			ptr->addPassOnLayer(actfunc_t::RELU);
-			break;
-		case 2:
-			ptr->addPassOnLayer(actfunc_t::TANH);
-			break;
-		case 3:
-			ptr->addPassOnLayer(actfunc_t::SIG);
-			break;
-		default:
-			ptr->addPassOnLayer(actfunc_t::NONE);
-	}
+	ptr->addPassOnLayer(static_cast<actfunc_t>(function));
 } 
 __declspec(dllexport) void __stdcall addReshapeLayer(CNet* ptr) {
 	ptr->addReshape();

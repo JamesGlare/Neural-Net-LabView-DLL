@@ -10,11 +10,11 @@
 class AntiConvolutionalLayer : public PhysicalLayer {
 public:
 	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, 
-		uint32_t features, uint32_t outBoxes, actfunc_t type);
+		uint32_t inChannels, uint32_t outChannels, actfunc_t type);
 	AntiConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, 
-		uint32_t features, uint32_t outBoxes, actfunc_t type, CNetLayer& lower);
-	AntiConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t features, uint32_t outBoxes, actfunc_t type);
-	AntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features, uint32_t outBoxes,  actfunc_t type, CNetLayer& lower);
+		uint32_t inChannels, uint32_t outChannels, actfunc_t type, CNetLayer& lower);
+	AntiConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, actfunc_t type);
+	AntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, actfunc_t type, CNetLayer& lower);
 	~AntiConvolutionalLayer();
 
 	layer_t whoAmI() const;
@@ -30,7 +30,7 @@ public:
 	inline size_t getNINY() const { return NINY; };
 	inline size_t getKernelX() const { return kernelX; };
 	inline size_t getKernelY() const { return kernelY; };
-	uint32_t getFeatures() const ;
+	uint32_t getOutChannels() const ;
 
 private:
 	/* Weight normalization functions

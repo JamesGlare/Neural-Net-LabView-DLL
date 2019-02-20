@@ -143,7 +143,7 @@ MAT AntiConvolutionalLayer::snorm_dWt(MAT& grad) {
 	}
 	return grad;
 }
-uint32_t AntiConvolutionalLayer::getFeatures() const {
+uint32_t AntiConvolutionalLayer::getOutChannels() const {
 	// deconv layers restart the tree.
 	// I assume there is at least one FC layer between 
 	// a convolutional and an anticonvolutional layer
@@ -165,8 +165,7 @@ void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive
 		if (recursive && getHierachy() != hierarchy_t::output) {
 			above->forProp(inBelow, true, true);
 		}
-	}
-	else {
+	} else {
 		inBelow = inBelow.unaryExpr(act);
 
 		if (recursive && getHierachy() != hierarchy_t::output)

@@ -32,10 +32,6 @@ CNetLayer::CNetLayer(size_t _NOUT, actfunc_t type, CNetLayer& lower): NOUT(_NOUT
 	hierarchy = hierarchy_t::output;
 }
 
-uint32_t CNetLayer::getFeatures() const {
-	return 1; // default
-}
-
 MAT CNetLayer::getDACT() const {
 	return actSave.unaryExpr(dact);
 }
@@ -105,6 +101,10 @@ void CNetLayer::assignActFunc(actfunc_t type) {
 		case actfunc_t::SOFTPLUS:
 			act = &SoftPlus;
 			dact = &DSoftPlus;
+			break;
+		case actfunc_t::LEAKYRELU:
+			act = &LeakyReLu;
+			dact = &DLeakyReLu;
 			break;
 		default:
 			act = &ReLu;

@@ -10,10 +10,12 @@
 
 class ConvolutionalLayer : public PhysicalLayer{
 	public:
-		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, uint32_t features,  actfunc_t type);
-		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX,  uint32_t features,  actfunc_t type, CNetLayer& lower);
-		ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t features,  actfunc_t type);
-		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t features,  actfunc_t type, CNetLayer& lower);
+		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, 
+			uint32_t inChannels, uint32_t outChannels, actfunc_t type);
+		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX,  
+			uint32_t inChannels, uint32_t outChannels, actfunc_t type, CNetLayer& lower);
+		ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, actfunc_t type);
+		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, actfunc_t type, CNetLayer& lower);
 		~ConvolutionalLayer();
 		
 		layer_t whoAmI() const;
@@ -30,7 +32,7 @@ class ConvolutionalLayer : public PhysicalLayer{
 		inline size_t getNINY() const { return NINY; };
 		inline size_t getKernelX() const { return kernelX; };
 		inline size_t getKernelY() const { return kernelY; };
-		uint32_t getFeatures() const;
+		uint32_t getOutChannels() const;
 	private:
 		/* Weight normalization functions
 		*/ 

@@ -9,9 +9,9 @@
 class MaxPoolLayer : public DiscarnateLayer{
 
 public:
-	MaxPoolLayer(size_t NINXY, size_t maxOver);
-	MaxPoolLayer(size_t maxOver, CNetLayer& lower);
-	MaxPoolLayer(CNetLayer& lower);
+	MaxPoolLayer(size_t NINXY, size_t maxOver, size_t channels);
+	MaxPoolLayer(size_t maxOver, size_t channels, CNetLayer& lower);
+	MaxPoolLayer(size_t channels, CNetLayer& lower);
 
 	~MaxPoolLayer();
 	layer_t whoAmI() const;
@@ -36,7 +36,7 @@ private:
 	size_t NOUTY;
 	MATINDEX indexX;
 	MATINDEX indexY;
-	size_t inFeatures;
+	size_t channels;
 
 	MAT maxPool(const MAT& in,  bool saveIndices);
 	void assertGeometry();

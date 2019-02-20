@@ -3,22 +3,22 @@
 #include "MaxPoolLayer.h"
 
 // Constructors
-MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY)
-	: inFeatures(1), NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), 
+MaxPoolLayer::MaxPoolLayer(size_t NINXY, size_t _maxOverXY, size_t _channels)
+	: channels(_channels), NINX(NINXY), NINY(NINXY), maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX((NINXY / _maxOverXY)), NOUTY((NINXY / _maxOverXY)), 
 	DiscarnateLayer(((int)(NINXY / _maxOverXY))*((int)(NINXY / _maxOverXY)),NINXY*NINXY, actfunc_t::NONE){
 	init();
 	assertGeometry();
 }
 // This constructor assumes a square input NINX x NINY.
 // However, we 
-MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, CNetLayer& lower) 
-	: inFeatures(lower.getFeatures()), NINX((int)sqrt(lower.getNOUT()/lower.getFeatures())), NINY((int)sqrt(lower.getNOUT() / lower.getFeatures())),
-	maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT() / lower.getFeatures())) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT() / lower.getFeatures())) / _maxOverXY),
-	DiscarnateLayer( lower.getFeatures()*((int)sqrt(lower.getNOUT() / lower.getFeatures()) / _maxOverXY)*((int)sqrt(lower.getNOUT() / lower.getFeatures()) / _maxOverXY), actfunc_t::NONE, lower) {
+MaxPoolLayer::MaxPoolLayer(size_t _maxOverXY, size_t _channels, CNetLayer& lower)
+	: channels(_channels), NINX((int)sqrt(lower.getNOUT()/ _channels)), NINY((int)sqrt(lower.getNOUT() / _channels)),
+	maxOverX(_maxOverXY), maxOverY(_maxOverXY), NOUTX(((int)sqrt(lower.getNOUT() / _channels)) / _maxOverXY), NOUTY(((int)sqrt(lower.getNOUT() / _channels)) / _maxOverXY),
+	DiscarnateLayer(_channels*((int)sqrt(lower.getNOUT() / _channels) / _maxOverXY)*((int)sqrt(lower.getNOUT() / _channels) / _maxOverXY), actfunc_t::NONE, lower) {
 	init();
 	assertGeometry();
 }
-MaxPoolLayer::MaxPoolLayer(CNetLayer& lower) : MaxPoolLayer::MaxPoolLayer(2, lower) {}
+MaxPoolLayer::MaxPoolLayer(size_t _channels, CNetLayer& lower) : MaxPoolLayer::MaxPoolLayer(2, _channels, lower) {}
 
 MaxPoolLayer::~MaxPoolLayer(){}
 
@@ -28,9 +28,9 @@ void MaxPoolLayer::assertGeometry() {
 }
 
 void MaxPoolLayer::init() {
-	indexX = MATINDEX(NOUTY, inFeatures*NOUTX);
+	indexX = MATINDEX(NOUTY, channels*NOUTX);
 	indexX.setConstant(0);
-	indexY = MATINDEX(NOUTY, inFeatures*NOUTX);
+	indexY = MATINDEX(NOUTY, channels*NOUTX);
 	indexY.setConstant(0);
 	actSave = MAT(getNOUT(), 1); 
 	actSave.setConstant(0);
@@ -43,7 +43,7 @@ layer_t MaxPoolLayer::whoAmI() const {
 
 
 void MaxPoolLayer::saveToFile(ostream& os) const {
-	os << maxOverX << " " << maxOverY << " " << NINX << " " << NINY << " " << NOUTX << " "<< NOUTY << " "<< inFeatures<<endl;
+	os << maxOverX << " " << maxOverY << " " << NINX << " " << NINY << " " << NOUTX << " "<< NOUTY << " "<< channels<<endl;
 }
 void MaxPoolLayer::loadFromFile(ifstream& in) {
 	in >> maxOverX;
@@ -52,11 +52,11 @@ void MaxPoolLayer::loadFromFile(ifstream& in) {
 	in >> NINY; 
 	in >> NOUTX;
 	in >> NOUTY;
-	in >> inFeatures;
+	in >> channels;
 }
 
 void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
-	inBelow.resize(NINY, inFeatures* NINX);
+	inBelow.resize(NINY, channels* NINX);
 	inBelow = maxPool(inBelow, training);
 	inBelow.resize(getNOUT(), 1);
 	
@@ -71,11 +71,11 @@ void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
 void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	//deltaSave = deltaAbove;
 	if (getHierachy() != hierarchy_t::input || !recursive) { // ... this is not an input layer.
-		deltaAbove.resize(NOUTY, inFeatures*NOUTX);
+		deltaAbove.resize(NOUTY, channels*NOUTX);
 
-		MAT newDelta(NINY, inFeatures*NINX);
+		MAT newDelta(NINY, channels*NINX);
 		newDelta.setConstant(0);
-		for (size_t f = 0; f < inFeatures; ++f) {
+		for (size_t f = 0; f < channels; ++f) {
 			for (size_t m = 0; m < NOUTY; ++m) {
 				for (size_t n = 0; n < NOUTX; ++n) {
 					if (indexY(m, n+f*NOUTX) >= 0 && indexY(m, n + f*NOUTX) < NINY
@@ -94,7 +94,7 @@ void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 }
 
 MAT MaxPoolLayer::maxPool(const MAT& in, bool saveIndices){
-	MAT out( NOUTY, inFeatures*NOUTX );
+	MAT out( NOUTY, channels*NOUTX );
 	static const fREAL initNegative = -1000;
 	
 	fREAL curMax = initNegative;
@@ -102,7 +102,7 @@ MAT MaxPoolLayer::maxPool(const MAT& in, bool saveIndices){
 	size_t ii = -1;
 	size_t jj = -1;
 
-	for (size_t f = 0; f < inFeatures; ++f) {
+	for (size_t f = 0; f < channels; ++f) {
 		for (size_t j = 0; j < NOUTY; ++j) {
 			for (size_t i = 0; i < NOUTX; ++i) {
 				for (size_t k = 0; k < maxOverY; ++k) {

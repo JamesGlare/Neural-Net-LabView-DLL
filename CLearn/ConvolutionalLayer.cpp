@@ -13,24 +13,22 @@ They are intended to be passed on to some dense layer where they can be incorpor
 * - The CNetLayer::NOUT variable contains information about the number of features.
 */
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
-	uint32_t _features, actfunc_t type)
-	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features),
-	PhysicalLayer(_features*_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, 
-		MATIND{ 1,_features }, MATIND{ _features*_kernelY, _features*_kernelX }) {
+	uint32_t _inChannels, uint32_t _outChannels,  actfunc_t type)
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), inFeatures(_inChannels), features(_outChannels),
+	PhysicalLayer(_outChannels*_NOUTX*_NOUTY, _NINX*_NINY, type, MATIND{ _kernelY, _outChannels*_kernelX }, MATIND{ _kernelY, _outChannels*_kernelX },
+		MATIND{ 1,_outChannels }, MATIND{ _outChannels*_kernelY, _outChannels*_kernelX }) {
 	// the layer matrix will act as convolutional kernel
-	inFeatures = 1;
 	init();
 	assertGeometry();
 }
 
 ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
-	uint32_t _features, actfunc_t type, CNetLayer& lower)
-	: NOUTX(_NOUTX), NOUTY(_NOUTY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features),
-	PhysicalLayer(lower.getFeatures()*_features*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX }, 
-		MATIND{ 1,_features }, MATIND{ _features*_kernelY, _features*_kernelX }, lower) {
+	uint32_t _inChannels, uint32_t _outChannels, actfunc_t type, CNetLayer& lower)
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_outChannels), inFeatures(_inChannels),
+	PhysicalLayer(_outChannels*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _outChannels*_kernelX }, MATIND{ _kernelY, _outChannels*_kernelX },
+		MATIND{ 1,_outChannels }, MATIND{ _outChannels*_kernelY, _outChannels*_kernelX }, lower) {
 
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
-	inFeatures = lower.getFeatures();
 	NINX = _NINX / inFeatures; //TODO 
 	NINY = _NINY;
 
@@ -38,23 +36,22 @@ ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NIN
 	assertGeometry();
 }
 // second most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type)
-	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
-	PhysicalLayer(_features*_NOUTXY*_NOUTXY, _NINXY*_NINXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, 
-		MATIND{ 1,_features }, MATIND{ _features*_kernelXY, _features*_kernelXY }) {
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _inChannels, uint32_t _outChannels, actfunc_t type)
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_outChannels), inFeatures(_inChannels),
+	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, _NINXY*_NINXY, type, MATIND{ _kernelXY, _outChannels*_kernelXY }, MATIND{ _kernelXY, _outChannels*_kernelXY },
+		MATIND{ 1,_outChannels }, MATIND{ _outChannels*_kernelXY, _outChannels*_kernelXY }) {
 	inFeatures = 1;
 	init();
 	assertGeometry();
 }
 
 // most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, actfunc_t type, CNetLayer& lower)
-	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features),
-	PhysicalLayer(lower.getFeatures()*_features*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY }, 
-		MATIND{ 1,_features }, MATIND{ _features*_kernelXY, _features*_kernelXY }, lower) {
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _inChannels, uint32_t _outChannels, actfunc_t type, CNetLayer& lower)
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_outChannels), inFeatures(_inChannels),
+	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _outChannels*_kernelXY }, MATIND{ _kernelXY, _outChannels*_kernelXY },
+		MATIND{ 1,_outChannels }, MATIND{ _outChannels*_kernelXY, _outChannels*_kernelXY }, lower) {
 
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
-	inFeatures = lower.getFeatures(); // product of all features so far
 	NINX = sqrt((lower.getNOUT()) / inFeatures); // sqrt(2* 5*5/2) = 5 
 	NINY = NINX; // this is only for squares.
 
@@ -68,7 +65,7 @@ layer_t ConvolutionalLayer::whoAmI() const {
 	return layer_t::convolutional;
 }
 void ConvolutionalLayer::assertGeometry() {
-	assert(inFeatures*features*NOUTX*NOUTY == getNOUT());
+	assert(features*NOUTX*NOUTY == getNOUT());
 	assert(NINX*NINY*inFeatures == getNIN());
 	// Feature dimensions
 	assert((strideX*NOUTX - strideX - NINX + kernelX) % 2 == 0);
@@ -197,12 +194,8 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 		}
 	}
 }
-uint32_t ConvolutionalLayer::getFeatures() const {
-	uint32_t tree_feature_product = features;
-	if (getHierachy() != hierarchy_t::input) {
-		tree_feature_product *= below->getFeatures();
-	}
-	return tree_feature_product;
+uint32_t ConvolutionalLayer::getOutChannels() const {
+	return features;
 }
 // backprop
 void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {

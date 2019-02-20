@@ -33,25 +33,25 @@ void CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	}
 }
 
-void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, actfunc_t type) {
+void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t inChannels, size_t outChannels, actfunc_t type) {
 	// At the moment, I only allow for square-shaped input.
 	// this may need to change in the future.
 	if (getLayerNumber() > 0) {
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, features, type, *(getLast()));
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels, type, *(getLast()));
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, features,  type);
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, inChannels, outChannels, type);
 		layers.push_back(cl);
 	}
 }
 
-void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t features, size_t outBoxes, actfunc_t type) {
+void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t inChannels, size_t outChannels, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, features, outBoxes, type, *(getLast()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels , type, *(getLast()));
 		layers.push_back(acl);
 	} else {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN/features), kernelXY, stride, features, outBoxes, type);
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN / inChannels), kernelXY, stride, inChannels, outChannels, type);
 		layers.push_back(acl);
 	}
 }
@@ -96,14 +96,14 @@ void CNet::addDropoutLayer(fREAL ratio) {
 	}
 }
 
-void CNet::addPoolingLayer(size_t maxOverXY, pooling_t type) {
+void CNet::addPoolingLayer(size_t maxOverXY, size_t channels, pooling_t type) {
 	switch (type) {
 		case pooling_t::max:
 			if (getLayerNumber() > 0) {
-				MaxPoolLayer* mpl = new MaxPoolLayer(maxOverXY, *(getLast()));
+				MaxPoolLayer* mpl = new MaxPoolLayer(maxOverXY, channels, *(getLast()));
 				layers.push_back(mpl);
 			} else {
-				MaxPoolLayer* mpl = new MaxPoolLayer(sqrt(NIN), maxOverXY);
+				MaxPoolLayer* mpl = new MaxPoolLayer(sqrt(NIN), maxOverXY,  channels);
 				layers.push_back(mpl);
 			}
 			break;

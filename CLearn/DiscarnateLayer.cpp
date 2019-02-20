@@ -10,10 +10,3 @@ void DiscarnateLayer::applyUpdate(const learnPars& pars, MAT& input, bool recurs
 		above->applyUpdate(pars, input, true);
 	}
 }
-uint32_t DiscarnateLayer::getFeatures() const {
-	if (getHierachy() != hierarchy_t::input) {
-		return below->getFeatures();
-	} else {
-		return 1;
-	}
-}
