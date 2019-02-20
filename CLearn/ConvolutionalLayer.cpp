@@ -206,7 +206,7 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 		if (getHierachy() == hierarchy_t::output)
 			deltaAbove = deltaAbove.cwiseProduct(this->getDACT());
 
-		deltaSave.resize(NOUTY, inFeatures*features*NOUTX); // keep track of this!!!
+		deltaSave.resize(NOUTY, features*NOUTX); // keep track of this!!!
 															//deltaAbove = backPropConv_(deltaSave, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		deltaAbove = antiConv_(deltaSave, W, NINY, NINX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features, inFeatures);
 		deltaSave.resize(getNOUT(), 1); // resize back
@@ -220,7 +220,7 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 }
 // grad
 MAT ConvolutionalLayer::w_grad(MAT& input) { // deltaSave: (NOUT-sideChannel) sized vector
-	deltaSave.resize(NOUTY, inFeatures*features*NOUTX);
+	deltaSave.resize(NOUTY, features*NOUTX);
 	if (getHierachy() == hierarchy_t::input) {
 
 		input.resize(NINY, inFeatures*NINX);

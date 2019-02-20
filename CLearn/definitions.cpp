@@ -103,7 +103,7 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 	size_t kernelX = kernel.cols()/outFeatures;
 
 	// (2) Allocate matrices 
-	MAT out(NOUTY, NOUTX*inFeatures*outFeatures); // stack features along x in accord with convention
+	MAT out(NOUTY, NOUTX*outFeatures); // stack features along x in accord with convention
 	out.setZero();
 
 	// (3) Begin loop
@@ -133,7 +133,7 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 								yInd >= 0 &&
 								xInd < NINX &&
 								xInd >= 0) { // Check we're not in the padding.
-								out(j, i + f*NOUTX) += kernel(m, outF*kernelX + n) * in(yInd, xInd + inF*NINX);
+								out(j, i + outF*NOUTX) += kernel(m, outF*kernelX + n) * in(yInd, xInd + inF*NINX);
 							} 
 						}
 					}
@@ -227,7 +227,7 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t kernelY, uint32_t kernel
 								xInd >= 0) { // Check we're not in the padding.
 
 								//#pragma omp critical
-								kernelGrad(j, i + outF*kernelX) += delta(m, f*deltaX + n) * in(yInd, xInd + inF*NINX);
+								kernelGrad(j, i + outF*kernelX) += delta(m, outF*deltaX + n) * in(yInd, xInd + inF*NINX);
 							}
 						}
 					}
@@ -309,7 +309,7 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint
 								yInd < NOUTY	&&  
 								xInd < NOUTX) { // Check we're not in the padding.
 
-								out(yInd, xInd + outB*NOUTX) += kernel(m, F*kernelX + n) * in(j, i + f*NINX);
+								out(yInd, xInd + outB*NOUTX) += kernel(m, F*kernelX + n) * in(j, i + F*NINX);
 							}
 						}
 					}
@@ -436,7 +436,7 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 								xInd < deltaX &&
 								xInd >= 0) { // Check we're not in the padding.
 
-								kernelGrad(j, i + F*kernelX) += delta(yInd, xInd + outB*deltaX ) * in(m, n + f*NINX);
+								kernelGrad(j, i + F*kernelX) += delta(yInd, xInd + outB*deltaX ) * in(m, n + F*NINX);
 							}
 						}
 					}

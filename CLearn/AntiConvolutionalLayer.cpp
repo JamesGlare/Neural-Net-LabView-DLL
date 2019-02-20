@@ -4,7 +4,7 @@
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
 	uint32_t _features, uint32_t _outBoxes, actfunc_t type)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_features), outBoxes(_outBoxes),
-	PhysicalLayer(_outBoxes*_NOUTX*_NOUTY, _outBoxes*_features*_NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
+	PhysicalLayer(_outBoxes*_NOUTX*_NOUTY, _features*_NINX*_NINY, type, MATIND{ _kernelY, _features*_kernelX }, MATIND{ _kernelY, _features*_kernelX },
 		MATIND{ 1,_features }, MATIND{_features*_kernelY, _features*_kernelX}) {
 
 	init();
@@ -23,7 +23,7 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 // second most convenient constructor
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride, uint32_t _features, uint32_t _outBoxes, actfunc_t type)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_features), outBoxes(_outBoxes),
-	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY, _outBoxes*_features*_NINXY*_NINXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY },
+	PhysicalLayer(_outBoxes*_NOUTXY*_NOUTXY, _features*_NINXY*_NINXY, type, MATIND{ _kernelXY, _features*_kernelXY }, MATIND{ _kernelXY, _features*_kernelXY },
 		MATIND{ 1,_features }, MATIND{ _features*_kernelXY, _features*_kernelXY }) {
 
 	init();
@@ -50,7 +50,7 @@ layer_t AntiConvolutionalLayer::whoAmI() const {
 
 void AntiConvolutionalLayer::assertGeometry() {
 	assert(outBoxes*NOUTX*NOUTY == getNOUT());
-	assert(outBoxes*features*NINX*NINY == getNIN());
+	assert(features*NINX*NINY == getNIN());
 	assert(antiConvoSize(NINY, kernelY, antiConvPad(NINY, strideY, kernelY, NOUTY), strideY) == NOUTY);
 	assert(antiConvoSize(NINX, kernelX, antiConvPad(NINX, strideX, kernelX, NOUTX), strideX) == NOUTX);
 }
@@ -153,7 +153,7 @@ uint32_t AntiConvolutionalLayer::getOutChannels() const {
 void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 
 	// (1) Reshape the remaining input
-	inBelow.resize(getNINY(), outBoxes*features*getNINX());
+	inBelow.resize(getNINY(), features*getNINX());
 	inBelow = antiConv_(inBelow, W, getNOUTY(), getNOUTX(), strideY, strideX, antiConvPad(getNINY(), strideY, kernelY, getNOUTY()),
 		antiConvPad(getNINX(), strideX, kernelX, getNOUTX()), features, outBoxes); // square convolution//
 	inBelow.resize(getNOUT(), 1);
@@ -202,7 +202,7 @@ MAT AntiConvolutionalLayer::w_grad(MAT& input) {
 
 	if (getHierachy() == hierarchy_t::input) {
 
-		input.resize(getNINY(), getNINX()*features*outBoxes);
+		input.resize(getNINY(), getNINX()*features);
 		MAT convoluted = antiConvGrad_(deltaSave, input, kernelY, kernelX, strideY, strideX, antiConvPad(getNINY(), strideY, kernelY, getNOUTY()),
 			antiConvPad(getNINX(), strideX, kernelX, getNOUTX()), features, outBoxes);
 
@@ -215,7 +215,7 @@ MAT AntiConvolutionalLayer::w_grad(MAT& input) {
 	else {
 		MAT fromBelow = below->getACT();
 
-		fromBelow.resize(getNINY(), getNINX()*features*outBoxes);
+		fromBelow.resize(getNINY(), getNINX()*features);
 		MAT convoluted = antiConvGrad_(deltaSave, fromBelow, kernelY, kernelX, strideY, strideX, antiConvPad(getNINY(), strideY, kernelY, getNOUTY()), antiConvPad(getNINX(), strideX, kernelX, getNOUTX()),
 			features, outBoxes);
 
