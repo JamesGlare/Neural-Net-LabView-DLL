@@ -75,13 +75,14 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 	/* new version of this function
 	*/
 	// Get gradient
+	bool isDense = whoAmI() == layer_t::fullyConnected;
 
 	if (inRange(getLayerNumber(), pars.firstTrain, pars.lastTrain)) {
 		if (pars.accept) {
 			w_batch.swallowGradient(w_grad(input));
 			b_batch.swallowGradient(b_grad());
 		// TODO ------ -------- Put this abomination of a hack into order. 
-			if (pars.spectral_normalization) { // collect special batch information for spectral normalization
+			if ( pars.spectral_normalization) { // collect special batch information for spectral normalization
 				lambdaBatch += (deltaSave.transpose()*(actSave - b)).sum(); // store this value
 				++lambdaCount;
 			}
@@ -112,7 +113,7 @@ void PhysicalLayer::applyUpdate(const learnPars& pars, MAT& input, bool recursiv
 				// (3) Recompute inversNorm and update the layer weight matrix
 				wnorm_inversVNorm();
 				wnorm_setW();
-			} else if (pars.spectral_normalization) {
+			} else if ( pars.spectral_normalization) {
 				/* Spectral Normalization
 				*/
 				if (!spectralNormMode) {

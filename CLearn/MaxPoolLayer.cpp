@@ -69,8 +69,8 @@ void MaxPoolLayer::forProp(MAT& inBelow,  bool training, bool recursive) {
 }
 
 void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
-	//deltaSave = deltaAbove;
-	if (getHierachy() != hierarchy_t::input || !recursive) { // ... this is not an input layer.
+	deltaSave = deltaAbove;
+	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 		deltaAbove.resize(NOUTY, channels*NOUTX);
 
 		MAT newDelta(NINY, channels*NINX);
@@ -86,8 +86,7 @@ void MaxPoolLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 		}
 		newDelta.resize(getNIN(), 1);
 		deltaAbove = std::move(newDelta); 
-			
-		if (recursive)
+		if(recursive)
 			below->backPropDelta(deltaAbove, true);
 		
 	}

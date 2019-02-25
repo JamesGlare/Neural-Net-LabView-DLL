@@ -131,7 +131,7 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	// (0) change a few settings for the discriminator
 	//pars.weight_normalization = false; // only used for generator
 	bool batchIsDue = pars.batch_update == 0;
-
+	pars.weight_normalization = false;
 	// (1) Train D real =====================================================================
 	MAT D_REAL_Y(y_matrix); // Y copy - expensive
 	MAT D_REAL_RES(1, 1);

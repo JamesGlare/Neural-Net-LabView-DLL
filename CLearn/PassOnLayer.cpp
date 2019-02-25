@@ -31,16 +31,10 @@ void PassOnLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 
 void PassOnLayer::backPropDelta(MAT& delta, bool recursive) {
 	
-	deltaSave = delta; // need this to collect delta
-	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
-
-		MAT temp = (below->getDACT()).cwiseProduct(delta);
-		if (getHierachy() == hierarchy_t::output) {
-			temp.cwiseProduct(this->getDACT());
-		}
-		if(recursive)
-			below->backPropDelta(temp, true);
-	}
+	delta = (getDACT()).cwiseProduct(delta); // need this to collect delta
+	deltaSave = delta;
+	if(getHierachy() != hierarchy_t::input && recursive)
+		below->backPropDelta(delta, true);
 }
 
 void PassOnLayer::saveToFile(ostream& os) const {

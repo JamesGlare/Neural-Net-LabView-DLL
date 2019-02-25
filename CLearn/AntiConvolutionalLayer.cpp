@@ -3,18 +3,18 @@
 
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
 	 uint32_t _outChannels, uint32_t _inChannels, actfunc_t type)
-	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_inChannels*_outChannels), inChannels(_inChannels),
-	outChannels(_outChannels), PhysicalLayer(_outChannels*_NOUTX*_NOUTY, _inChannels*_NINX*_NINY, type, MATIND{ _kernelY, features*_kernelX }, MATIND{ _kernelY, features*_kernelX },
-		MATIND{ 1,features }, MATIND{_kernelY, features*_kernelX}) {
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_inChannels), inChannels(_inChannels),
+	outChannels(_outChannels), PhysicalLayer(_outChannels*_NOUTX*_NOUTY, _inChannels*_NINX*_NINY, type, MATIND{ _kernelY, _inChannels*_kernelX }, MATIND{ _kernelY, _inChannels*_kernelX },
+		MATIND{ 1,_inChannels }, MATIND{_kernelY, _inChannels*_kernelX}) {
 
 	init();
 }
 
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
 	 uint32_t _outChannels, uint32_t _inChannels, actfunc_t type, CNetLayer& lower)
-	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_inChannels*_outChannels), inChannels(_inChannels), 
-	outChannels(_outChannels), PhysicalLayer(_outChannels*_NOUTX*_NOUTY, type, MATIND{ _kernelY, features*_kernelX }, MATIND{ _kernelY, features*_kernelX },
-		MATIND{ 1, features }, MATIND{_kernelY, features*_kernelX }, lower) {
+	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), features(_inChannels), inChannels(_inChannels), 
+	outChannels(_outChannels), PhysicalLayer(_outChannels*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _inChannels*_kernelX }, MATIND{ _kernelY, _inChannels*_kernelX },
+		MATIND{ 1, _inChannels }, MATIND{_kernelY, _inChannels*_kernelX }, lower) {
 
 	init();
 	assertGeometry();
@@ -22,9 +22,9 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, siz
 
 // second most convenient constructor
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride,  uint32_t _outChannels, uint32_t _inChannels, actfunc_t type)
-	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_inChannels*_outChannels), outChannels(_outChannels),
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), features(_inChannels), outChannels(_outChannels),
 	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, _inChannels*_NINXY*_NINXY, type, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY }, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY },
-		MATIND{ 1, _inChannels*_outChannels }, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY }) {
+		MATIND{ 1, _inChannels }, MATIND{ _kernelXY, _inChannels*_kernelXY }) {
 
 	init();
 	assertGeometry();
@@ -33,9 +33,9 @@ AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, si
 // most convenient constructor
 AntiConvolutionalLayer::AntiConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride, uint32_t _outChannels, uint32_t _inChannels, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(sqrt(lower.getNOUT() / (_inChannels))), NINY(sqrt(lower.getNOUT() / (_inChannels))), kernelX(_kernelXY), kernelY(_kernelXY),
-	strideY(_stride), strideX(_stride), features(_inChannels*_outChannels), inChannels(_inChannels), outChannels(_outChannels),
-	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY }, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY },
-		MATIND{ 1,_inChannels*_outChannels }, MATIND{_kernelXY, _inChannels*_outChannels*_kernelXY }, lower) {
+	strideY(_stride), strideX(_stride), features(_inChannels), inChannels(_inChannels), outChannels(_outChannels),
+	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _inChannels*_kernelXY }, MATIND{ _kernelXY, _inChannels*_kernelXY },
+		MATIND{ 1,_inChannels }, MATIND{_kernelXY, _inChannels*_kernelXY }, lower) {
 
 	init();
 	assertGeometry();
@@ -184,22 +184,18 @@ void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive
 }
 // backprop
 void AntiConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
-	if (getHierachy() == hierarchy_t::output)
-		deltaAbove = deltaAbove.cwiseProduct(this->getDACT());
-
+		
+	deltaAbove = deltaAbove.cwiseProduct(getDACT());
 	deltaSave = deltaAbove;
 
 	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 		
-
 		deltaAbove.resize(getNOUTY(), outChannels*getNOUTX()); // keep track of this!!!
 
 		deltaAbove = conv_(deltaAbove, W, getNINY(), getNINX(),
 			strideY, strideX, antiConvPad(getNINY(), strideY, kernelY, getNOUTY()), antiConvPad(getNINX(), strideX, kernelX, getNOUTX()), inChannels, outChannels);
 		deltaAbove.resize(getNIN(), 1);
 
-		deltaAbove = deltaAbove.cwiseProduct(below->getDACT()); // multiply with h'(aj)
-		//deltaSave.resize(getNOUT(), 1); // resize back
 		if (recursive) {
 			below->backPropDelta(deltaAbove, true); // cascade...
 		}
@@ -211,7 +207,7 @@ MAT AntiConvolutionalLayer::w_grad(MAT& input) {
 	deltaSave.resize(NOUTY, outChannels*NOUTX);
 
 	if (getHierachy() == hierarchy_t::input) {
-
+	
 		input.resize(getNINY(), getNINX()*inChannels);
 		MAT convoluted = antiConvGrad_(deltaSave, input, kernelY, kernelX, strideY, strideX, antiConvPad(getNINY(), strideY, kernelY, getNOUTY()),
 			antiConvPad(getNINX(), strideX, kernelX, getNOUTX()), outChannels, inChannels);
@@ -266,7 +262,7 @@ void AntiConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> strideX;
 	in >> outChannels;
 	in >> inChannels;
-	features = inChannels * outChannels;
+	features = inChannels;
 	
 	// Load normalization settings
 	in >> spectralNormMode;

@@ -31,9 +31,6 @@ void FullyConnectedLayer::init() {
 	assert(W.cols() == getNIN());
 }
 
-uint32_t FullyConnectedLayer::getFeatures() const {
-	return 1;
-}
 
 // weight normalization reparametrize
 void FullyConnectedLayer::wnorm_setW() {
@@ -118,10 +115,10 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	} else {
 		/* Non-training forward pass
 		*/
-		MAT temp;
+		//MAT temp;
 		// Eigen assumes aliasing by default for matrix products A*B type situations
-		temp.noalias() = (W*inBelow + b).unaryExpr(act);
-		inBelow = move(temp);
+		inBelow = (W*inBelow + b).unaryExpr(act);
+		//inBelow = move(temp);
 		if (recursive && getHierachy() != hierarchy_t::output)
 			above->forProp(inBelow, false, true);
 		
@@ -130,13 +127,12 @@ void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 
 void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	//DACT(inAct).cwiseProduct(hiddenLayers[0].leftCols(hiddenLayers[0].cols() - 1).transpose()*hiddenDeltas[0]);
+	deltaAbove = deltaAbove.cwiseProduct(getDACT());
 	deltaSave = deltaAbove;
 
 	if (getHierachy() != hierarchy_t::input) {
-		if (getHierachy() == hierarchy_t::output)
-			deltaAbove = deltaAbove.cwiseProduct(this->getDACT());
-
-		deltaAbove.noalias() = (below->getDACT()).cwiseProduct(W.transpose() * deltaSave); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
+		// this tranposition is often faster, if NOUT^2 << NIN*NOUT
+		deltaAbove =  (deltaAbove.transpose() * W).transpose(); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
 		if (recursive)
 			below->backPropDelta(deltaAbove, true);
 	}
@@ -146,8 +142,7 @@ void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 MAT FullyConnectedLayer::w_grad(MAT& input) {
 	if (getHierachy() == hierarchy_t::input) {
 		return deltaSave*(input.transpose()); //(NOUT, 1) x (NIN+1,1).T = (NOUT, NIN+1)
-	}
-	else {
+	} else {
 		//if (kappa > 0.0f) {
 		//	MAT temp = appendOneInline(below->getACT()).transpose();
 		//	return (deltaSave + kappa*getDACT())*temp;

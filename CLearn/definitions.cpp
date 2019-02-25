@@ -78,11 +78,10 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 	uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels) {
 	
 	// (1) Geometry of the situation
-	size_t features = inChannels*outChannels;
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / inChannels;
 	size_t kernelY = kernel.rows();
-	size_t kernelX = kernel.cols()/features;
+	size_t kernelX = kernel.cols()/outChannels;
 
 	// (2) Allocate matrices 
 	MAT out(NOUTY, NOUTX*outChannels); // stack features along x in accord with convention
@@ -101,7 +100,7 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 	*/
 
 	#pragma omp parallel for private(xInd,yInd,f, inF,outF) shared(out, kernel, in) 
-	for (f = 0; f< features; ++f) {
+	for (f = 0; f<  inChannels*outChannels; ++f) {
 		inF = f / outChannels;
 		outF = f % outChannels; // moves first
 			for (size_t i = 0; i < NOUTX; ++i) {
@@ -115,7 +114,7 @@ MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint
 								yInd >= 0 &&
 								xInd < NINX &&
 								xInd >= 0) { // Check we're not in the padding.
-								out(j, i + outF*NOUTX) += kernel(m, f*kernelX + n) * in(yInd, xInd + inF*NINX);
+								out(j, i + outF*NOUTX) += kernel(m, outF*kernelX + n) * in(yInd, xInd + inF*NINX);
 							} 
 						}
 					}
@@ -130,7 +129,6 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t kernelY, uint32_t kernel
 	uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels) {
 
 	// (1) Geometry of the situation
-	size_t features = inChannels*outChannels;
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / inChannels;
 
@@ -138,7 +136,7 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t kernelY, uint32_t kernel
 	size_t deltaX = delta.cols() /outChannels;
 
 	// (2) Allocate matrices 
-	MAT kernelGrad(kernelY, kernelX*features); // stack features along x in accord with convention
+	MAT kernelGrad(kernelY, kernelX*outChannels); // stack features along x in accord with convention
 	kernelGrad.setZero();
 
 	// (3) Begin loop
@@ -149,7 +147,7 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t kernelY, uint32_t kernel
 	int32_t yInd = 0;
 
 	#pragma omp parallel for private(xInd, yInd,f, inF, outF) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
-	for (f = 0; f < features; ++f) {
+	for (f = 0; f <  inChannels*outChannels; ++f) {
 		inF = f / outChannels; // Example inFeats = 3, outFeats=2 -> max[f] = 5 -> max[inF] = 5/2 =2, max[outF]=5%2 =1 -> Correct.
 		outF = f % outChannels; // Example2 inFeats = 2, outFeats=3 -> max[f] =5 -> max[inF] = 5/3 =1, max[outF]=5%3 = 2 -> Correct. 
 
@@ -166,7 +164,7 @@ MAT convGrad_(const MAT& in, const MAT& delta, uint32_t kernelY, uint32_t kernel
 								xInd >= 0) { // Check we're not in the padding.
 
 								//#pragma omp critical
-								kernelGrad(j, i + f*kernelX) += delta(m, outF*deltaX + n) * in(yInd, xInd + inF*NINX);
+								kernelGrad(j, i + outF*kernelX) += delta(m, outF*deltaX + n) * in(yInd, xInd + inF*NINX);
 							}
 						}
 					}
@@ -181,11 +179,10 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint
 	uint32_t outChannels, uint32_t inChannels) {
 
 	// (1) Geometry of the situation
-	size_t features = inChannels * outChannels;
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / inChannels;
 	size_t kernelY = kernel.rows();
-	size_t kernelX = kernel.cols() / features;
+	size_t kernelX = kernel.cols() / inChannels;
 
 	// (2) Allocate matrices 
 	MAT out(NOUTY, NOUTX*outChannels); // stack features along x in accord with convention
@@ -199,7 +196,7 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint
 	size_t yInd = 0;
 
 	#pragma omp parallel for private(xInd, yInd,f, inF, outF) shared(out, kernel, in)// Choose (probably) smallest rowwise loop size for parallelization.
-	for (f = 0; f < features; ++f) {
+	for (f = 0; f < inChannels*outChannels; ++f) {
 		inF = f / outChannels ; // Example: feats=3, outB=2 -> max[f]=5 -> max[F] = 5  % 2 = 2, max[outB] = 5 % 2 == 1 
 		outF = f % outChannels;// Example: feats=3, outB=2 -> max[f] = 5 -> max[F] = 5 % 3 == 2, outB = 5 /3 == 1
 
@@ -216,7 +213,7 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint
 								yInd < NOUTY	&&  
 								xInd < NOUTX) { // Check we're not in the padding.
 
-								out(yInd, xInd + outF*NOUTX) += kernel(m, f*kernelX + n) * in(j, i + inF*NINX);
+								out(yInd, xInd + outF*NOUTX) += kernel(m, inF*kernelX + n) * in(j, i + inF*NINX);
 							}
 						}
 					}
@@ -232,7 +229,6 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 	uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels){
 	
 	// (1) Geometry of the situation
-	size_t features = inChannels * outChannels;
 	size_t NINY = in.rows();
 	size_t NINX = in.cols() / inChannels;
 
@@ -240,7 +236,7 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 	size_t deltaX = delta.cols() / outChannels;
 
 	// (2) Allocate matrices 
-	MAT kernelGrad(kernelY, kernelX*features); // stack features along x in accord with convention
+	MAT kernelGrad(kernelY, kernelX*inChannels); // stack features along x in accord with convention
 	kernelGrad.setZero();
 
 	// (3) Begin loop
@@ -251,7 +247,7 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 	int32_t yInd = 0;
 
 	#pragma omp parallel for private(xInd, yInd,f, inF, outF) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
-	for (f = 0; f < features; ++f) {
+	for (f = 0; f < inChannels*outChannels; ++f) {
 		inF = f / outChannels;
 		outF = f % outChannels;
 
@@ -267,7 +263,7 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 								xInd < deltaX &&
 								xInd >= 0) { // Check we're not in the padding.
 
-								kernelGrad(j, i + f*kernelX) += delta(yInd, xInd + outF*deltaX ) * in(m, n + inF*NINX);
+								kernelGrad(j, i + inF*kernelX) += delta(yInd, xInd + outF*deltaX ) * in(m, n + inF*NINX);
 							}
 						}
 					}
