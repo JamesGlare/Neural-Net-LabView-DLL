@@ -33,25 +33,25 @@ void CNet::addFullyConnectedLayer(size_t NOUT, actfunc_t type) {
 	}
 }
 
-void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t inChannels, size_t outChannels, actfunc_t type) {
+void CNet::addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride,  size_t outChannels, size_t inChannels, actfunc_t type) {
 	// At the moment, I only allow for square-shaped input.
 	// this may need to change in the future.
 	if (getLayerNumber() > 0) {
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels, type, *(getLast()));
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, kernelXY, stride,  outChannels, inChannels, type, *(getLast()));
 		layers.push_back(cl);
 	} else {
 		// then it's the input layer
-		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN), kernelXY, stride, inChannels, outChannels, type);
+		ConvolutionalLayer* cl = new ConvolutionalLayer(NOUTXY, sqrt(NIN/inChannels), kernelXY, stride,  outChannels, inChannels, type);
 		layers.push_back(cl);
 	}
 }
 
-void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t inChannels, size_t outChannels, actfunc_t type) {
+void CNet::addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride,  size_t outChannels, size_t inChannels, actfunc_t type) {
 	if (getLayerNumber() > 0) {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels , type, *(getLast()));
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, kernelXY, stride,  outChannels , inChannels, type, *(getLast()));
 		layers.push_back(acl);
 	} else {
-		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN / inChannels), kernelXY, stride, inChannels, outChannels, type);
+		AntiConvolutionalLayer* acl = new AntiConvolutionalLayer(NOUTXY, sqrt(NIN / inChannels), kernelXY, stride,  outChannels, inChannels, type);
 		layers.push_back(acl);
 	}
 }
@@ -262,9 +262,12 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 void CNet::train_GAN_D(MAT& Y_copy, MAT &Y, MAT& res, bool real, const learnPars& pars) {
 	static MAT labels(getNOUT(), 1);
 	static MAT cross_entropy_gradient(getNOUT(), 1);
-	bool batchIsDue = pars.batch_update == 0;
 
 	getFirst()->forProp(Y_copy, true, true);
+	// check for NaN's & Infinities.
+	if (!Y_copy.allFinite())
+		return; // protect the network.
+
 	if (real) {
 		labels.setOnes();
 	} else {
@@ -296,7 +299,7 @@ void CNet::train_GAN_G_D(MAT& Y_copy, MAT& res, const learnPars& pars) {
 
 	if (cross_entropy_gradient.allFinite())
 		getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
-
+	
 	// Calculate the generator loss
 	res(0,0) = (Y_copy - Y_copy.unaryExpr(&LogExp)).mean();
 
@@ -306,22 +309,12 @@ void CNet::train_GAN_G_D(MAT& Y_copy, MAT& res, const learnPars& pars) {
 void CNet::backProp_GAN_G(MAT& input, MAT& deltaMatrix, learnPars& pars) {
 
 	// (0) Check if Input contains no NaN's or Infinities.
-
-	// (1) Propagate in forward direction (with saveActivations == true)
-	//MAT logits(input);
-
-	//getFirst()->forProp(logits, true, true);
-
-	// (2) calculate error matrix and error
-	// Check if we've computed error gradients 
-	// for both fake and real datasets
-	//deltaMatrix += pars.lambda*l1_errorMatrix(logits); // allow for regularization... 
-	// (3) back propagate the deltas
+	if (!deltaMatrix.allFinite())
+		return; // protect the network.
+	// (2) Backpropagate deltas
 	getLast()->backPropDelta(deltaMatrix, true);
-	// (4) Apply update
+	// (3) Apply update
 	getFirst()->applyUpdate(pars, input, true);
-
-	//deltaMatrix = logits; // overwrite the deltaMatrix with generator output
 }
 
 
@@ -388,7 +381,7 @@ fREAL CNet::sigmoid_cross_entropy_with_logits(const MAT& logits, const MAT& labe
 }
 
 MAT CNet::sigmoid_GEN_loss(const MAT& labels, const MAT& logits) {
-	return logits.unaryExpr(&Sig)-labels;
+	return logits.unaryExpr(&Sig) -labels; // only use if top level not sigma 
 }
 MAT CNet::sigmoid_cross_entropy_errorMatrix(const MAT& logits, const MAT& labels) {
 	

@@ -70,10 +70,11 @@ void Stepper::doAdamStep(MAT& W, const MAT& grad, const learnPars& pars) {
 		
 		W = (1.0f - pars.lambda)*W - alphat*mt.cwiseQuotient(vt.unaryExpr(&sqroot) + epsilon);
 		
+
 }
 void Stepper::doRMSPropStep(MAT & W, const MAT & grad, const learnPars & pars) {
-	prev_avgGrad *= 0.9;
-	prev_avgGrad += 0.1*grad.unaryExpr(&norm);
+	prev_avgGrad *= pars.gamma;
+	prev_avgGrad += (1.0f-pars.gamma)*grad.unaryExpr(&norm);
 
 	W = (1.0f - pars.lambda)*W - pars.eta*grad.cwiseQuotient( (prev_avgGrad + epsilon).unaryExpr(&sqroot));
 }

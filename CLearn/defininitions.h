@@ -72,15 +72,10 @@ struct learnPars {
 };
 // library functions
 
-MAT conv(const MAT& in, const MAT& _kernel, uint32_t kernelStrideY, uint32_t kernelStrideX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
-MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outFeatures, uint32_t inFeatures);
-MAT antiConv(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t antiPaddingY, uint32_t antiPaddingX, uint32_t features);
-MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t outBoxes);
-MAT backPropConv_(const MAT& in, const MAT& kernel, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t inFeatures);
-MAT convGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
-MAT convGrad_(const MAT& input, const MAT& delta, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t inFeatures);
-MAT antiConvGrad(const MAT& delta, const MAT& input, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features);
-MAT antiConvGrad_(const MAT& delta, const MAT& input, size_t kernelY, size_t kernelX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t features, uint32_t outBoxes);
+MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
+MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
+MAT convGrad_(const MAT& input, const MAT& delta, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
+MAT antiConvGrad_(const MAT& delta, const MAT& input, size_t kernelY, size_t kernelX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
 MAT fourier(const MAT& in);
 void clipParameters(MAT& layers, fREAL clip);
 fREAL spectralNorm(const MAT& W, const MAT& u1, const MAT& v1);
@@ -213,6 +208,8 @@ inline uint32_t padSize(uint32_t outSize, uint32_t inSize, uint32_t kernelSize, 
 inline uint32_t antiConvPad(uint32_t inSize, uint32_t stride, uint32_t kernelSize, uint32_t outSize) {
 	return (stride*(inSize - 1) + kernelSize - outSize) / 2;
 }
+void flipUD(MAT& toFlip);
+void flipLR(MAT& toFlip);
 
 // MAT functions
 void appendOne(MAT&);

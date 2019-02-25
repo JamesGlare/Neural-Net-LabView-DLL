@@ -33,10 +33,10 @@ __declspec(dllexport) void __stdcall addFullyConnectedLayer(CNet* ptr, uint32_t 
 	ptr->addFullyConnectedLayer(NOUT, static_cast<actfunc_t>(func));
 }
 __declspec(dllexport) void __stdcall addConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, uint32_t func) {
-	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels, static_cast<actfunc_t>(func));
+	ptr->addConvolutionalLayer(NOUTXY, kernelXY, stride,  outChannels, inChannels, static_cast<actfunc_t>(func));
 }
 __declspec(dllexport) void __stdcall addAntiConvolutionalLayer(CNet* ptr, uint32_t NOUTXY, uint32_t kernelXY, uint32_t stride, uint32_t inChannels, uint32_t outChannels, uint32_t func) {
-	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, inChannels, outChannels, static_cast<actfunc_t>(func));
+	ptr->addAntiConvolutionalLayer(NOUTXY, kernelXY, stride, outChannels, inChannels, static_cast<actfunc_t>(func));
 }
 __declspec(dllexport) void __stdcall addMaxPoolLayer(CNet* ptr, uint32_t maxOverXY, uint32_t channels) {
 	ptr->addPoolingLayer(maxOverXY, channels, pooling_t::max);
@@ -129,7 +129,7 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	y_matrix.resize(ptr_D->getNIN(), 1);// (NOUT,1) Matrix
 
 	// (0) change a few settings for the discriminator
-	pars.weight_normalization = false; // only used for generator
+	//pars.weight_normalization = false; // only used for generator
 	bool batchIsDue = pars.batch_update == 0;
 
 	// (1) Train D real =====================================================================

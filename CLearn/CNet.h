@@ -19,8 +19,8 @@ class CNet {
 		~CNet();
 		// Physical Layers (i.e. layers with weight parameters)
 		void addFullyConnectedLayer(size_t NOUT, actfunc_t type);
-		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t inChannels, size_t outChannels, actfunc_t type);
-		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t inChannels, size_t outChannels, actfunc_t type);
+		void addConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t outChannels, size_t inChannels, actfunc_t type);
+		void addAntiConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride,  size_t outChannels, size_t inChannels, actfunc_t type);
 
 		// Discarnate Layers (i.e. layers without weight parameters)
 		void addPoolingLayer(size_t maxOverXY, size_t channels, pooling_t type);
