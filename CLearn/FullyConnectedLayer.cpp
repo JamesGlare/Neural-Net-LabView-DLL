@@ -131,8 +131,7 @@ void FullyConnectedLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	deltaSave = deltaAbove;
 
 	if (getHierachy() != hierarchy_t::input) {
-		// this tranposition is often faster, if NOUT^2 << NIN*NOUT
-		deltaAbove =  (deltaAbove.transpose() * W).transpose(); // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
+		deltaAbove =  W.transpose() * deltaAbove; // (NIN,1) cw* (NOUT, NIN).T x (NOUT, 1) = (NIN,1) cw* (NIN, 1) = (NIN,1) 
 		if (recursive)
 			below->backPropDelta(deltaAbove, true);
 	}

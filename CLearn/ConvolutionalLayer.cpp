@@ -70,8 +70,7 @@ void ConvolutionalLayer::assertGeometry() {
 	assert((strideY*NOUTY - strideY - NINY + kernelY) % 2 == 0);
 }
 void ConvolutionalLayer::init() {
-	W.unaryExpr(&SoftPlus);
-	W *= ((fREAL)inChannels) / outChannels;
+	W.unaryExpr(&abs<fREAL>);
 
 	deltaSave = MAT(getNOUT(), 1);
 	deltaSave.setZero();

@@ -55,9 +55,8 @@ void AntiConvolutionalLayer::assertGeometry() {
 	assert(antiConvoSize(NINX, kernelX, antiConvPad(NINX, strideX, kernelX, NOUTX), strideX) == NOUTX);
 }
 void AntiConvolutionalLayer::init() {
-	W.setRandom();
-	W.unaryExpr(&SoftPlus); // make evrythng positive
-	W *= ((fREAL)features) / W.size();
+	W.unaryExpr(&abs<fREAL>); // make evrythng positive
+
 }
 
 /* Weight Normalization Functions

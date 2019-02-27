@@ -131,7 +131,10 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	// (0) change a few settings for the discriminator
 	//pars.weight_normalization = false; // only used for generator
 	bool batchIsDue = pars.batch_update == 0;
-	pars.weight_normalization = false;
+	//pars.weight_normalization = false;
+	//pars.firstTrain = 0; // UNDOOOOOOOOOOOOOOOOOOO
+	//ptr_D->linkChain(); // relink the chain
+
 	// (1) Train D real =====================================================================
 	MAT D_REAL_Y(y_matrix); // Y copy - expensive
 	MAT D_REAL_RES(1, 1);
@@ -143,7 +146,7 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	ptr_D->preFeedSideChannel(x_matrix);
 	ptr_D->train_GAN_D(D_REAL_Y, y_matrix, D_REAL_RES, true, pars);
 
-	*D_REAL_ERR = Sig(D_REAL_RES(0, 0));
+	*D_REAL_ERR = D_REAL_RES(0, 0);
 
 	//(2) Draw Z and produce generator sample ===============================================
 	MAT Z(ptr_G->getSideChannelSize(), 1);
@@ -163,11 +166,11 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	ptr_D->preFeedSideChannel(G_Sample);
 	ptr_D->train_GAN_D(D_FAKE_Y, y_matrix, D_FAKE_RES, false, pars);
 
-	*D_FAKE_ERR = Sig(D_FAKE_RES(0, 0));
+	*D_FAKE_ERR = D_FAKE_RES(0, 0);
 
 	// (4) Prepare and Train the Generator ==================================================
 	if (prepGen) {
-		Z.setRandom().unaryExpr(&abs<fREAL>);
+		Z.setRandom().unaryExpr(&abs<fREAL>); // map to [0,1]
 		ptr_G->preFeedSideChannel(Z);
 		G_Sample = y_matrix;
 		ptr_G->forProp(G_Sample, x_matrix, true, pars); // New Gen sample, SAVE = true!
@@ -185,7 +188,8 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 		pars.spectral_normalization = false;
 		pars.weight_normalization = weight_norm;
 		pars.eta = eta_G;
-
+		//pars.firstTrain = 0; // UNDOOOOOOOOOOOOOOOOOOO
+		//ptr_G->linkChain();
 		ptr_G->backProp_GAN_G(y_matrix, deltas, pars); // backprop those deltas through G
 	}
 	// (5) Copy the G_sample into the X-Array ================================================
