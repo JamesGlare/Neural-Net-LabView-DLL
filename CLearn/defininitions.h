@@ -43,7 +43,7 @@ typedef fREAL(*ACTFUNC)(fREAL);
 typedef LLT<MAT> CHOL;
 
 enum actfunc_t {RELU =1, TANH=2, SIG=3, NONE=4, SOFTPLUS=5, LEAKYRELU=6};
-enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6, dropout=7, mixtureDensity=8, reshape=9, sideChannel = 10}; // enumerators: 1, 2, 4 range: 0..7
+enum layer_t { fullyConnected = 0, convolutional = 1, antiConvolutional=2, maxPooling = 3, avgPooling=4, cnet = 5, passOn = 6, dropout=7, mixtureDensity=8, reshape=9, sideChannel = 10, batchNorm=11}; // enumerators: 1, 2, 4 range: 0..7
 enum pooling_t {max =1, average = 2};
 enum hierarchy_t { input = 1, hidden = 2, output = 3};
 
@@ -72,10 +72,10 @@ struct learnPars {
 };
 // library functions
 
-MAT conv_(const MAT& in, const MAT& kernel, uint32_t NOUTY, uint32_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
-MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
-MAT convGrad_(const MAT& input, const MAT& delta, uint32_t strideY, uint32_t strideX, uint32_t kernelY, uint32_t kernelX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
-MAT antiConvGrad_(const MAT& delta, const MAT& input, size_t kernelY, size_t kernelX, uint32_t strideY, uint32_t strideX, uint32_t paddingY, uint32_t paddingX, uint32_t outChannels, uint32_t inChannels);
+MAT conv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, size_t strideY, size_t strideX, size_t paddingY, size_t paddingX, size_t feautures, size_t outChannels, size_t inChannels);
+MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, size_t strideY, size_t strideX, size_t paddingY, size_t paddingX, size_t feautures, size_t outChannels, size_t inChannels);
+MAT convGrad_(const MAT& input, const MAT& delta, size_t strideY, size_t strideX, size_t kernelY, size_t kernelX, size_t paddingY, size_t paddingX, size_t feautures, size_t outChannels, size_t inChannels);
+MAT antiConvGrad_(const MAT& delta, const MAT& input, size_t kernelY, size_t kernelX, size_t strideY, size_t strideX, size_t paddingY, size_t paddingX, size_t feautures, size_t outChannels, size_t inChannels);
 MAT fourier(const MAT& in);
 void clipParameters(MAT& layers, fREAL clip);
 fREAL spectralNorm(const MAT& W, const MAT& u1, const MAT& v1);

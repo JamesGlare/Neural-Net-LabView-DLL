@@ -131,7 +131,8 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	// (0) change a few settings for the discriminator
 	//pars.weight_normalization = false; // only used for generator
 	bool batchIsDue = pars.batch_update == 0;
-	//pars.weight_normalization = false;
+	if(pars.spectral_normalization)
+		 pars.weight_normalization = false;
 	//pars.firstTrain = 0; // UNDOOOOOOOOOOOOOOOOOOO
 	//ptr_D->linkChain(); // relink the chain
 
@@ -215,10 +216,12 @@ __declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t NOUT, s
 __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
 }
-__declspec(dllexport) uint32_t __stdcall initializeNetwork(CNet* ptr) {
+__declspec(dllexport) uint32_t __stdcall initializeNetwork(CNet* ptr, uint32_t batchSize) {
 	if (!sameCNet(ptr)) {
 		ptr->linkChain();
 	}
+	ptr->initToUnitVariance(batchSize);
+
 	return ptr->getLayerNumber();
 }
 __declspec(dllexport) void __stdcall saveCNet(CNet* ptr, char* filePath) {

@@ -23,6 +23,10 @@ public:
 	MAT w_grad(MAT& input);
 	MAT b_grad();
 	void backPropDelta(MAT& delta, bool recursive);
+
+	// Initialization 
+	void constrainToMax(MAT& mues, MAT& sigma);
+
 	// Getter Function
 	inline size_t getNOUTX() const { return NOUTX; };
 	inline size_t getNOUTY() const { return NOUTY; };
@@ -58,6 +62,8 @@ private:
 	size_t kernelY;
 	size_t strideY;
 	size_t strideX;
+	size_t padX;
+	size_t padY;
 	size_t features;
 	size_t inChannels;
 	size_t outChannels;

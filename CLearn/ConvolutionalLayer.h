@@ -10,12 +10,12 @@
 
 class ConvolutionalLayer : public PhysicalLayer{
 	public:
-		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX, 
-			 uint32_t outChannels, uint32_t inChannels, actfunc_t type);
-		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, uint32_t strideY, uint32_t strideX,  
-			 uint32_t outChannels, uint32_t inChannels, actfunc_t type, CNetLayer& lower);
-		ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, uint32_t stride,  uint32_t outChannels, uint32_t inChannels, actfunc_t type);
-		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, uint32_t stride,  uint32_t outChannels, uint32_t inChannels, actfunc_t type, CNetLayer& lower);
+		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, size_t strideY, size_t strideX,
+			size_t outChannels, size_t inChannels, actfunc_t type);
+		ConvolutionalLayer(size_t NOUTX, size_t NOUTY, size_t NINX, size_t NINY, size_t kernelX, size_t kernelY, size_t strideY, size_t strideX,
+			size_t outChannels, size_t inChannels, actfunc_t type, CNetLayer& lower);
+		ConvolutionalLayer(size_t NOUTXY, size_t NINXY, size_t kernelXY, size_t stride, size_t outChannels, size_t inChannels, actfunc_t type);
+		ConvolutionalLayer(size_t NOUTXY, size_t kernelXY, size_t stride, size_t outChannels, size_t inChannels, actfunc_t type, CNetLayer& lower);
 		~ConvolutionalLayer();
 		
 		layer_t whoAmI() const;
@@ -33,6 +33,9 @@ class ConvolutionalLayer : public PhysicalLayer{
 		inline size_t getKernelX() const { return kernelX; };
 		inline size_t getKernelY() const { return kernelY; };
 		uint32_t getOutChannels() const;
+		//Initialization Routine
+		void constrainToMax(MAT& mues, MAT& sigma);
+
 	private:
 		/* Weight normalization functions
 		*/ 
@@ -57,13 +60,15 @@ class ConvolutionalLayer : public PhysicalLayer{
 		size_t NOUTY;
 		size_t NINX;
 		size_t NINY;
+		size_t padX;
+		size_t padY;
 		size_t kernelX;
 		size_t kernelY;
-		uint32_t strideX;
-		uint32_t strideY;
-		uint32_t inChannels;
-		uint32_t outChannels;
-		uint32_t features;
+		size_t strideX;
+		size_t strideY;
+		size_t inChannels;
+		size_t outChannels;
+		size_t features;
 		void assertGeometry();
 
 		// File functions

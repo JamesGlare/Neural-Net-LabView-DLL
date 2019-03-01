@@ -190,6 +190,33 @@ void CNet::loadFromFile_layer(string filePath, uint32_t layerNr) {
 	file.close();
 }
 
+/* Initialization routine
+*/
+void CNet::initToUnitVariance(size_t batchSize) {
+
+	// (1) For each physical layer
+	for (uint32_t i = 0; i < getLayerNumber(); ++i) {
+		if (isPhysical(i)) {
+			
+			PhysicalLayer* layer = dynamic_cast<PhysicalLayer*>(layers[i]);
+			size_t nin = layer->getNIN();
+			size_t nout = layer->getNOUT();
+			BatchBuffer buffer(nout, nin);
+			//(2) Draw Random numbers
+			for (size_t k = 0; k < batchSize; ++k) {
+				MAT in(nin, 1);
+				in.setRandom();
+				in.unaryExpr(&abs<fREAL>); // constrain noise to [0,1]
+				layer->forProp(in, true, false);
+				in = layer->getACT(); // don't apply non-linearity
+				buffer.updateBuffer(in);
+			}
+			buffer.updateModel();
+			layer->constrainToMax(buffer.batchMean(), buffer.batchMax());
+		}
+
+	}
+}
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars) {
 

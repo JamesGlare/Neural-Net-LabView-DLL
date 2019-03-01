@@ -27,13 +27,17 @@ public:
 	virtual void forProp(MAT& in, bool training, bool recursive) = 0; // recursive
 	virtual MAT w_grad(MAT& input) = 0;
 	virtual MAT b_grad() = 0;
+	
 	/* Backward propagation
 	* Implementation on child class level.
 	*/
 	virtual void backPropDelta(MAT& delta, bool recursive) = 0; // recursive
 	void applyUpdate(const learnPars& pars, MAT& input, bool recursive); // recursive
-	
-	// Read-only access to weight parameters.
+	/* Initialization Routine
+	*/
+	virtual void constrainToMax(MAT& mues, MAT& max) = 0;
+	/* Read-only access to weight parameters.
+	*/
 	MAT copyW() const;
 	MAT copyb() const;
 	// Set the layer weights (e.g. for initialization)

@@ -20,7 +20,8 @@ class FullyConnectedLayer : public PhysicalLayer {
 		MAT w_grad(MAT& input);
 		MAT b_grad();
 
-		uint32_t getFeatures() const;
+		// Initialization Routine
+		void constrainToMax(MAT& mues, MAT& sigma);
 
 private:
 	/* Weight normalization functions

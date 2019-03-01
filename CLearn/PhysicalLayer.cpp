@@ -30,7 +30,7 @@ void PhysicalLayer::init() {
 	v1.setRandom();
 	W_temp.setZero();
 	b.setZero();
-	fREAL initStddev =  1.0f/sqrt(getNIN()/4.0);
+	fREAL initStddev =  1.0f/sqrt(getNIN());
 	for (size_t i = 0; i < W.cols(); ++i) {
 		for (size_t j = 0; j < W.rows(); ++j) {
 			W(j, i) = normal_dist(0.0f, initStddev);

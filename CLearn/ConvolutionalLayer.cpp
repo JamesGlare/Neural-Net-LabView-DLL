@@ -12,42 +12,42 @@ which bypass the convolution. I refer to these input channels as "sidechannels".
 They are intended to be passed on to some dense layer where they can be incorporated in the stream of information.
 * - The CNetLayer::NOUT variable contains information about the number of features.
 */
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
-	 uint32_t _outChannels, uint32_t _inChannels, actfunc_t type)
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, size_t _strideY, size_t _strideX,
+	size_t _outChannels, size_t _inChannels, actfunc_t type)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), 
-	inChannels(_inChannels), outChannels(_outChannels), features(_outChannels),
-	PhysicalLayer(_outChannels*_NOUTX*_NOUTY, _inChannels*_NINX*_NINY, type, MATIND{ _kernelY, _outChannels*_kernelX }, MATIND{ _kernelY, _outChannels*_kernelX },
-		MATIND{ 1,_outChannels }, MATIND{ _kernelY, _outChannels*_kernelX }) {
+	inChannels(_inChannels), outChannels(_outChannels), features(_inChannels*_outChannels),
+	PhysicalLayer(_outChannels*_NOUTX*_NOUTY, _inChannels*_NINX*_NINY, type, MATIND{ _kernelY, _inChannels*_outChannels*_kernelX }, MATIND{ _kernelY, _inChannels*_outChannels*_kernelX },
+		MATIND{ 1,_inChannels*_outChannels }, MATIND{ _kernelY, _inChannels*_outChannels*_kernelX }) {
 	// the layer matrix will act as convolutional kernel
 	init();
 	assertGeometry();
 }
 
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, uint32_t _strideY, uint32_t _strideX,
-	 uint32_t _outChannels, uint32_t _inChannels, actfunc_t type, CNetLayer& lower)
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTX, size_t _NOUTY, size_t _NINX, size_t _NINY, size_t _kernelX, size_t _kernelY, size_t _strideY, size_t _strideX,
+	size_t _outChannels, size_t _inChannels, actfunc_t type, CNetLayer& lower)
 	: NOUTX(_NOUTX), NOUTY(_NOUTY), NINX(_NINX), NINY(_NINY), kernelX(_kernelX), kernelY(_kernelY), strideY(_strideY), strideX(_strideX), inChannels(_inChannels), 
-	outChannels(_outChannels), features(_outChannels), PhysicalLayer(_outChannels*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _inChannels*_outChannels*_kernelX }, MATIND{ _kernelY, _outChannels*_kernelX },
-		MATIND{ 1,_outChannels }, MATIND{ _kernelY,_outChannels*_kernelX }, lower) {
-
+	outChannels(_outChannels), features(_inChannels*_outChannels), PhysicalLayer(_outChannels*_NOUTX*_NOUTY, type, MATIND{ _kernelY, _inChannels*_outChannels*_kernelX }, 
+		MATIND{ _kernelY, _inChannels*_outChannels*_kernelX },
+		MATIND{ 1,_inChannels*_outChannels }, MATIND{ _kernelY,_inChannels*_outChannels*_kernelX }, lower) {
 
 	init();
 	assertGeometry();
 }
 // second most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, uint32_t _stride,  uint32_t _outChannels, uint32_t _inChannels, actfunc_t type)
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _NINXY, size_t _kernelXY, size_t _stride, size_t _outChannels, size_t _inChannels, actfunc_t type)
 	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), NINX(_NINXY), NINY(_NINXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), 
-	inChannels(_inChannels), outChannels(_outChannels), features(_outChannels), PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, _inChannels*_NINXY*_NINXY, type,
-		MATIND{ _kernelXY, _outChannels*_kernelXY }, MATIND{ _kernelXY,_outChannels*_kernelXY }, 
-		MATIND{ 1,_outChannels }, MATIND{ _kernelXY, _outChannels*_kernelXY }) {
+	inChannels(_inChannels), outChannels(_outChannels), features(_inChannels*_outChannels), PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, _inChannels*_NINXY*_NINXY, type,
+		MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY }, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY },
+		MATIND{ 1, _inChannels*_outChannels}, MATIND{_kernelXY, _inChannels*_outChannels*_kernelXY}) {
 	init();
 	assertGeometry();
 }
 
 // most convenient constructor
-ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, uint32_t _stride,  uint32_t _outChannels, uint32_t _inChannels, actfunc_t type, CNetLayer& lower)
-	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), inChannels(_inChannels), outChannels(_outChannels), features(_outChannels),
-	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _outChannels*_kernelXY }, MATIND{ _kernelXY, _outChannels*_kernelXY },
-		MATIND{ 1,_outChannels }, MATIND{ _kernelXY, _outChannels*_kernelXY }, lower) {
+ConvolutionalLayer::ConvolutionalLayer(size_t _NOUTXY, size_t _kernelXY, size_t _stride, size_t _outChannels, size_t _inChannels, actfunc_t type, CNetLayer& lower)
+	: NOUTX(_NOUTXY), NOUTY(_NOUTXY), kernelX(_kernelXY), kernelY(_kernelXY), strideY(_stride), strideX(_stride), outChannels(_outChannels), inChannels(_inChannels), features(_inChannels*_outChannels),
+	PhysicalLayer(_outChannels*_NOUTXY*_NOUTXY, type, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY }, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY },
+		MATIND{ 1,_inChannels*_outChannels }, MATIND{ _kernelXY, _inChannels*_outChannels*_kernelXY }, lower) {
 
 	// We need to know how to interpre the inputs geometrically. Thus, we request number of features.
 	NINX = sqrt((lower.getNOUT()) / inChannels); // sqrt(2* 5*5/2) = 5 
@@ -71,6 +71,9 @@ void ConvolutionalLayer::assertGeometry() {
 }
 void ConvolutionalLayer::init() {
 	W.unaryExpr(&abs<fREAL>);
+
+	padY = padSize(NOUTY, NINY, kernelY, strideY);
+	padX = padSize(NOUTX, NINX, kernelX, strideX);
 
 	deltaSave = MAT(getNOUT(), 1);
 	deltaSave.setZero();
@@ -186,9 +189,7 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 	// (1) Reshape the remaining input
 
 	inBelow.resize(NINY, inChannels*NINX);
-
-	//inBelow = conv(inBelow, layer, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), features); // square convolution
-	inBelow = conv_(inBelow, W, NOUTY, NOUTX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), outChannels, inChannels);
+	inBelow = conv_(inBelow, W, NOUTY, NOUTX, strideY, strideX, padY, padX, features, outChannels, inChannels);
 	inBelow.resize(getNOUT(), 1);
 	inBelow += b; // add bias term
 
@@ -208,6 +209,11 @@ void ConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 uint32_t ConvolutionalLayer::getOutChannels() const {
 	return outChannels;
 }
+// Initializtion
+void ConvolutionalLayer::constrainToMax(MAT & mues, MAT & maxVec) {
+	b = -mues;
+	W = W / maxVec.maxCoeff(); // could be made better, but this works
+}
 // backprop
 void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 
@@ -217,7 +223,7 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 	if (getHierachy() != hierarchy_t::input) { // ... this is not an input layer.
 		
 		deltaAbove.resize(NOUTY, outChannels*NOUTX); // keep track of this!!!
-		deltaAbove = antiConv_(deltaAbove, W, NINY, NINX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), inChannels, outChannels);
+		deltaAbove = antiConv_(deltaAbove, W, NINY, NINX, strideY, strideX, padY, padX, features, inChannels, outChannels);
 		deltaAbove.resize(getNIN(), 1);
 
 		if (recursive) {
@@ -227,13 +233,12 @@ void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 }
 // Gradient of convolution matrix
 MAT ConvolutionalLayer::w_grad(MAT& input) { // deltaSave: (NOUT-sideChannel) sized vector
-	deltaSave.resize(NOUTY, features*NOUTX);
+	deltaSave.resize(NOUTY, outChannels*NOUTX);
 	if (getHierachy() == hierarchy_t::input) {
 
 		input.resize(NINY, inChannels*NINX);
 
-		MAT convoluted = convGrad_(input, deltaSave, kernelY, kernelX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX),
-			outChannels, inChannels);
+		MAT convoluted = convGrad_(input, deltaSave, kernelY, kernelX, strideY, strideX, padY, padX, features, outChannels, inChannels);
 		deltaSave.resize(getNOUT(), 1); // make sure to resize to NOUT-sideChannels
 		input.resize(getNIN(), 1);
 
@@ -243,8 +248,7 @@ MAT ConvolutionalLayer::w_grad(MAT& input) { // deltaSave: (NOUT-sideChannel) si
 
 		fromBelow.resize(NINY, inChannels*NINX);
 
-		MAT convoluted = convGrad_(fromBelow, deltaSave, kernelY, kernelX, strideY, strideX, padSize(NOUTY, NINY, kernelY, strideY), padSize(NOUTX, NINX, kernelX, strideX), 
-			outChannels, inChannels);
+		MAT convoluted = convGrad_(fromBelow, deltaSave, kernelY, kernelX, strideY, strideX, padY, padX, features, outChannels, inChannels);
 
 		deltaSave.resize(getNOUT(), 1);  // make sure to resize to NOUT-sideChannels
 
@@ -283,7 +287,10 @@ void ConvolutionalLayer::loadFromFile(ifstream& in) {
 	in >> strideX;
 	in >> outChannels;
 	in >> inChannels;
-	features =  outChannels;
+	features = outChannels*inChannels;
+
+	padY = padSize(NOUTY, NINY, kernelY, strideY);
+	padX = padSize(NOUTX, NINX, kernelX, strideX);
 
 	W = MAT(kernelY*features*kernelX, 1); // initialize as a column vector
 	b = MAT(getNOUT(), 1);

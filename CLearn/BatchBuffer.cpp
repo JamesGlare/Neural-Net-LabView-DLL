@@ -14,6 +14,9 @@ BatchBuffer::BatchBuffer(MATIND _WInd, size_t _NOUT, size_t _NIN) :  NIN(_NIN), 
 	sigmas.setOnes();
 
 }
+//  convenience constructur
+BatchBuffer::BatchBuffer(size_t _NOUT, size_t _NIN) : BatchBuffer(MATIND{ 0,0 }, _NOUT, _NIN) {
+}
 
 void BatchBuffer::swallowGradient(const MAT& grad) {
 	if(gradientBuffer.size() < MAX_SIZE)
@@ -60,18 +63,18 @@ void BatchBuffer::updateModel() {
 	size_t batchSize = batchBuffer.size();
 	// (1) Calculate mean of all inputs
 	if (batchSize > 0) {
-		mues = batchBuffer[1];
+		mues = batchBuffer[0];
+	} else {
+		return;
 	}
-	for (size_t i = 1; i < batchSize; i++) {
+	for (size_t i = 1; i < batchSize; ++i) {
 		mues += batchBuffer[i];
 	}
 	mues /= batchSize; // normalize by batch size
 
 	// (2) Now, calculate the variance of all activations in the batch
-	if (batchSize > 0) {
-		sigmas = (batchBuffer[1] - mues).unaryExpr(&norm);
-	}
-	for (size_t i = 1; i < batchSize; i++) {
+	sigmas = (batchBuffer[0] - mues).unaryExpr(&norm);
+	for (size_t i = 1; i < batchSize; ++i) {
 		sigmas += (batchBuffer[i] - mues).unaryExpr(&norm);
 	}
 	sigmas /= batchSize; // normalize by batch size
@@ -81,29 +84,30 @@ void BatchBuffer::updateModel() {
 	stillToGo = batchSize;
 }
 
+MAT BatchBuffer::batchRMS(){
+	return sigmas;
+}
+
+MAT BatchBuffer::batchMean(){
+	return mues;
+}
+MAT BatchBuffer::batchMax() {
+	MAT maxVec(mues.rows(), 1);
+	maxVec.setZero();
+	for (size_t i = 0; i < batchBuffer.size(); ++i) {
+		for (size_t j = 0; j < maxVec.size(); ++j) {
+			maxVec(j, 0) = abs(batchBuffer[i](j, 0)) > maxVec(j, 0) ? abs(batchBuffer[i](j, 0)) : maxVec(j, 0);
+		}
+	}
+	return maxVec;
+}
 
 
-MAT& BatchBuffer::normalize(MAT& input) const {
+void BatchBuffer::normalize(MAT& input) const {
 	input -= mues; // subtract mean
 	input = input.cwiseQuotient( (sigmas));
-	return input;
 }
 
-
-MAT& BatchBuffer::passOnNormalized() {
-	size_t batchSize= batchBuffer.size();
-	if (stillToGo >0){ // if stillToGo ==0 => problem.
-		if (batchSize > 0) { // to avoid crashed, if nrPassedOn
-			stillToGo--;
-			return normalize(batchBuffer[stillToGo - 1]);
-		} else { // error -> we shouldn't be here
-			MAT lvalRef = MAT::Constant(NIN, 1, -1);
-			return lvalRef;
-		}
-	} else {
-		clearBuffer();
-	}
-}
 
 void BatchBuffer::clearBuffer() {
 	batchBuffer.clear();

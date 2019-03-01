@@ -32,6 +32,8 @@ class CNet {
 
 		// Share Layer Functionality
 		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
+		// Initialization Routines
+		void initToUnitVariance(size_t batchSize);
 
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars);

@@ -100,6 +100,14 @@ MAT FullyConnectedLayer::wnorm_vGrad(const MAT& grad, MAT& ggrad) {
 MAT FullyConnectedLayer::b_grad() {
 	return deltaSave;
 }
+/* Initialization Routine
+*/
+void FullyConnectedLayer::constrainToMax(MAT & mues, MAT & maxVec) {
+	b = -mues; // should be same size
+	for (size_t i = 0; i < W.rows(); ++i) {
+		W.row(i) = W.row(i) / maxVec(i);
+	}
+}
 
 void FullyConnectedLayer::forProp(MAT& inBelow, bool training, bool recursive) {
 

@@ -7,22 +7,25 @@
 class BatchBuffer {
 public:
 	BatchBuffer(MATIND _layerInd, size_t NOUT, size_t NIN);
-	
+	BatchBuffer(size_t NOUT, size_t NIN);
 	// Standard gradient minibatch
 	void swallowGradient(const MAT& grad);
 	MAT avgGradient();
 	MAT rmsGradient();
+	
 	void clearGradients();
 	// Buffer for actual inputs - if we are interested in statistics etc
 	void updateBuffer(MAT& input);
 	void updateModel();
-	MAT& passOnNormalized(); // NOTE: make this MAT&& ? return value optimization of the compiler probably gets rid of this anyway
+	MAT batchRMS();
+	MAT batchMax();
+	MAT batchMean();
 	inline size_t stillToCome() const { return gradientBuffer.size(); }; // can't name function as variable...
+	inline size_t batchSize() const { return batchBuffer.size(); };
 	void clearBuffer();
+	void normalize(MAT& input) const;
 
-	//friend class PhysicalLayer; // Physical layer orchestrates the normalization process
 private:
-	MAT& normalize(MAT& input) const;
 	size_t stillToGo;
 	MATVEC batchBuffer; // Store input matrices over minibatch
 	MATVEC gradientBuffer;
