@@ -34,6 +34,7 @@ class CNet {
 		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
 		// Initialization Routines
 		void initToUnitVariance(size_t batchSize);
+		size_t layerDimensionError() const;
 
 		// Propagate input matrix through entire network. Results are stored in "in".
 		fREAL forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars);
@@ -41,8 +42,8 @@ class CNet {
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars, bool deltaProvided=false); // set bool to 'true' if you outDesired contains delta's from other network
 
 		// Specialized functions for training GANs
-		void train_GAN_D(MAT& Y_copy, MAT &Y, MAT& res, bool real, const learnPars& pars);
-		void train_GAN_G_D(MAT& Y_copy, MAT& res, const learnPars& pars);
+		void train_GAN_D(MAT& in_copy, MAT &in, MAT& res, bool real, const learnPars& pars);
+		void train_GAN_G_D(MAT& in_copy, MAT& res, const learnPars& pars);
 		void backProp_GAN_G(MAT& Y, MAT& deltaMatrix, learnPars& pars); // Generator
 
 		// Feed a tensor into the sidechannel of the network

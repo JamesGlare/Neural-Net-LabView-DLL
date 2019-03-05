@@ -193,7 +193,9 @@ MAT antiConv_(const MAT& in, const MAT& kernel, size_t NOUTY, size_t NOUTX, size
 	#pragma omp parallel for private(xInd, yInd,outF,f) shared(out, kernel, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (outF = 0; outF < outChannels; ++outF) {
 		for (size_t inF = 0; inF < inChannels; ++inF) {
-			f = inF + outF*inChannels; // max[f] = outChannels-1 + (inChannels-1)*outChannels = inChannels*outChannels -1
+			//f = inF + outF*inChannels; // max[f] = outChannels-1 + (inChannels-1)*outChannels = inChannels*outChannels -1
+			f = outF + inF*outChannels; //this has to be the other way around
+
 			for (size_t n = 0; n < kernelX; ++n) {
 				for (size_t i = 0; i < NINX; ++i) {
 					for (size_t m = 0; m < kernelY; ++m) {
@@ -240,9 +242,10 @@ MAT antiConvGrad_(const MAT& delta, const MAT& in, size_t kernelY, size_t kernel
 	int32_t xInd = 0;
 	int32_t yInd = 0;
 
-	//#pragma omp parallel for private(xInd, yInd,f, outF) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
+	#pragma omp parallel for private(xInd, yInd,f, outF) shared(kernelGrad, delta, in)// Choose (probably) smallest rowwise loop size for parallelization.
 	for (outF = 0; outF < outChannels; ++outF) {
 		for (size_t inF = 0; inF < inChannels; ++inF) {
+			//f = inF + outF*inChannels; // max[f] = outChannels-1 + (inChannels-1)*outChannels = inChannels*outChannels -1
 			f = outF + inF*outChannels; // max[f] = outChannels-1 + (inChannels-1)*outChannels = inChannels*outChannels -1
 
 			for (size_t n = 0; n < NINX; ++n) {

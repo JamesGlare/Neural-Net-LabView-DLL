@@ -211,8 +211,8 @@ uint32_t ConvolutionalLayer::getOutChannels() const {
 }
 // Initializtion
 void ConvolutionalLayer::constrainToMax(MAT & mues, MAT & maxVec) {
-	b = -mues;
-	W = W / maxVec.maxCoeff(); // could be made better, but this works
+	//b = -mues;
+	//W = W / maxVec.maxCoeff(); // could be made better, but this works
 }
 // backprop
 void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {

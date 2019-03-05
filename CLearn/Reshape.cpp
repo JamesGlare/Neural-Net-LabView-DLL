@@ -17,21 +17,25 @@ void Reshape::forProp(MAT& in, bool saveActivation, bool recursive) {
 
 	size_t squaresize = sqrt(in.size());
 	in.resize(squaresize, squaresize);
-	in.transposeInPlace();
+	//in.transposeInPlace();
+	flipUD(in);
+	flipLR(in);
 	in.resize(in.size(), 1);
 	if (getHierachy() != hierarchy_t::output && recursive)
 		above->forProp(in, saveActivation, true);
 }
 void Reshape::backPropDelta(MAT& delta, bool recursive) {
-	//deltaSave = delta;
-	if (getHierachy() != hierarchy_t::input) {
+
 		size_t squaresize = sqrt(delta.size());
 		delta.resize(squaresize, squaresize);
-		delta.transposeInPlace();
+		//delta.transposeInPlace();
+		flipUD(delta);
+		flipLR(delta);
 		delta.resize(delta.size(), 1);
-		if (recursive)
+		deltaSave = delta;
+		if (getHierachy() != hierarchy_t::input && recursive)
 			below->backPropDelta(delta, true);
-	}
+
 }
 
 void Reshape::saveToFile(ostream& os) const {

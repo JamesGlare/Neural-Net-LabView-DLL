@@ -217,6 +217,26 @@ void CNet::initToUnitVariance(size_t batchSize) {
 
 	}
 }
+size_t CNet::layerDimensionError() const{
+
+	uint32_t wrongLayer = 0;
+	// test first layer
+	CNetLayer* firstLayer = layers[0];
+	if (firstLayer->getNIN() != getNIN())
+		return -1;
+
+	while (wrongLayer < getLayerNumber()-1) {
+		CNetLayer* layer = layers[wrongLayer];
+		CNetLayer* nextLayer = layers[wrongLayer +1];
+
+		if (layer->getNOUT() != nextLayer->getNIN()) {
+			return wrongLayer;
+		}
+			++wrongLayer;
+	}
+	// last layer and NOUT by definition correct
+	return 0;
+}
 // Simply output the network
 fREAL CNet::forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars) {
 
@@ -286,13 +306,13 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 } 
 /* Train the Discriminator
 */
-void CNet::train_GAN_D(MAT& Y_copy, MAT &Y, MAT& res, bool real, const learnPars& pars) {
+void CNet::train_GAN_D(MAT& in_copy, MAT &in, MAT& res, bool real, const learnPars& pars) {
 	static MAT labels(getNOUT(), 1);
 	static MAT cross_entropy_gradient(getNOUT(), 1);
 
-	getFirst()->forProp(Y_copy, true, true);
+	getFirst()->forProp(in_copy, true, true);
 	// check for NaN's & Infinities.
-	if (!Y_copy.allFinite())
+	if (!in_copy.allFinite())
 		return; // protect the network.
 
 	if (real) {
@@ -301,34 +321,34 @@ void CNet::train_GAN_D(MAT& Y_copy, MAT &Y, MAT& res, bool real, const learnPars
 		labels.setZero();
 	}
 	
-	cross_entropy_gradient = sigmoid_cross_entropy_errorMatrix(Y_copy, labels); // delta =  estimate - target
+	cross_entropy_gradient = sigmoid_cross_entropy_errorMatrix(in_copy, labels); // delta =  estimate - target
 	if (cross_entropy_gradient.allFinite()) {
 		getLast()->backPropDelta(cross_entropy_gradient, true);
-		getFirst()->applyUpdate(pars, Y, true);
+		getFirst()->applyUpdate(pars, in, true);
 	}
 	
 	// calculate D-loss
-	res(0, 0) = sigmoid_cross_entropy_with_logits(Y_copy, labels);
+	res(0, 0) = sigmoid_cross_entropy_with_logits(in_copy, labels);
 }
 /* Prepare the training of the generator
 */
-void CNet::train_GAN_G_D(MAT& Y_copy, MAT& res, const learnPars& pars) {
+void CNet::train_GAN_G_D(MAT& in_copy,  MAT& res, const learnPars& pars) {
 	static MAT labels(getNOUT(), 1);
 	static MAT cross_entropy_gradient(getNOUT(), 1);
 
-	getFirst()->forProp(Y_copy, true, true);
+	getFirst()->forProp(in_copy, true, true);
 
 	// compute the gradient through Critic
 	labels.setOnes();
 
-	cross_entropy_gradient = move(sigmoid_GEN_loss(labels, Y_copy));// Generator loss
+	cross_entropy_gradient = move(sigmoid_GEN_loss(labels, in_copy));// Generator loss
 	//cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));
 
 	if (cross_entropy_gradient.allFinite())
 		getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
 	
 	// Calculate the generator loss
-	res(0,0) = (Y_copy - Y_copy.unaryExpr(&LogExp)).mean();
+	res(0,0) = (in_copy - in_copy.unaryExpr(&LogExp)).mean();
 
 }
 

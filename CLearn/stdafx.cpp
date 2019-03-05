@@ -115,7 +115,12 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 
 __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL* const X, fREAL* const Y, 
 	uint32_t prepGen, uint32_t handOverLayer, fREAL* D_REAL_ERR, fREAL* D_FAKE_ERR, fREAL eta_D, fREAL eta_G, fREAL clip, fREAL gamma, fREAL lambda, uint32_t rmsprop, uint32_t adam, uint32_t batch_update,
-	uint32_t weight_norm, uint32_t spectral_norm, uint32_t firstTrain, uint32_t lastTrain, int32_t* const xFormat, int32_t* const yFormat) {
+	uint32_t weight_norm, uint32_t spectral_norm, uint32_t firstTrain, uint32_t lastTrain, int32_t* const xFormat, int32_t* const yFormat, uint32_t int_GEN_TO_SIDECHANNEL) {
+
+	// Make a choice if the generator feeds into a side channel of the discriminator 
+	// or if the conditional variable Y feeds into the side channel instead.
+	bool GEN_TO_SIDECHANNEL = int_GEN_TO_SIDECHANNEL > 0;
+
 
 	// Major GAN training function
 	learnPars pars(eta_D, clip, gamma, lambda, rmsprop, adam, batch_update, weight_norm, spectral_norm, firstTrain, lastTrain, true);
@@ -137,16 +142,21 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	//ptr_D->linkChain(); // relink the chain
 
 	// (1) Train D real =====================================================================
-	MAT D_REAL_Y(y_matrix); // Y copy - expensive
 	MAT D_REAL_RES(1, 1);
 	D_REAL_RES.setZero();
 	
 	if (batchIsDue) // hold back the update to the disc weights - need fake loss
 		pars.batch_update = 1;
 
-	ptr_D->preFeedSideChannel(x_matrix);
-	ptr_D->train_GAN_D(D_REAL_Y, y_matrix, D_REAL_RES, true, pars);
-
+	if (GEN_TO_SIDECHANNEL) {
+		MAT D_REAL_Y(y_matrix); // Y copy - expensive
+		ptr_D->preFeedSideChannel(x_matrix);
+		ptr_D->train_GAN_D(D_REAL_Y, y_matrix, D_REAL_RES, true, pars);
+	} else {
+		MAT D_REAL_X(x_matrix);
+		ptr_D->preFeedSideChannel(y_matrix);
+		ptr_D->train_GAN_D(D_REAL_X, x_matrix, D_REAL_RES, true, pars);
+	}
 	*D_REAL_ERR = D_REAL_RES(0, 0);
 
 	//(2) Draw Z and produce generator sample ===============================================
@@ -157,16 +167,21 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	ptr_G->forProp(G_Sample, x_matrix, false, pars); // G_Sample contains the generator sample
 
 	// (3) Train D fake =====================================================================
-	MAT D_FAKE_Y(y_matrix); // Y copy - expensive
 	MAT D_FAKE_RES(1, 1);
 	D_FAKE_RES.setZero();
 
 	if (batchIsDue) // undo the change to batch_update 
 		pars.batch_update = 0;
-
-	ptr_D->preFeedSideChannel(G_Sample);
-	ptr_D->train_GAN_D(D_FAKE_Y, y_matrix, D_FAKE_RES, false, pars);
-
+	
+	if (GEN_TO_SIDECHANNEL) {
+		MAT D_FAKE_Y(y_matrix); // Y copy - expensive
+		ptr_D->preFeedSideChannel(G_Sample);
+		ptr_D->train_GAN_D(D_FAKE_Y, y_matrix, D_FAKE_RES, false, pars);
+	} else {
+		MAT D_FAKE_X(G_Sample); // X copy
+		//ptr_D->preFeedSideChannel(y_matrix);
+		ptr_D->train_GAN_D(D_FAKE_X, G_Sample, D_FAKE_RES, false, pars);
+	}
 	*D_FAKE_ERR = D_FAKE_RES(0, 0);
 
 	// (4) Prepare and Train the Generator ==================================================
@@ -175,13 +190,24 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 		ptr_G->preFeedSideChannel(Z);
 		G_Sample = y_matrix;
 		ptr_G->forProp(G_Sample, x_matrix, true, pars); // New Gen sample, SAVE = true!
-		ptr_D->preFeedSideChannel(G_Sample); // feed the new generator output to the discriminator
-
-		MAT D_G_Y(y_matrix);
+		
 		MAT D_G_RES(1, 1);
-		D_G_RES.setZero();
-		ptr_D->train_GAN_G_D(D_G_Y, D_G_RES, pars); // forprop through new weights of D
-													// backprop as well so that we can collect deltas
+		if (GEN_TO_SIDECHANNEL) {
+			ptr_D->preFeedSideChannel(G_Sample); // feed the new generator output to the discriminator
+
+			MAT D_G_Y(y_matrix);
+			D_G_RES.setZero();
+			ptr_D->train_GAN_G_D(D_G_Y, D_G_RES, pars); // forprop through new weights of D
+
+		} else {
+			//ptr_D->preFeedSideChannel(y_matrix); // unnecessary...
+
+			MAT D_G_X(G_Sample);
+			D_G_RES.setZero();
+			ptr_D->train_GAN_G_D(D_G_X, D_G_RES, pars); // forprop through new weights of D
+
+		}
+		// backprop as well so that we can collect deltas
 		MAT deltas(ptr_G->getNOUT(), 1);
 		ptr_D->copyNthDelta(handOverLayer, deltas.data(), ptr_G->getNOUT()); // collect deltas
 		
@@ -216,11 +242,14 @@ __declspec(dllexport) void __stdcall addMixtureDensity(CNet* ptr, size_t NOUT, s
 __declspec(dllexport) void __stdcall debugMsg(CNet* ptr, fREAL* msg) {
 	ptr->debugMsg(msg);
 }
-__declspec(dllexport) uint32_t __stdcall initializeNetwork(CNet* ptr, uint32_t batchSize) {
+__declspec(dllexport) uint32_t __stdcall initializeNetwork(CNet* ptr, uint32_t init, uint32_t batchSize, uint32_t* const wrongLayer) {
 	if (!sameCNet(ptr)) {
 		ptr->linkChain();
 	}
-	ptr->initToUnitVariance(batchSize);
+	if (init > 0) {
+		ptr->initToUnitVariance(batchSize);
+	}
+	*wrongLayer = ptr->layerDimensionError();
 
 	return ptr->getLayerNumber();
 }

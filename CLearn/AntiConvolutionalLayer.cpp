@@ -201,8 +201,8 @@ void AntiConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {
 }
 
 void AntiConvolutionalLayer::constrainToMax(MAT & mues, MAT & maxVec){
-	b = -mues;
-	W = W / maxVec.maxCoeff();
+	//b = -mues;
+	//W = W / maxVec.maxCoeff();
 }
 
 // grad
