@@ -105,6 +105,9 @@ Gradient penalty is almost impossible to implement without automatic differentia
 Update -- Another idea might be to train the discriminator using spectral normalization, which I now added to the library. Spectral normalization achieved really good results on ImageNet, especially when it comes to variability of produced patterns, which is what I am looking for. It's also much easier to implement than Gradient penalty and not as computationally demanding.
 Work in progres...
 
+[![Video of HOLOconGAN training](./pictures/coverHOLOconGAN.PNG)](https://youtu.be/Cjj4HIWdUrY "HOLOconGAN single-frequency examples")
+
+
 <h2> Another approach - Forward/Backward Nets </h2>
 
 Arguably, the most naive approach to inverse problems might be to simply train two nets - one that simply learns the forward mapping, F: h -> I (where h is a hologramm and I is the intensity) and one that learns the inverse, B : I-> h' . 
