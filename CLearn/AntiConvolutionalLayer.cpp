@@ -171,7 +171,7 @@ void AntiConvolutionalLayer::forProp(MAT& inBelow, bool training, bool recursive
 
 	if (training) {
 		actSave = inBelow;
-		inBelow = move(this->getACT());
+		inBelow = move(getACT());
 		if (recursive && getHierachy() != hierarchy_t::output) {
 			above->forProp(inBelow, true, true);
 		}

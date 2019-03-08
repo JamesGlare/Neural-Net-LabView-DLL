@@ -136,27 +136,10 @@ MAT ConvolutionalLayer::wnorm_vGrad(const MAT& grad, MAT& ggrad) {
 */
 void ConvolutionalLayer::snorm_setW() {
 	W = W_temp / spectralNorm(W_temp, u1, v1);
-
-	/*
-	for (size_t i = 0; i< features; ++i)
-		W._FEAT(i) /= spectralNorm(W._FEAT(i), u1.block(i*kernelY, 0, kernelY, 1), v1.block(i*kernelX, 0, kernelX, 1));*/
 }
 
 void ConvolutionalLayer::snorm_updateUVs() {
 	updateSingularVectors(W_temp, u1, v1, 1);
-
-	/*
-	MAT u_temp = u1.block(0, 0, kernelY, 1);
-	MAT v_temp = v1.block(0, 0, kernelX, 1);
-
-	for (size_t i = 0; i < features; ++i) {
-		// TODO Do this differently - without the copies here
-		u_temp = u1.block(i*kernelY, 0, kernelY, 1);
-		v_temp = v1.block(i*kernelX, 0, kernelX, 1);
-		updateSingularVectors(W_temp._FEAT(i), u_temp, v_temp, 1);
-		u1.block(i*kernelY, 0, kernelY, 1) = u_temp;
-		v1.block(i*kernelX, 0, kernelX, 1) = v_temp;
-	}*/
 }
 MAT ConvolutionalLayer::snorm_dWt(MAT& grad){
 	// This is actual work
@@ -167,19 +150,6 @@ MAT ConvolutionalLayer::snorm_dWt(MAT& grad){
 	lambdaBatch = 0; // reset this
 	lambdaCount = 0;
 	return grad;
-	/*
-	if (lambdaCount > 0) {
-		fREAL ratio = lambdaBatch / lambdaCount;
-		for (size_t i = 0; i < features; ++i) {
-			grad._FEAT(i) -= ratio*(u1.block(i*kernelY, 0, kernelY, 1)*(v1.block(i*kernelX, 0, kernelX, 1)).transpose());
-
-			grad._FEAT(i) /= spectralNorm(W_temp._FEAT(i), u1.block(i*kernelY, 0, kernelY, 1), v1.block(i*kernelX, 0, kernelX, 1));
-
-		}
-		lambdaBatch = 0; // reset this
-		lambdaCount = 0;
-	}
-	return grad; */
 }
 /* For/back prop
 */
@@ -212,7 +182,7 @@ uint32_t ConvolutionalLayer::getOutChannels() const {
 // Initializtion
 void ConvolutionalLayer::constrainToMax(MAT & mues, MAT & maxVec) {
 	//b = -mues;
-	//W = W / maxVec.maxCoeff(); // could be made better, but this works
+	W = W / maxVec.maxCoeff(); // could be made better, but this works
 }
 // backprop
 void ConvolutionalLayer::backPropDelta(MAT& deltaAbove, bool recursive) {

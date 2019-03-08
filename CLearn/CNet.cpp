@@ -307,6 +307,13 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 /* Train the Discriminator
 */
 void CNet::train_GAN_D(MAT& in_copy, MAT &in, MAT& res, bool real, const learnPars& pars) {
+
+	/*	The ICML 2017 workshop uses softplus as the cost .. see below.
+	*	d_loss = tf.reduce_mean(tf.nn.softplus(d_fake) + tf.nn.softplus(-d_real))
+	*	g_loss = tf.reduce_mean(tf.nn.softplus(-d_fake))
+	*/
+	static bool softPlusLoss = false;
+
 	static MAT labels(getNOUT(), 1);
 	static MAT cross_entropy_gradient(getNOUT(), 1);
 
@@ -314,42 +321,60 @@ void CNet::train_GAN_D(MAT& in_copy, MAT &in, MAT& res, bool real, const learnPa
 	// check for NaN's & Infinities.
 	if (!in_copy.allFinite())
 		return; // protect the network.
+	if (softPlusLoss) {
+		if (real) {
+			cross_entropy_gradient = (-in_copy).unaryExpr(&DSoftPlus);
+			res(0, 0) = (-in_copy).unaryExpr(&SoftPlus).mean();
 
-	if (real) {
-		labels.setOnes();
+		} else {
+			cross_entropy_gradient = (in_copy).unaryExpr(&DSoftPlus);
+			res(0, 0) = (in_copy).unaryExpr(&SoftPlus).mean();
+		}
 	} else {
-		labels.setZero();
+
+		if (real) {
+			labels.setOnes();
+		} else {
+			labels.setZero();
+		}
+
+		cross_entropy_gradient = sigmoid_cross_entropy_errorMatrix(in_copy, labels); // delta =  estimate - target
+		// calculate D-loss
+		res(0, 0) = sigmoid_cross_entropy_with_logits(in_copy, labels);
 	}
-	
-	cross_entropy_gradient = sigmoid_cross_entropy_errorMatrix(in_copy, labels); // delta =  estimate - target
+
+	// apply whatever gradient we just calculated
 	if (cross_entropy_gradient.allFinite()) {
 		getLast()->backPropDelta(cross_entropy_gradient, true);
 		getFirst()->applyUpdate(pars, in, true);
 	}
-	
-	// calculate D-loss
-	res(0, 0) = sigmoid_cross_entropy_with_logits(in_copy, labels);
 }
 /* Prepare the training of the generator
 */
 void CNet::train_GAN_G_D(MAT& in_copy,  MAT& res, const learnPars& pars) {
+	/*	The ICML 2017 workshop uses softplus as the cost .. see below.
+	*	d_loss = tf.reduce_mean(tf.nn.softplus(d_fake) + tf.nn.softplus(-d_real))
+	*	g_loss = tf.reduce_mean(tf.nn.softplus(-d_fake))
+	*/
 	static MAT labels(getNOUT(), 1);
 	static MAT cross_entropy_gradient(getNOUT(), 1);
+	static bool softPlusLoss = false;
 
 	getFirst()->forProp(in_copy, true, true);
 
 	// compute the gradient through Critic
-	labels.setOnes();
-
-	cross_entropy_gradient = move(sigmoid_GEN_loss(labels, in_copy));// Generator loss
-	//cross_entropy_gradient = move(sigmoid_cross_entropy_errorMatrix(logits, labels));
-
+	if (softPlusLoss) {
+		// Calculate the generator loss
+		res(0, 0) = (-in_copy).unaryExpr(&SoftPlus).mean();
+		cross_entropy_gradient = (-in_copy).unaryExpr(&DSoftPlus);// Generator loss
+	} else {
+		labels.setOnes();
+		// Calculate the generator loss
+		res(0, 0) = (in_copy - in_copy.unaryExpr(&LogExp)).mean();
+		cross_entropy_gradient = move(sigmoid_GEN_loss(labels, in_copy));// Generator loss
+	}
 	if (cross_entropy_gradient.allFinite())
 		getLast()->backPropDelta(cross_entropy_gradient, true);// make sure the deltaSaves are updated
-	
-	// Calculate the generator loss
-	res(0,0) = (in_copy - in_copy.unaryExpr(&LogExp)).mean();
-
 }
 
 // Backpropagation 
