@@ -5,15 +5,16 @@ Compilation requires version 3.3.5. of the Eigen library. Compiled with VisualSt
 
 The library currently supports 
 <pre>
-1. Multi-feature Convolutional Layers with sidechannels (unstructured inputs that are simply passed on)
-2. Multi-feature Deconvolutional Layers with sidechannels 
+1. Multi-feature Convolutional Layers
+2. Multi-feature Deconvolutional Layers 
 3. Dense Layers 
 4. Dropout Layers
 5. Max-Pooling Layers
 6. Pass-On Layers (apply some elementwise function)
 7. Mixture Density Layer (Probability distribution of likely output values)
 9. Layer sharing between networks
-10. Vanilla & Wasserstein GAN-training functions
+10. Sidechannel layers (input additional data upstream into the network)
+11. Vanilla & Wasserstein GAN-training functions
 </pre>
 with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
 
@@ -103,7 +104,11 @@ The inverse GAN approach works really well on all toy problems that I could conc
 Gradient penalty is almost impossible to implement without automatic differentiation though. I will therefore have to train the network using tensorflow and then export the graph into a format that allows me to transfer it to my network here, so that I can actually produce holograms.
 
 Update -- Another idea might be to train the discriminator using spectral normalization, which I now added to the library. Spectral normalization achieved really good results on ImageNet, especially when it comes to variability of produced patterns, which is what I am looking for. It's also much easier to implement than Gradient penalty and not as computationally demanding.
-Work in progres...
+
+The video below shows a conditional GAN trained on the inverse relation of the fourier table with the light field. I used only a single frequency to see if this works in principle (which it sort of does).
+
+[![Video of HOLOconGAN training](./pictures/coverHOLOconGAN.PNG)](https://youtu.be/Cjj4HIWdUrY "HOLOconGAN single-frequency examples")
+
 
 <h2> Another approach - Forward/Backward Nets </h2>
 
