@@ -103,7 +103,8 @@ The inverse GAN approach works really well on all toy problems that I could conc
 Gradient penalty is almost impossible to implement without automatic differentiation though. I will therefore have to train the network using tensorflow and then export the graph into a format that allows me to transfer it to my network here, so that I can actually produce holograms.
 
 Update -- Another idea might be to train the discriminator using spectral normalization, which I now added to the library. Spectral normalization achieved really good results on ImageNet, especially when it comes to variability of produced patterns, which is what I am looking for. It's also much easier to implement than Gradient penalty and not as computationally demanding.
-Work in progres...
+
+The video below shows a conditional GAN trained on the inverse relation of the fourier table with the light field. I used only a single frequency to see if this works in principle (which it sort of does).
 
 [![Video of HOLOconGAN training](./pictures/coverHOLOconGAN.PNG)](https://youtu.be/Cjj4HIWdUrY "HOLOconGAN single-frequency examples")
 
