@@ -5,15 +5,16 @@ Compilation requires version 3.3.5. of the Eigen library. Compiled with VisualSt
 
 The library currently supports 
 <pre>
-1. Multi-feature Convolutional Layers with sidechannels (unstructured inputs that are simply passed on)
-2. Multi-feature Deconvolutional Layers with sidechannels 
+1. Multi-feature Convolutional Layers
+2. Multi-feature Deconvolutional Layers 
 3. Dense Layers 
 4. Dropout Layers
 5. Max-Pooling Layers
 6. Pass-On Layers (apply some elementwise function)
 7. Mixture Density Layer (Probability distribution of likely output values)
 9. Layer sharing between networks
-10. Vanilla & Wasserstein GAN-training functions
+10. Sidechannel layers (input additional data upstream into the network)
+11. Vanilla & Wasserstein GAN-training functions
 </pre>
 with three different non-linearities ReLu, Tanh and Sigmoid (can be different for each layer).
 
