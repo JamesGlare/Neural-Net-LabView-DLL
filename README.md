@@ -44,7 +44,7 @@ In theory, this should allow me to shape the beam in any way I want. In practice
 
 That is not a simple problem. In fact, its non-trivial enough, that there are mountains of literature about it (there always are).
  
-I thought that deep learning might be one way to solve this problem. We should be able to train a neural network on the forward problem (Hologram to Intensity). The inverse problem is an ongoing project described further down.
+I thought that deep learning might be one way to solve this problem. We should be able to train a neural network on the forward problem (Hologram to Intensity). The inverse problem is an ongoing project described further below.
 
 Mathematically speaking, the forward-transformation we wish to train our network on is a non-linear matrix-to-matrix problem. Our images are intensity only, so no additional colour channels.
 The transformation that the SLM imparts on the beam cannot be written down in any analytical form and even if this was possible, it would require precise knowledge of the geometry of the setup. 
