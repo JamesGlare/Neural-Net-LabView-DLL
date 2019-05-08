@@ -29,6 +29,7 @@ class CNet {
 		void addMixtureDensity(size_t NOUT, size_t features, size_t BlockXY);
 		void addReshape();
 		void addSideChannel(size_t sideChannelSize);
+		void addGaussianReparametrization();
 
 		// Share Layer Functionality
 		void shareLayers(CNet* const otherNet, uint32_t firstLayer, uint32_t lastLayer);
@@ -37,7 +38,7 @@ class CNet {
 		size_t layerDimensionError() const;
 
 		// Propagate input matrix through entire network. Results are stored in "in".
-		fREAL forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars);
+		fREAL forProp(MAT& in, const MAT& outDesired, bool saveAct);
 		// Backpropagate through network. 
 		fREAL backProp(MAT& in, MAT& outDesired, const learnPars& pars, bool deltaProvided=false); // set bool to 'true' if you outDesired contains delta's from other network
 

@@ -53,6 +53,9 @@ __declspec(dllexport) void __stdcall addSideChannel(CNet* ptr, uint32_t sideChan
 __declspec(dllexport) void __stdcall addDropoutLayer(CNet* ptr, fREAL ratio) {
 	 ptr->addDropoutLayer(ratio);
 }
+__declspec(dllexport) void __stdcall addGaussianReparametrization(CNet* ptr) {
+	ptr->addGaussianReparametrization();
+}
 __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input, fREAL* const output, int32_t* const inFormat, int32_t* const outFormat) {
 	// if change of CNet instance, relink the chain
 
@@ -60,8 +63,6 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 		ptr->linkChain();
 	}
 
-
-	learnPars pars;
 	assert(ptr->getNOUT() == outFormat[0]*outFormat[1]);
 	assert(ptr->getNIN() == inFormat[0]*inFormat[1]);
 
@@ -70,7 +71,7 @@ __declspec(dllexport) fREAL __stdcall forwardCNet(CNet* ptr, fREAL* const input,
 	outputDesiredMatrix.resize(ptr->getNOUT(), 1); // (NIN, 1) Matrix
 	inputMatrix.resize(ptr->getNIN(), 1); // (NIN, 1) Matrix
 	
-	fREAL error = ptr->forProp(inputMatrix, outputDesiredMatrix,  false, pars);
+	fREAL error = ptr->forProp(inputMatrix, outputDesiredMatrix,  false);
 	inputMatrix.resize(outFormat[0], outFormat[1]);
 	inputMatrix.transposeInPlace(); // Go back to Row-major format
 	inputMatrix.resize(ptr->getNOUT(), 1);
@@ -111,6 +112,118 @@ __declspec(dllexport) fREAL __stdcall backPropCNet(CNet* ptr, fREAL* const input
 	copyToOut(outputDesiredMatrix.data(), output, ptr->getNOUT());
 	
 	return error;
+}
+
+__declspec(dllexport) fREAL __stdcall forward_VAE(CNet* ptr_enc, CNet* ptr_dec, uint32_t validate, fREAL* const Y_, fREAL* const X_, int32_t* const Y_format, int32_t* const X_format)
+{
+	// (0) map the matrices --------------------------------------------------------------------------------------
+	MAT X = MATMAP_ROWMAJOR(X_, X_format[0], X_format[1]);
+	MAT Y = MATMAP_ROWMAJOR(Y_, Y_format[0], Y_format[1]);
+	MAT Z;
+	
+	// (1) Forward the encoder -----------------------------------------------------------------------------------
+	if (!validate) 
+	{
+		Z = Y;
+		MAT Z_target(ptr_enc->getNOUT(), 1);
+		Z_target.setZero();
+		MAT Z_tilde(ptr_enc->getSideChannelSize(), 1);
+		Z_tilde.unaryExpr(&std_normal);
+		ptr_enc->preFeedSideChannel(Z_tilde);
+		
+		ptr_enc->forProp(Z, Z_target, false);
+		// Z contains latent space
+	}
+	else 
+	{
+		Z.resize(ptr_dec->getSideChannelSize(), 1);
+		Z.unaryExpr(&std_normal); // just some random number
+	}
+
+	// (2) forprop the decoder -----------------------------------------------------------------------------------
+	ptr_dec->preFeedSideChannel(Z);
+	MAT X_HAT(Y);
+	fREAL err = ptr_dec->forProp(X_HAT, X, false);
+	// X_HAT contains the input prediction
+
+	// (3) return the input prediction
+	X_HAT.resize(X_format[0], X_format[1]);
+	X_HAT.transposeInPlace();
+	X_HAT.resize(X_format[0] * X_format[1], 1);
+	copyToOut(X_HAT.data(), X_, X_format[0] * X_format[1]);
+
+	return err ;// 
+}
+
+__declspec(dllexport) fREAL __stdcall train_FB_VAE(CNet* ptr_enc, CNet* ptr_dec, CNet* ptr_forw,
+	 fREAL* const Y_, fREAL* const Y_hat_, fREAL* const X_, fREAL* const X_hat_, uint32_t handoverLayer,
+	fREAL eta_VAE, fREAL eta_forw, uint32_t batch_update, uint32_t weight_norm, uint32_t spectral_norm, int32_t* const Y_format,
+	int32_t* const X_format)
+{
+	// (0) Initialize learning structures etc
+	bool batch_is_due = batch_update == 0;
+	learnPars pars_vae(eta_VAE, 0.0f, 0.9, 0.0f, true, false, batch_update, weight_norm, false, 0, 99, true);
+	learnPars pars_forw(eta_forw, 0.0f, 0.9, 0.0f, false, true, batch_update, false, spectral_norm, 0, 99, true);
+	// assert geometry
+	assert(ptr_enc->getNIN() == Y_format[0] * Y_format[1]);
+	assert(ptr_dec->getNIN() == Y_format[0] * Y_format[1]);
+	assert(ptr_dec->getNOUT() == X_format[0] * X_format[1]);
+	assert(ptr_forw->getNIN() == X_format[0] * X_format[1]);
+
+	// Format the matrices
+	// Original input
+	MAT X = MATMAP_ROWMAJOR(X_, X_format[0], X_format[1]);
+	X.resize(ptr_forw->getNIN(), 1);// (NIN, 1) Matrix
+	// Output(original input)
+	MAT Y = MATMAP_ROWMAJOR(Y_, Y_format[0], Y_format[1]);
+	Y.resize(ptr_forw->getNOUT(), 1);// (NOUT,1) Matrix
+	// Input prediction based on output(original input)
+	MAT X_HAT = MATMAP_ROWMAJOR(X_hat_, X_format[0], X_format[1]);
+	X_HAT.resize(ptr_forw->getNIN(), 1);// (NIN, 1) Matrix
+	// Output(input prediction)
+	MAT Y_HAT = MATMAP_ROWMAJOR(Y_hat_, Y_format[0], Y_format[1]);
+	Y_HAT.resize(ptr_forw->getNOUT(), 1);// (NOUT,1) Matrix
+
+	// (1) Backprop through forward -------------------------------------------------------------------------------------
+	if (batch_is_due)
+		pars_forw.batch_update = 0;
+	MAT Y_temp(Y);
+	ptr_forw->backProp(X, Y_temp, pars_forw);
+	
+	if (batch_is_due)
+		pars_forw.batch_update = 0;
+	MAT Y_hat_temp(Y_HAT);
+	//ptr_forw->backProp(X_HAT, Y_hat_temp, pars_forw);
+
+	fREAL y_reconstruction_err = (Y - Y_HAT).squaredNorm();
+
+	/// DECOUPLED FROM THAT
+	pars_forw.accept = false; // backprop only
+	pars_forw.batch_update = 1;
+	Y_temp = Y;
+	ptr_forw->backProp(X_HAT, Y_temp, pars_forw);
+	// (2) get the delta out of the forward net ------------------------------------------------------------------------
+	MAT delta_f(ptr_forw->getNIN(), 1);
+	ptr_forw->copyNthDelta(0, delta_f.data(), ptr_forw->getNIN());
+	// delta now contains the backproped deltas
+
+	// (3) Backprop now through the decoder ----------------------------------------------------------------------------
+	// to this end, we need to make sure the sidechannel contains Z
+	// this should be the case 
+	static fREAL beta = 1;
+	MAT x_diff = move(beta*(X_HAT - X));
+	x_diff.resize(x_diff.size(), 1);
+	x_diff = move(x_diff + delta_f);
+	ptr_dec->backProp(Y, x_diff, pars_vae, true);
+	// get the delta out of the sidechannel
+	MAT delta_dec(ptr_dec->getSideChannelSize(), 1);
+	ptr_dec->copyNthDelta(handoverLayer, delta_dec.data(), ptr_dec->getSideChannelSize());
+	
+	// (4) backprop through the encoder --------------------------------------------------------------------------------
+	// we need to make sure the side channel of the encoder still
+	ptr_enc->backProp(Y, delta_dec, pars_vae, true);
+
+	return y_reconstruction_err;
 }
 
 __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL* const X, fREAL* const Y, 
@@ -165,7 +278,7 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 	Z.setRandom().unaryExpr(&abs<fREAL>);
 	ptr_G->preFeedSideChannel(Z);
 	MAT G_Sample(y_matrix);
-	ptr_G->forProp(G_Sample, x_matrix, false, pars); // G_Sample contains the generator sample
+	ptr_G->forProp(G_Sample, x_matrix, false); // G_Sample contains the generator sample
 
 	// (3) Train D fake =====================================================================
 	MAT D_FAKE_RES(1, 1);
@@ -190,7 +303,7 @@ __declspec(dllexport) void __stdcall trainConGan(CNet* ptr_D, CNet* ptr_G, fREAL
 		Z.setRandom().unaryExpr(&abs<fREAL>); // map to [0,1]
 		ptr_G->preFeedSideChannel(Z);
 		G_Sample = y_matrix;
-		ptr_G->forProp(G_Sample, x_matrix, true, pars); // New Gen sample, SAVE = true!
+		ptr_G->forProp(G_Sample, x_matrix, true); // New Gen sample, SAVE = true!
 		
 		MAT D_G_RES(1, 1);
 		if (GEN_TO_SIDECHANNEL) {

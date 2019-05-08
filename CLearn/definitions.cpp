@@ -34,8 +34,8 @@ void shrinkOne(MAT& in) {
 
 fREAL normal_dist(fREAL mu, fREAL stddev) {
 	static mt19937 rng(42);
-	static normal_distribution<fREAL> nd(mu, stddev);
-	return nd(rng);
+	static normal_distribution<fREAL> nd(0, 1.0f);
+	return mu+stddev*nd(rng);
 }
 MAT& appendOneInline(MAT& toAppend) {
 	//MAT temp = MAT(toAppend.rows() + 1, toAppend.cols());

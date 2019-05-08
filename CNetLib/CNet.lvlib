@@ -7,6 +7,7 @@
 	<Item Name="addConvolutionalLayer.vi" Type="VI" URL="../addConvolutionalLayer.vi"/>
 	<Item Name="addDropoutLayer.vi" Type="VI" URL="../addDropoutLayer.vi"/>
 	<Item Name="addFullyConnectedLayer.vi" Type="VI" URL="../addFullyConnectedLayer.vi"/>
+	<Item Name="addGaussReparametrization.vi" Type="VI" URL="../addGaussReparametrization.vi"/>
 	<Item Name="addMaxPoolLayer.vi" Type="VI" URL="../addMaxPoolLayer.vi"/>
 	<Item Name="addMixtureDensity.vi" Type="VI" URL="../addMixtureDensity.vi"/>
 	<Item Name="addPassOnLayer.vi" Type="VI" URL="../addPassOnLayer.vi"/>
@@ -15,6 +16,7 @@
 	<Item Name="debugMsg.vi" Type="VI" URL="../debugMsg.vi"/>
 	<Item Name="destroyCNet.vi" Type="VI" URL="../destroyCNet.vi"/>
 	<Item Name="feedSideChannel.vi" Type="VI" URL="../feedSideChannel.vi"/>
+	<Item Name="Forward_conVAE.vi" Type="VI" URL="../Forward_conVAE.vi"/>
 	<Item Name="getActivation.vi" Type="VI" URL="../getActivation.vi"/>
 	<Item Name="getDelta.vi" Type="VI" URL="../getDelta.vi"/>
 	<Item Name="getLayerDimensions.vi" Type="VI" URL="../getLayerDimensions.vi"/>
@@ -26,8 +28,7 @@
 	<Item Name="shareLayers.vi" Type="VI" URL="../shareLayers.vi"/>
 	<Item Name="Start.vi" Type="VI" URL="../Start.vi"/>
 	<Item Name="train.vi" Type="VI" URL="../train.vi"/>
-	<Item Name="train_GAN_D.vi" Type="VI" URL="../train_GAN_D.vi"/>
-	<Item Name="train_GAN_G.vi" Type="VI" URL="../train_GAN_G.vi"/>
-	<Item Name="train_WGAN_D.vi" Type="VI" URL="../train_WGAN_D.vi"/>
+	<Item Name="train_conVAE.vi" Type="VI" URL="../train_conVAE.vi"/>
+	<Item Name="trainConGan.vi" Type="VI" URL="../trainConGan.vi"/>
 	<Item Name="validate.vi" Type="VI" URL="../validate.vi"/>
 </Library>

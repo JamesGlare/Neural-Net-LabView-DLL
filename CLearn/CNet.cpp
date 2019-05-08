@@ -8,6 +8,7 @@
 #include "DropoutLayer.h"
 #include "Reshape.h"
 #include "SideChannel.h"
+#include "GaussianReparametrizationLayer.h"
 
 CNet::CNet(size_t NIN) :  NIN(NIN) {
 	layers = vector<CNetLayer*>(); // to be filled with layers
@@ -83,6 +84,20 @@ void CNet::addSideChannel(size_t sideChannelSize) {
 	} else {
 		SideChannel* sc = new SideChannel(getNIN(), sideChannelSize);
 		layers.push_back(sc);
+	}
+}
+
+void CNet::addGaussianReparametrization()
+{
+	if (getLayerNumber() > 0) 
+	{
+		GaussianReparametrizationLayer* grpl = new GaussianReparametrizationLayer( *(getLast() ) );
+		layers.push_back(grpl);
+	}
+	else
+	{
+		GaussianReparametrizationLayer* grpl = new GaussianReparametrizationLayer(getNIN());
+		layers.push_back(grpl);
 	}
 }
 
@@ -238,7 +253,7 @@ size_t CNet::layerDimensionError() const{
 	return 0;
 }
 // Simply output the network
-fREAL CNet::forProp(MAT& in, const MAT& outDesired, bool saveAct, const learnPars& pars) {
+fREAL CNet::forProp(MAT& in, const MAT& outDesired, bool saveAct) {
 
 	// (1) Forward propagation
 	getFirst()->forProp(in, saveAct, true);
@@ -257,6 +272,7 @@ void CNet::preFeedSideChannel(const MAT& sideChannelInput) {
 			break;
 		}
 	}
+
 }
 
 size_t CNet::getSideChannelSize() {
@@ -280,7 +296,7 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 	// (0.5) Initialize error and difference matrix
 	MAT diffMatrix;
 	fREAL errorOut = 0.0f;
-
+	
 	// (1) Propagate in forward direction (with saveActivations == true)
 	MAT outPredicted(input);
 	getFirst()->forProp(outPredicted, true, true);
@@ -289,7 +305,7 @@ fREAL CNet::backProp(MAT& input, MAT& outDesired, const learnPars& pars, bool de
 	if (!deltaProvided)
 		diffMatrix = move(l2_errorMatrix(outPredicted - outDesired)); // delta =  estimate - target
 	else
-		diffMatrix = move(outDesired);
+		diffMatrix = outDesired;
 	errorOut = l2_error(diffMatrix);
 
 	// (3) back propagate the deltas
